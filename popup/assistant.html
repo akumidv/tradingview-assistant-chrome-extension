@@ -1,11 +1,31 @@
 <!DOCTYPE>
-<html>
+<html lang="en">
+<head>
   <head>
-  <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <script src="popup.js"></script>
-  <title></title>
+    <title>>Tradingview assistant</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <script src="popup.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
   </head>
   <body>
-  <textarea id="tvparam" name="comment" cols="40" rows="3"></textarea>
+  <div class="header">
+    <h2>Tradingview assistant</h2>
+  </div>
+
+  <div class="row">
+    <div class="column left">
+      <p>To set the timestamps of trading signals, upload a CSV file according to the
+      <a href="data:text/csv;charset=utf-8,signal,timestamp,pair,timeframe\r\nBUY,1625718600000,BTCUSDT,1m\r\nSELL,1625719500000,BABA,1H" download="signals_template.csv">template</a></p>
+    </div>
+    <div class="column right">
+      <div style="align-content: center"><button class="button button-blue">Upload signals</button></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p class="footer footer-text"></p>
+  </div>
   </body>
 </html>
