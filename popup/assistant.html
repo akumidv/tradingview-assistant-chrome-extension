@@ -17,10 +17,20 @@
   <div class="row">
     <div class="column left">
       <p>To set the timestamps of trading signals, upload a CSV file according to the
-      <a href="data:text/csv;charset=utf-8,signal,timestamp,pair,timeframe\r\nBUY,1625718600000,BTCUSDT,1m\r\nSELL,1625719500000,BABA,1H" download="signals_template.csv">template</a></p>
+      <a href="data:text/csv;charset=utf-8,signal,timestamp,pair,timeframe\r\nBUY,1625718600000,BTCUSDT,1m\r\nSELL,2021-07-27T01:00:00Z,BABA,1H" download="signals_template.csv">template. </a></p>
     </div>
     <div class="column right">
       <div style="align-content: center"><button class="button button-blue">Upload signals</button></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="column left">
+      <p>To test the profit of strategies, upload a CSV file in which the column names correspond to the strategy parameter names, and the values are given in a row. For logical elements, specify the lines TRUE or FALSE.
+        <a href="data:text/csv;charset=utf-8,SMALong,&quot;EMA short&quot;,&quot;Check MACD&quot;\r\n50,9,TRUE\r\n100,21,FALSE" download="strategy_template.csv">Template</a></p>
+    </div>
+    <div class="column right">
+      <div style="align-content: center"><button class="button button-blue">Upload the strategy parameters</button></div>
     </div>
   </div>
 
