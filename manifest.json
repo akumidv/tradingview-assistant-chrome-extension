@@ -1,0 +1,33 @@
+{
+    "manifest_version": 2,
+ 
+    "name": "Tradingview assistant",
+    "version": "1.0",    
+    "icons": {
+            "16": "images/tv_assist_16.png",
+            "32": "images/tv_assist_32.png",
+            "48": "images/tv_assist_48.png",
+            "64": "images/tv_assist_64.png",
+            "128": "images/tv_assist_128.png"
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://*.tradingview.com/*"],
+            "js": [ "content_scripts/tv-page-worker.js"],
+            "run_at": "document_end"
+        }
+    ],
+    "permissions": ["storage", "activeTab"],
+    "action": {
+          "default_icon": {
+            "16": "images/tv_assist_16.png",
+            "32": "images/tv_assist_32.png",
+            "48": "images/tv_assist_48.png",
+            "64": "images/tv_assist_64.png",
+            "128": "images/tv_assist_128.png"
+          },
+          "default_title": "TV",
+          "default_popup": "popup/assistant.html"
+    },
+    "options_page": "options/set.html"
+}
