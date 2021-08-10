@@ -2,44 +2,59 @@
  @license Copyright 2021 akumidv (https://github.com/akumidv/)
  SPDX-License-Identifier: Apache-2.0
 */
+
 'use strict';
 
 (async function() {
   let isMsgShown = false
+  let workerStatus = null
   const STORAGE_KEY_PREFIX = 'iondv'
+
+  async function uploadFiles (handler, endOfMsg, isMultiple = false) {
+    let fileUploadEl = document.createElement('input');
+    fileUploadEl.type = 'file';
+    if(isMultiple)
+      fileUploadEl.multiple = 'multiple';
+    fileUploadEl.addEventListener('change', async () => {
+      let message = ''
+      for(let file of fileUploadEl.files) {
+        message += await handler(file) + '\n'
+      }
+      message += endOfMsg
+      alert(message)
+      isMsgShown = false
+    });
+    fileUploadEl.click();
+  }
 
   chrome.runtime.onMessage.addListener(
     async function(msg, sender, sendResponse) {
-      console.log('Message recieved:', msg)
-      if (!sender.tab && msg.hasOwnProperty('action') && msg.action === 'uploadSignals') {
-        let fileUploadSig = document.createElement('input');
-        fileUploadSig.type = 'file';
-        fileUploadSig.multiple = 'multiple';
-        fileUploadSig.addEventListener('change', async () => {
-          let message = ''
-          for(let file of fileUploadSig.files) {
-            message += await parseTSSignalsAndGetMsg(file) + '\n'
-          }
-          message += `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to enter new data on the chart.`
-          alert(message)
-          isMsgShown = false
-        });
-        fileUploadSig.click();
-      } else if (!sender.tab && msg.hasOwnProperty('action') && msg.action === 'clearAll') {
-        const clearRes = await storageClearAll()
-        alert(clearRes && clearRes.length ? `The data was deleted: ${clearRes.join(',')}` : 'There was no data in the storage')
-      } else if (!sender.tab && msg.hasOwnProperty('action') && msg.action === 'uploadStrategyTestParameters') {
-        let fileUploadStrParam = document.createElement('input');
-        fileUploadSig.type = 'file';
-        fileUploadStrParam.addEventListener('change', async () => {
-          const file = fileUploadStrParam.files[0]
-          let message = await parsStrategyParamsAndGetMsg(file) + '\n'
-          message += `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
-          alert(message)
-          isMsgShown = false
-        });
-        fileUploadStrParam.click();
+      if(sender.tab || !msg.hasOwnProperty('action')) {
+        console.log('Not for action message received:', msg)
+        return
       }
+      if(workerStatus !== null) {
+        console.log('Waiting for end previous work. Status:', workerStatus)
+        return
+      }
+
+      workerStatus = msg.action
+
+      switch (msg.action) {
+        case 'uploadSignals':
+          await uploadFiles(parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to enter new data on the chart.`, true)
+          break;
+        case 'uploadStrategyTestParameters':
+          await uploadFiles(parsStrategyParamsAndGetMsg, `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`, false)
+          break;
+        case 'clearAll':
+          const clearRes = await storageClearAll()
+          alert(clearRes && clearRes.length ? `The data was deleted: ${clearRes.join(',')}` : 'There was no data in the storage')
+          break
+        default:
+          console.log('None of realisation for signal:', msg)
+      }
+      workerStatus = null
     }
   );
   async function parseTSSignalsAndGetMsg (filename) { // TODO
