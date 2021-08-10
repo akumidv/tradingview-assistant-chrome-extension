@@ -5,19 +5,19 @@
 'use strict';
 
 (async function() {
-  const waitForTimeout = async (timeout = 5000) => new Promise(resolve => setTimeout(resolve, timeout))
+  const waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(resolve, timeout))
 
-  function triggerME (el, eventType) {
+  function mouseTrigger (el, eventType) {
     var clickEvent = document.createEvent ('MouseEvents');
     clickEvent.initEvent (eventType, true, true);
     el.dispatchEvent (clickEvent);
   }
 
   function mouseClick (el) {
-    triggerME (el, "mouseover");
-    triggerME (el, "mousedown");
-    triggerME (el, "mouseup");
-    triggerME (el, "click");
+    mouseTrigger (el, "mouseover");
+    mouseTrigger (el, "mousedown");
+    mouseTrigger (el, "mouseup");
+    mouseTrigger (el, "click");
   }
 
   // Example click on react object

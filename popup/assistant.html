@@ -6,36 +6,89 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <script src="popup.js"></script>
+    <script src="assistant.js"></script>
     <link rel="stylesheet" type="text/css" href="style.css">
   </head>
   <body>
   <div class="header">
     <h2>Tradingview assistant</h2>
+    <p>To work with the extension, activate it on the tab with the open Tradingview chart</p>
   </div>
-
+  <div class="header">
+    <h3>Displaying trading signals by timestamps</h3>
+  </div>
   <div class="row">
     <div class="column left">
-      <p>To set the timestamps of trading signals, upload a CSV file according to the
-      <a href="data:text/csv;charset=utf-8,signal,timestamp,pair,timeframe\r\nBUY,1625718600000,BTCUSDT,1m\r\nSELL,2021-07-27T01:00:00Z,BABA,1H" download="signals_template.csv">template. </a></p>
+      To display the signals, you need to create a pine script named 'iondvSignals' from the
+      <a href="data:text/csv;charset=utf-8,//©akumidv
+//@version=4
+study(%22iondv Signals%22,shorttitle=%22iondvSignals%22,overlay=true)
+strTSBuy=input(%22%22,%22TSBuy%22)
+strTSBuy=input(%22%22,%22TSSell%22)%0AtickerName=input(%22%22,%22Ticker%22)
+var arrTSBuy=str.split(buy_series_time,%22,%22)
+var arrTSSell=str.split(sell_series_time,%22,%22)
+plotchar(tickerName==syminfo.ticker and array.includes(arrTSBuy,tostring(time))?low:na,location=location.belowbar,color=color.green,char='▲')
+plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))?high:na,location=location.abovebar,color=color.red,char='▼')%0A" download="iondv_signals_pinescript.txt">
+        file</a> and add it to the graph.
+      After that, upload the signals from the file created by the
+      <a href="data:text/csv;charset=utf-8,timestamp,pair,timeframe,signal
+1625718600000,BTCUSDT,1m,BUY
+2021-07-27T01:00:00Z,BABA,1H,SELL%0A" download="signals_template.csv">template</a>.
+      The signals are stored in the browser, to activate them, open the properties of the created indicator named 'iondvSignals'.
     </div>
     <div class="column right">
-      <div style="align-content: center"><button class="button button-blue">Upload signals</button></div>
+      <div style="align-content: center"><button id="uploadSignals" class="button button-ocean">Upload signals</button></div>
     </div>
   </div>
-
+  <div class="header">
+    <h3>Testing a trading strategy</h3>
+  </div>
   <div class="row">
     <div class="column left">
-      <p>To test the profit of strategies, upload a CSV file in which the column names correspond to the strategy parameter names, and the values are given in a row. For logical elements, specify the lines TRUE or FALSE.
-        <a href="data:text/csv;charset=utf-8,SMALong,&quot;EMA short&quot;,&quot;Check MACD&quot;\r\n50,9,TRUE\r\n100,21,FALSE" download="strategy_template.csv">Template</a></p>
+      <p>If the range of test parameters is loaded or for automatic testing.</p>
     </div>
     <div class="column right">
-      <div style="align-content: center"><button class="button button-blue">Upload the strategy parameters</button></div>
+      <div style="align-content: center"><button id="testStrategy" class="button button-green">Test strategy</button></div>
     </div>
   </div>
+  <div class="row">
+    <div class="column left">
+      <p>To download the results of the last testing for this ticker and timeframe.</p>
+    </div>
+    <div class="column right">
+      <div style="align-content: center"><button id="downloadStrategyTestResults" class="button button-blue">Download results</button></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="column left">
+      <p>Getting a template for setting the testing parameters of the current strategy.</p>
+    </div>
+    <div class="column right">
+      <div style="align-content: center"><button id="getStrategyTemplate" class="button button-blue">Get template</button></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="column left">
+      <p>To test the profit of strategies, upload a CSV file in which the lines correspond to the strategy parameters and contain the testing range.
+        <a href="data:text/csv;charset=utf-8,Parameters,From,To,Step
+SMALong,40,70,5
+EMAShort,5,15,
+%22Check MACD%22,False,True,
+%22Stop Loss%22,1,5,0.5%0A" download="strategy_template.csv">Sample template </a></p>
+    </div>
+    <div class="column right">
+      <div style="align-content: center"><button id="uploadStrategyTestParameters" class="button button-blue">Upload parameters</button></div>
+    </div>
+  </div>
+  <div class="header">
+    <h5>Clear all stored data</h5>
+  </div>
+  <div style="text-align: center"><button id="clearAll" class="button button-red">Clear all</button></div>
 
   <div class="footer">
-    <p class="footer footer-text"></p>
+    <p class="footer footer-text">You can order the development of indicators and Tradingview strategies, their testing
+      in python or the implementation of a trading bot on <a href="https://www.upwork.com/freelancers/~0153c0d5352bc2eab7">upwork</a></p>
   </div>
   </body>
 </html>
+

@@ -8,7 +8,7 @@ body {
     padding: 0;
 }
 .header {
-    padding: 10px;
+    padding: 5px;
     text-align: center;
     font-size: 125%;
     min-width: 500px;
@@ -58,13 +58,14 @@ body {
 }
 
 .footer-text {
-    font-size: 75%;
+    font-size: 90%;
     color: #555;
     text-align: right;
     padding: 5px 15px;
 }
 
 .button {
+    width: 150px;
     background-color: #008CBA;
     border: none;
     color: white;
@@ -72,7 +73,7 @@ body {
     text-align: center;
     text-decoration: none;
     /*display: inline-block;*/
-    font-size: 16px;
+    font-size: 14px;
     margin: 4px 2px;
     -webkit-transition-duration: 0.4s; /* Safari */
     transition-duration: 0.4s;
@@ -87,5 +88,38 @@ body {
 
 .button-blue:hover {
     background-color: #008CBA;
+    color: white;
+}
+
+.button-red {
+    background-color: white;
+    color: black;
+    border: 2px solid #ba004a;
+}
+
+.button-red:hover {
+    background-color: #ba004a;
+    color: white;
+}
+
+.button-ocean {
+    background-color: white;
+    color: black;
+    border: 2px solid #00baa4;
+}
+
+.button-ocean:hover {
+    background-color: #00baa4;
+    color: white;
+}
+
+.button-green {
+    background-color: white;
+    color: black;
+    border: 2px solid #00ba09;
+}
+
+.button-green:hover {
+    background-color: #00ba09;
     color: white;
 }

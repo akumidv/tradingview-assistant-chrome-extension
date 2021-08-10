@@ -1,0 +1,10 @@
+//©akumidv
+//@version=4
+study("iondv Signals", shorttitle="iondvSignals", overlay=true)
+strTSBuy = input("", "TSBuy")
+strTSBuy = input("", "TSSell")
+tickerName = input("", "Ticker")
+var arrTSBuy = str.split(buy_series_time, ",")
+var arrTSSell = str.split(sell_series_time, ",")
+plotchar(tickerName == syminfo.ticker and array.includes(arrTSBuy, tostring(time)) ? low : na, location = location.belowbar, color=color.green, char='▲')
+plotchar(tickerName == syminfo.ticker and array.includes(arrTSSell, tostring(time)) ? low : na, location = location.abovebar, color=color.red, char='▼')
