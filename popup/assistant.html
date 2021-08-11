@@ -31,7 +31,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSBuy,tostring(time))?
 plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))?high:na,location=location.abovebar,color=color.red,char='▼')%0A" download="iondv_signals_pinescript.txt">
         file</a> and add it to the graph.
       After that, upload the signals from the file created by the
-      <a href="data:text/csv;charset=utf-8,timestamp,pair,timeframe,signal
+      <a href="data:text/csv;charset=utf-8,timestamp,ticker,timeframe,signal
 1625718600000,BTCUSDT,1m,BUY
 2021-07-27T01:00:00Z,BABA,1H,SELL%0A" download="signals_template.csv">template</a>.
       The signals are stored in the browser, to activate them, open the properties of the created indicator named 'iondvSignals'.
