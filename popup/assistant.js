@@ -3,6 +3,7 @@
  SPDX-License-Identifier: Apache-2.0
 */
 'use strict';
+
 function sendSignalToActiveTab (signal) {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     chrome.tabs.sendMessage(tabs[0].id, {action: signal}
@@ -12,6 +13,9 @@ function sendSignalToActiveTab (signal) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const link = document.querySelector('div.tabs__links > a');
+  if (link) // Activate first tab
+    link.click();
   document.getElementById('uploadSignals').addEventListener('click', () => {
     sendSignalToActiveTab('uploadSignals')
   });
@@ -25,7 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sendSignalToActiveTab('getStrategyTemplate')
   });
   document.getElementById('uploadStrategyTestParameters').addEventListener('click', function () {
-    sendSignalToActiveTab('uploadStrategyTestParameters')
+    chrome.runtime.sendMessage({ action: 'uploadStrategyTestParameters' })
+    // sendSignalToActiveTab('uploadStrategyTestParameters')
   });
   document.getElementById('clearAll').addEventListener('click', function () {
     sendSignalToActiveTab('clearAll')
