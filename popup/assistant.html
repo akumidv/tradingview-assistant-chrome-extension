@@ -24,11 +24,11 @@
 //@version=4
 study(%22iondv Signals%22,shorttitle=%22iondvSignals%22,overlay=true)
 strTSBuy=input(%22%22,%22TSBuy%22)
-strTSBuy=input(%22%22,%22TSSell%22)%0AtickerName=input(%22%22,%22Ticker%22)
-var arrTSBuy=str.split(buy_series_time,%22,%22)
-var arrTSSell=str.split(sell_series_time,%22,%22)
-plotchar(tickerName==syminfo.ticker and array.includes(arrTSBuy,tostring(time))?low:na,location=location.belowbar,color=color.green,char='▲')
-plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))?high:na,location=location.abovebar,color=color.red,char='▼')%0A" download="iondv_signals_pinescript.txt">
+strTSSell=input(%22%22,%22TSSell%22)%0AtickerName=input(%22%22,%22Ticker%22)
+var arrTSBuy=str.split(strTSBuy,%22,%22)
+var arrTSSell=str.split(strTSSell,%22,%22)
+plotchar(tickerName==syminfo.ticker and array.includes(arrTSBuy,tostring(time))?low:na,location=location.belowbar,color=color.green,char='▲',title='Buy')
+plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))?high:na,location=location.abovebar,color=color.red,char='▼',title='Sell')%0A" download="iondv_signals_pinescript.txt">
         file</a> and add it to the graph.
       After that, upload the signals from the file created by the
       <a href="data:text/csv;charset=utf-8,timestamp,ticker,timeframe,signal
