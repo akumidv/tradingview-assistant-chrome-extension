@@ -12,7 +12,6 @@
   <body>
   <div class="header">
     <h2>Tradingview assistant</h2>
-    <p><strong>To work with the extension</strong>, activate it on the tab with the opened <a href="https://www.tradingview.com/chart" target="_blank">Tradingview chart</a>.</p>
   </div>
 
 
@@ -80,7 +79,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
             <a href="data:text/csv;charset=utf-8,Parameters,From,To,Step
 SMALong,40,70,5
 EMAShort,5,15,
-%22Check MACD%22,False,True,
+%22Check MACD%22,false,true,
 %22Stop Loss%22,1,5,0.5%0A" download="strategy_template.csv">Sample template </a></p>
         </div>
         <div class="column right">
@@ -105,6 +104,15 @@ EMAShort,5,15,
     <p class="footer footer-text">You can order the development of indicators and Tradingview strategies, their testing
       in python or the implementation of a trading bot on <a href="https://www.upwork.com/freelancers/~0153c0d5352bc2eab7">upwork</a></p>
   </div>
+
+  <div id="shim"></div>
+  <div id="msgbx">
+    <div class="msg-header">
+      <h5>Warning.</h5>
+    </div>
+    <p>To work with the extension, activate it on the tab with the opened <a href="https://www.tradingview.com/chart" target="_blank">Tradingview chart</a>.</p>
+    <div style="text-align: center"><button id="closeMsg" class="button">Close</button></div></div>
+
   </body>
 </html>
 

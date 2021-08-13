@@ -6,6 +6,11 @@
 
 function sendSignalToActiveTab (signal) {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+    if(!tabs[0].url.includes('tradingview.com')) {
+      document.getElementById('shim').style.display= 'block'
+      document.getElementById('msgbx').style.display = 'block';
+      return
+    }
     chrome.tabs.sendMessage(tabs[0].id, {action: signal}
     //, function(response) {alert('Data deleted', response ? response.join(',') : ''); console.info(response);  window.close();}
     );
@@ -34,6 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('clearAll').addEventListener('click', function () {
     sendSignalToActiveTab('clearAll')
+  });
+  document.getElementById('closeMsg').addEventListener('click', function () {
+    document.getElementById('shim').style.display = 'none'
+    document.getElementById('msgbx').style.display = 'none';
   });
 });
 

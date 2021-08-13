@@ -171,3 +171,43 @@ body {
 .tabs>div:target {
     display: block;
 }
+
+#shim {
+    opacity: .75;
+    filter: alpha(opacity=75);
+    -ms-filter: "alpha(opacity=75)";
+    -khtml-opacity: .75;
+    -moz-opacity: .75;
+    background: #B8B8B8;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    height: 100%;
+    width: 100%;
+    z-index:990;
+    display: none
+}
+
+.msg-header {
+    padding: 5px;
+    text-align: center;
+    font-size: 125%;
+}
+
+#msgbx {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    padding: 5px;
+    width: 400px;
+    margin-top: -150px;
+    margin-left: -200px;
+    background: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 7px #777;
+    -webkit-box-shadow: 3px 3px 7px #777;
+    -moz-border-radius: 22px;
+    -webkit-border-radius: 22px;
+    z-index:999;
+    display: none
+}
