@@ -7,11 +7,20 @@
 function sendSignalToActiveTab (signal) {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     if(!tabs[0].url.includes('tradingview.com')) {
+      document.getElementById('msg-text').innerHTML = 'To work with the extension, activate it on the tab with the opened <a href="https://www.tradingview.com/chart" target="_blank">Tradingview chart</a>.'
       document.getElementById('shim').style.display= 'block'
-      document.getElementById('msgbx').style.display = 'block';
+      document.getElementById('msgbx').style.display = 'block'
+      return
+    } else if (['testStrategy','downloadStrategyTestResults','getStrategyTemplate', 'uploadStrategyTestParameters'].includes(signal)) {
+      document.getElementById('msg-text').innerHTML = 'This feature is not yet implemented in this version of the extension. Please waiting for publishing a new version or look at the development version from the <a href=" http://github.com/akumidv/tradingview-assistant-chrome-extension/">repository</a>.'
+      document.getElementById('shim').style.display= 'block'
+      document.getElementById('msgbx').style.display = 'block'
       return
     }
-    chrome.tabs.sendMessage(tabs[0].id, {action: signal}
+    if(signal === 'uploadStrategyTestParameters')
+      chrome.runtime.sendMessage({ action: 'uploadStrategyTestParameters' })
+    else
+      chrome.tabs.sendMessage(tabs[0].id, {action: signal}
     //, function(response) {alert('Data deleted', response ? response.join(',') : ''); console.info(response);  window.close();}
     );
   });
@@ -34,8 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sendSignalToActiveTab('getStrategyTemplate')
   });
   document.getElementById('uploadStrategyTestParameters').addEventListener('click', function () {
-    chrome.runtime.sendMessage({ action: 'uploadStrategyTestParameters' })
-    // sendSignalToActiveTab('uploadStrategyTestParameters')
+    sendSignalToActiveTab('uploadStrategyTestParameters')
   });
   document.getElementById('clearAll').addEventListener('click', function () {
     sendSignalToActiveTab('clearAll')
