@@ -365,10 +365,11 @@
         return
       }
       document.querySelector(SEL.okBtn).click()
+      const allSignals = [].concat(tsData.buy.split(','),tsData.sell.split(',')).sort()
+      alert(`${allSignals.length} signals are set.\n  - date of the first signal: ${new Date(parseInt(allSignals[0]))}.\n  - date of the last signal: ${new Date(parseInt(allSignals[allSignals.length - 1]))}`)
       isMsgShown =  true
     }
   }
-
 
   const dialogWindowNode = await waitForSelector(SEL.tvDialogRoot, 0)
   if(dialogWindowNode) {
