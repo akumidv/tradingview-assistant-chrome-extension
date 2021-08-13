@@ -27,7 +27,9 @@
 //@version=4
 study(%22iondv Signals%22,shorttitle=%22iondvSignals%22,overlay=true)
 strTSBuy=input(%22%22,%22TSBuy%22)
-strTSSell=input(%22%22,%22TSSell%22)%0AtickerName=input(%22%22,%22Ticker%22)
+strTSSell=input(%22%22,%22TSSell%22)
+tickerName=input(%22%22,%22Ticker%22)
+timeFrame=input(%22%22,%22Timeframe%22)
 var arrTSBuy=str.split(strTSBuy,%22,%22)
 var arrTSSell=str.split(strTSSell,%22,%22)
 plotchar(tickerName==syminfo.ticker and array.includes(arrTSBuy,tostring(time))?low:na,location=location.belowbar,color=color.green,char='▲',title='Buy')

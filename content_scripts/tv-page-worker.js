@@ -345,7 +345,8 @@
       const propVal = {
         TSBuy: tsData && tsData.hasOwnProperty('buy') ? tsData.buy : '',
         TSSell: tsData && tsData.hasOwnProperty('sell') ? tsData.sell : '',
-        Ticker: tickerText
+        Ticker: tickerText,
+        Timeframe: timeFrameText
       }
       const setResult = []
       const propKeys = Object.keys(propVal)
