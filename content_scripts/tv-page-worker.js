@@ -71,7 +71,7 @@
       workerStatus = null
     }
   );
-  function strategyRangeToTemplate(strategyData) {
+  function strategyToRange(strategyData) {
 
   }
   function strategyRangeToTemplate(strategyData) {
@@ -379,7 +379,7 @@
       tickerTextPrev = tickerText
       timeFrameTextPrev = timeFrameText
 
-      if(await tvDialogChangeTabToInput()) {
+      if(!await tvDialogChangeTabToInput()) {
         console.error(`Can't set parameters tab to input`)
         isMsgShown = true
         return
