@@ -12,9 +12,9 @@
   let tickerTextPrev = null
   let timeFrameTextPrev = null
 
-  let strategy = {}
-
   const STORAGE_KEY_PREFIX = 'iondv'
+  const STORAGE_STRATEGY_KEY_PREFIX = 'strategy'
+  const STORAGE_SIGNALS_KEY_PREFIX = 'signals'
 
   const SEL = {
     tvLegendIndicatorItem: 'div[data-name="legend"] div[class^="sourcesWrapper"] div[class^="sources"] div[data-name="legend-source-item"]',
@@ -46,39 +46,98 @@
       workerStatus = request.action
 
       switch (request.action) {
-        case 'uploadSignals':
+        case 'uploadSignals': {
           await uploadFiles(parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)
           break;
-        case 'uploadStrategyTestParameters': // TODO
-          await uploadFiles(parsStrategyParamsAndGetMsg, `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`, false)
+        }
+        case 'uploadStrategyTestParameters': {
+          await uploadFiles(parseStrategyParamsAndGetMsg, '', false)
           break;
-        case 'getStrategyTemplate':
+        }
+        case 'getStrategyTemplate': {
           const strategyData = await getStrategy()
-          if(!strategyData || !strategyData.hasOwnProperty('name')) {
-            alert('It was not possible to find a strategy among the indicators. Add it to the chart and try again.')
+          if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+            alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+          } else {
+            const paramRange = strategyGetRange(strategyData)
+            const strategyRangeParamsCSV = strategyRangeToTemplate(paramRange)
+            saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
+            await storageSetKeys(STORAGE_STRATEGY_KEY_PREFIX, paramRange)
+            alert('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
+          }
+          break;
+        }
+        case 'testStrategy': {
+          const strategyData = await getStrategy()
+          if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+            alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
             break
           }
-          const strategyRange = strategyToRange(strategyData)
-          const strategyRangeTemplateCSV = strategyRangeToTemplate(strategyRange)
+          console.log(strategyData)
+          let paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PREFIX)
+          console.log(paramRange)
+          if(paramRange) {
+            const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
+            console.log(mismatched)
+            if(mismatched) {
+              const isDef = confirm(`The data loaded from the storage has parameters that are not present in the current strategy: ${mismatched.join(',')}.\n\nYou need to load the correct strategy in the Tradingview chart or load new parameters for the current one. \nAlternatively, you can use the default strategy optimization parameters.\n\nShould it use the default settings?`)
+              if (!isDef)
+                break
+              paramRange = strategyGetRange(strategyData)
+            }
+          } else {
+            paramRange = strategyGetRange(strategyData)
+          }
+          console.log(paramRange)
+          await storageSetKeys(STORAGE_STRATEGY_KEY_PREFIX, paramRange)
+          const cyclesStr = prompt(`Please enter the number of cycles for optimization. The maximum value is limited to 1000.\n\nYou can interrupt the search for strategy parameters by reloading the page. All data is stored in the storage after each iteration.\nYou can download it by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+          const cycles = parseInt(cyclesStr) || 100
+          console.log(cycles)
+          // TODO Create data range
+          // TODO realize set strategy params
+          // TODO realize optimization functions
           break;
-        case 'clearAll':
+        }
+        case 'clearAll': {
           const clearRes = await storageClearAll()
           alert(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
           break
+        }
         default:
           console.log('None of realisation for signal:', request)
+
       }
       workerStatus = null
     }
   );
-  function strategyToRange(strategyData) {
 
+  function saveFileAs(text, filename) {
+    var aData = document.createElement('a');
+    aData.setAttribute('href', 'data:text/plain;charset=urf-8,' + encodeURIComponent(text));
+    aData.setAttribute('download', filename);
+    aData.click();
   }
-  function strategyRangeToTemplate(strategyData) {
 
+  function strategyGetRange(strategyData) {
+    const paramRange = {}
+    Object.keys(strategyData.properties).forEach(key => {
+      paramRange[key] = [strategyData.properties[key] === Math.round(strategyData.properties[key]) ? Math.floor(strategyData.properties[key] / 2) : strategyData.properties[key] / 2,
+                                strategyData.properties[key] * 2]
+      const step = paramRange[key][0] === Math.round(paramRange[key][0]) ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
+      paramRange[key].push(step)
+    })
+    return paramRange
   }
+  function strategyRangeToTemplate(paramRange) {
+    let csv = 'Parameter,From,To,Step\n'
+    Object.keys(paramRange).forEach(key => {
+      csv += `${JSON.stringify(key)},${paramRange[key][0]},${paramRange[key][1]},${paramRange[key][2]}\n`
+    })
+    return csv
+  }
+
   async function getStrategy(strategyName) {
-    strategy = {}
+    let strategyData = {}
     const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
     if(!indicatorLegendsEl)
       return null
@@ -92,16 +151,50 @@
       }
       mouseClick(indicatorTitleEl)
       mouseClick(indicatorTitleEl)
-      await waitForTimeout(250)
-      const dialogTitle = await waitForSelector(SEL.indicatorTitle, 5000, true)
-      if(dialogTitle) {
-        console.error(`Dialog window doesn't close`)
+      const dialogTitle = await waitForSelector(SEL.indicatorTitle, 2500)
+      if(!dialogTitle || !dialogTitle.innerText)
+         continue
+      let isPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
+      if(isPropertiesTab) {
+        strategyData = {name: dialogTitle.innerText, properties: {}}
+        if(await tvDialogChangeTabToInput()) {
+          const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+          for(let i = 0; i < indicProperties.length; i++) {
+            const propClassName = indicProperties[i].getAttribute('class')
+            if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
+              i++ // Skip get the next cell because it content values
+              continue // Doesn't realise to manage this kind of properties (two rows)
+            } else if (propClassName.includes('first-')) {
+              const propText = indicProperties[i].innerText
+              i++
+              if(indicProperties[i]) {
+                if(indicProperties[i].querySelector('input')) {
+                  let propValue = indicProperties[i].querySelector('input').value
+                  if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') {
+                    propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just  search point in string
+                    if(!isNaN(propValue))
+                      strategyData.properties[propText] = propValue
+                  } else {
+                    strategyData.properties[propText] = propValue // TODO get all other values from list
+                  }
+
+                } else if(indicProperties[i].querySelector('span[role="button"]')) {
+                  strategyData.properties[propText] = indicProperties[i].querySelector('span[role="button"]').innerText
+                }
+              }
+            } else if (propClassName.includes('fill-')) {
+              continue // Doesn't realise to manage this kind of properties (bool)
+            }
+          }
+        } else {
+          console.error(`Can't set parameters tab to input`)
+        }
+        document.querySelector(SEL.okBtn).click()
         break
       }
-      if(strategy && strategy.hasOwnProperty('name'))
-        break
+      document.querySelector(SEL.okBtn).click()
     }
-    return strategy
+    return strategyData
   }
 
   function parseCSVLine(text) {
@@ -251,7 +344,7 @@
           const buyConv = buyArr.map(dt => dt.getTime())
           const sellArr = shiftToTimeframe(tickersAndTFSignals[tktfName].tsSell,  tfVal, tfType)
           const sellConv = sellArr.map(dt => dt.getTime())
-          await storageSetKeys(tktfName,  {buy: buyConv.filter((item, idx) => buyConv.indexOf(item) === idx).join(','),
+          await storageSetKeys(`${STORAGE_SIGNALS_KEY_PREFIX}_${tktfName}`,  {buy: buyConv.filter((item, idx) => buyConv.indexOf(item) === idx).join(','),
                                                 sell: sellConv.filter((item, idx) => sellConv.indexOf(item) === idx).join(','),
                                                 loadData: (new Date()).toISOString()})
           console.log(`For ${tktfName} loaded ${buyConv.length + sellConv.length} timestamps`)
@@ -268,9 +361,17 @@
     }
   }
 
-  async function parsStrategyParamsAndGetMsg (filename) { // TODO
-    console.log('parsStrategyParamsAndGetMsg filename', filename)
-    return filename
+  async function parseStrategyParamsAndGetMsg (fileData) { // TODO
+    console.log('parsStrategyParamsAndGetMsg filename', fileData)
+    const paramRange = {}
+    const csvData = await parseCSVFile(fileData)
+    const headers = Object.keys(csvData[0])
+    const missColumns = ['parameter','from','to','step'].filter(columnName => !headers.includes(columnName.toLowerCase()))
+    if(missColumns && missColumns.length)
+      return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV. Please add all necessary columns to CSV like showed in the template. Uploading canceled.\n`
+    csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step']])
+    await storageSetKeys(STORAGE_STRATEGY_KEY_PREFIX, paramRange)
+    return `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
   }
 
   async function storageSetKeys(storageKey, value) {
@@ -386,7 +487,7 @@
       }
 
       console.log("Tradingview indicator parameters window opened for ticker:", tickerText);
-      const tsData = await storageGetKey(`${tickerText}::${timeFrameText}`.toLowerCase())
+      const tsData = await storageGetKey(`${STORAGE_SIGNALS_KEY_PREFIX}_${tickerText}::${timeFrameText}`.toLowerCase())
       if(tsData === null) {
         alert(`No data was loaded for the ${tickerText} and timeframe ${timeFrameText}.\n\n` +
           `Please change the ticker and timeframe to correct and reopen script parameter window.`)
@@ -424,46 +525,6 @@
       const allSignals = [].concat(tsData.buy.split(','),tsData.sell.split(',')).sort()
       alert(`${allSignals.length} signals are set.\n  - date of the first signal: ${new Date(parseInt(allSignals[0]))}.\n  - date of the last signal: ${new Date(parseInt(allSignals[allSignals.length - 1]))}`)
       isMsgShown =  true
-    }
-    else if (workerStatus === 'getStrategyTemplate') {
-      let isPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-      if(isPropertiesTab) {
-        strategy = {name: indicatorTitle, properties: {}}
-        if(await tvDialogChangeTabToInput()) {
-          const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
-          for(let i = 0; i < indicProperties.length; i++) {
-            const propClassName = indicProperties[i].getAttribute('class')
-            if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
-              i++ // Skip get the next cell because it content values
-              continue // Doesn't realise to manage this kind of properties (two rows)
-            } else if (propClassName.includes('first-')) {
-              const propText = indicProperties[i].innerText
-              i++
-              if(indicProperties[i]) {
-                if(indicProperties[i].querySelector('input')) {
-                  let propValue = indicProperties[i].querySelector('input').value
-                  if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') {
-                    propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just  search point in string
-                    if(!isNaN(propValue))
-                      strategy.properties[propText] = propValue
-                  } else {
-                    strategy.properties[propText] = propValue // TODO get all other values from list
-                  }
-
-                } else if(indicProperties[i].querySelector('span[role="button"]')) {
-                  strategy.properties[propText] = indicProperties[i].querySelector('span[role="button"]').innerText
-                }
-              }
-
-            } else if (propClassName.includes('fill-')) {
-              continue // Doesn't realise to manage this kind of properties (bool)
-            }
-          }
-        } else {
-          console.error(`Can't set parameters tab to input`)
-        }
-      }
-      document.querySelector(SEL.okBtn).click()
     }
   }
 
