@@ -16,7 +16,7 @@ async function sendSignalToActiveTab (signal) {
       document.getElementById('shim').style.display= 'block'
       document.getElementById('msgbx').style.display = 'block'
       return
-    } else if (['testStrategy', 'downloadStrategyTestResults'].includes(signal)) {
+    } else if (['downloadStrategyTestResults'].includes(signal)) { //'testStrategy',
       document.getElementById('msg-text').innerHTML = 'This feature is not yet implemented in this version of the extension. Please waiting for publishing a new version or look at the development version from the <a href=" http://github.com/akumidv/tradingview-assistant-chrome-extension/">repository</a>.'
       document.getElementById('shim').style.display= 'block'
       document.getElementById('msgbx').style.display = 'block'

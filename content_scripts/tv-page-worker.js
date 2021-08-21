@@ -28,8 +28,17 @@
     timeFrame: '#header-toolbar-intervals div[data-role^="button"][class*="isActive"]',
     indicatorScroll: 'div[data-name="indicator-properties-dialog"] div[class^="scrollable-"]',
     indicatorProperty: 'div[data-name="indicator-properties-dialog"] div[class^="content-"] div[class^="cell-"]',
-    okBtn: 'div[data-name="indicator-properties-dialog"] div[class^="footer-"] button[name="submit"]'
-
+    okBtn: 'div[data-name="indicator-properties-dialog"] div[class^="footer-"] button[name="submit"]',
+    strategyTesterTab: '#footer-chart-panel div[data-name="backtesting"]',
+    strategyTesterTabActive: '#footer-chart-panel div[data-name="backtesting"][data-active="true"]',
+    strategyCaption: '#bottom-area div.backtesting-head-wrapper .strategy-select .caption',
+    strategyDialogParam: '#bottom-area div.backtesting-head-wrapper .js-backtesting-open-format-dialog',
+    strategySummary: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li:nth-child(2)',
+    strategySummaryActive: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li.active:nth-child(2)',
+    strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > div.reports-content.fade',
+    strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
+    strategyReportHeader: '#bottom-area div.backtesting-content-wrapper .report-data thead > tr',
+    strategyReportRow: '#bottom-area div.backtesting-content-wrapper .report-data tbody > tr'
   }
 
   chrome.runtime.onMessage.addListener(
@@ -71,29 +80,25 @@
           const strategyData = await getStrategy()
           if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
             alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
-            break
+            return null
           }
           console.log(strategyData)
-          let paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PREFIX)
-          console.log(paramRange)
-          if(paramRange) {
-            const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
-            console.log(mismatched)
-            if(mismatched) {
-              const isDef = confirm(`The data loaded from the storage has parameters that are not present in the current strategy: ${mismatched.join(',')}.\n\nYou need to load the correct strategy in the Tradingview chart or load new parameters for the current one. \nAlternatively, you can use the default strategy optimization parameters.\n\nShould it use the default settings?`)
-              if (!isDef)
-                break
-              paramRange = strategyGetRange(strategyData)
-            }
-          } else {
-            paramRange = strategyGetRange(strategyData)
-          }
-          console.log(paramRange)
-          await storageSetKeys(STORAGE_STRATEGY_KEY_PREFIX, paramRange)
+          const allRangeParams = await getStrategyRangeParameters(strategyData)
+          if(!allRangeParams)
+            break
           const cyclesStr = prompt(`Please enter the number of cycles for optimization. The maximum value is limited to 1000.\n\nYou can interrupt the search for strategy parameters by reloading the page. All data is stored in the storage after each iteration.\nYou can download it by clicking on the "Download results" button until you launch new strategy testing.`, 100)
-          const cycles = parseInt(cyclesStr) || 100
-          console.log(cycles)
-          // TODO Create data range
+          if(!cyclesStr)
+            break
+          let cycles = parseInt(cyclesStr)
+          if(!cycles || cycles < 1)
+            break
+          const testResults = await switchToStrategyTab()
+          console.log(testResults)
+          testResults.cycles = cycles
+          if(!testResults)
+            break
+          const res = await testStrategy(testResults, strategyData, allRangeParams)
+          console.log('ready')
           // TODO realize set strategy params
           // TODO realize optimization functions
           break;
@@ -111,11 +116,188 @@
     }
   );
 
+  function randomInteger (min = 0, max = 10) {
+    return Math.floor( min + Math.random() * (max + 1 - min))
+  }
+
+
+  async function getOptimizedPropertiesValues(allRangeParams) {
+    const res = {}
+    const paramsNames = Object.keys(allRangeParams)
+    paramsNames.forEach(param => {
+      res[param] = allRangeParams[param][randomInteger(0, allRangeParams[param].length - 1)]
+    })
+    return res
+  }
+
+  function parseReportTable() {
+    // SEL.strategyReportHeader
+    // SEL.strategyReportRow
+    return {}
+  }
+
+  async function testStrategy(testResults, strategyData, allRangeParams) {
+    testResults.perfomanceSummary = []
+    console.log('testStrategy', testResults.cycles, testResults.name, strategyData.name)
+    for(let i = 0; i < testResults.cycles; i++) {
+      const indicatorTitle = await checkAndOpenStrategy(strategyData.name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+      if(!indicatorTitle)
+        break
+
+      const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+
+      const propVal = await getOptimizedPropertiesValues(allRangeParams)
+      const propKeys = Object.keys(propVal)
+      let setResultNumber = 0
+      for(let j = 0; j < indicProperties.length; j++) {
+        const propText = indicProperties[j].innerText
+        if(propKeys.includes(propText)) {
+          setResultNumber++
+          setInputElementValue(indicProperties[j + 1].querySelector('input'), propVal[propText])
+          if(propKeys.length === setResultNumber)
+            break
+        }
+      }
+      document.querySelector(SEL.okBtn).click()
+      // TODO check if not equal propKeys.length === setResultNumber, becouse there is none of changes too. So calulation doesn't start
+      console.log('set params', setResultNumber, propVal)
+      const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1000)
+      console.log(!!isProcessStart)
+      if (isProcessStart) {
+        console.log('Process started', i)
+        const isProcessEnd = await waitForSelector(SEL.strategyReportReady, 5000)
+        if(!isProcessEnd) {
+          alert('The calculation of the strategy parameters took more than 30 seconds for one combination. Testing was stopped.')
+          break
+        } else
+          console.log('Process ended', i)
+      } else {
+        console.log('Process did not started', i)
+      }
+      const perfomanceSummary = parseReportTable() // TODO
+      testResults.perfomanceSummary.push(perfomanceSummary)
+
+      // const notFoundParam = propKeys.filter(item => !setResult.includes(item))
+      // if(notFoundParam && notFoundParam.length) {
+      //   alert(`One of the parameters named ${notFoundParam} was not found in the window. Check the script.\n`)
+      //   isMsgShown = true
+      //   return
+      // }
+
+    }
+    return testResults
+  }
+
+  async function checkAndOpenStrategy(name) {
+    let indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
+    if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
+      const res = await switchToStrategyTab()
+      if(!res)
+        return null
+      const stratParamEl = document.querySelector(SEL.strategyDialogParam)
+      if(!stratParamEl) {
+        alert('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
+        return null
+      }
+      stratParamEl.click()
+      const stratIndicatorEl = await waitForSelector(SEL.indicatorTitle, 2000)
+      if(!stratIndicatorEl) {
+        alert('There is not strategy parameters. Test stopped. Open correct page please')
+        return null
+      }
+      const tabInputEl = document.querySelector(SEL.tabInput)
+      if(!tabInputEl) {
+        alert('There is not strategy parameters input tab. Test stopped. Open correct page please')
+        return null
+      }
+      tabInputEl.click()
+      const tabInputActiveEl = await waitForSelector(SEL.tabInputActive)
+      if(!tabInputActiveEl) {
+        alert('There is not strategy parameters active input tab. Test stopped. Open correct page please')
+        return null
+      }
+      indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
+      if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
+        alert(`The ${name} strategy parameters could not be opened. Reload the page, leave one strategy on the chart and try again.`)
+        return null
+      }
+    }
+    return indicatorTitleEl
+  }
+
+  async function switchToStrategyTab() {
+    let isStrategyActiveEl = document.querySelector(SEL.strategyTesterTabActive)
+    if(!isStrategyActiveEl) {
+      const strategyTabEl = document.querySelector(SEL.strategyTesterTab)
+      if(strategyTabEl) {
+        strategyTabEl.click()
+      }
+      else {
+        alert('There is not strategy tester tab on the page. Open correct page please')
+        return null
+      }
+    }
+    const testResults = {}
+    testResults.ticker = document.querySelector(SEL.ticker).innerText
+    testResults.timeFrame = document.querySelector(SEL.timeFrame).innerText
+    testResults.name = document.querySelector(SEL.strategyCaption).innerText
+    if(!testResults.ticker || !testResults.timeFrame || !testResults.name) {
+      alert('There is not ticker, timeframe or strategy name on the page. Open correct page please')
+      return null
+    }
+    const stratSummaryEl = await waitForSelector(SEL.strategySummary, 1000)
+    if(!stratSummaryEl) {
+      alert('There is not strategy performance summary tab on the page. Open correct page please')
+      return null
+    }
+    stratSummaryEl.click()
+    await waitForSelector(SEL.strategySummaryActive, 1000)
+    return testResults
+  }
+
+  async function getStrategyRangeParameters(strategyData) {
+    let paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PREFIX)
+    console.log(paramRange)
+    if(paramRange) {
+      const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
+      if(mismatched && mismatched.length) {
+        const isDef = confirm(`The data loaded from the storage has parameters that are not present in the current strategy: ${mismatched.join(',')}.\n\nYou need to load the correct strategy in the Tradingview chart or load new parameters for the current one. \nAlternatively, you can use the default strategy optimization parameters.\n\nShould it use the default settings?`)
+        if (!isDef)
+          return null
+        paramRange = strategyGetRange(strategyData)
+      }
+    } else {
+      paramRange = strategyGetRange(strategyData)
+    }
+    console.log(paramRange)
+    await storageSetKeys(STORAGE_STRATEGY_KEY_PREFIX, paramRange)
+    const allRangeParams = createParamsFormRange(paramRange)
+    console.log(allRangeParams)
+    return allRangeParams
+  }
+
+  function createParamsFormRange(paramRange) {
+    const allRangeParams = {}
+
+    Object.keys(paramRange).forEach(key => {
+      allRangeParams[key] = []
+      for(let i = paramRange[key][0]; i < paramRange[key][1]; i = i + paramRange[key][2])
+        allRangeParams[key].push(i)
+      if(allRangeParams[key][allRangeParams[key].length -1] < paramRange[key][1])
+        allRangeParams[key].push(paramRange[key][1])
+    })
+
+
+    return allRangeParams
+
+  }
+
   function saveFileAs(text, filename) {
-    var aData = document.createElement('a');
+    let aData = document.createElement('a');
     aData.setAttribute('href', 'data:text/plain;charset=urf-8,' + encodeURIComponent(text));
     aData.setAttribute('download', filename);
     aData.click();
+    aData.parentNode.removeChild(aData);
   }
 
   function strategyGetRange(strategyData) {
@@ -425,20 +607,22 @@
     mouseTrigger (el, "click");
   }
   const waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(resolve, timeout))
+
   async function waitForSelector(selector, timeout = 5000, isHide = false, parentEl) {
     parentEl = parentEl ? parentEl : document
     return new Promise(async (resolve) => {
       let iter = 0
       let elem
-      const tikTime = 25
+      const tikTime = timeout === 0 ? 1000 : 50
       do {
         await waitForTimeout(tikTime)
         elem = parentEl.querySelector(selector)
         iter += 1
-      } while ( tikTime * iter < timeout && isHide ? !!elem : !elem)
-      if(isHide ? elem : !elem ) {
-        console.error(isHide ? `waitingForSelector: still present ${selector}` : `waitingForSelector: still absent ${selector}`)
-      }
+        // console.log(iter, tikTime * iter, timeout, selector)
+      } while ((timeout === 0 ? true : (tikTime * iter) < timeout) && (isHide ? !!elem : !elem))
+      // if(isHide ? elem : !elem ) {
+      //   console.error(isHide ? `waitingForSelector: still present ${selector}` : `waitingForSelector: still absent ${selector}`)
+      // }
       resolve(elem)
     });
   }
@@ -451,10 +635,12 @@
 
   const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
   const inputEvent = new Event('input', { bubbles: true});
+  const changeEvent = new Event('change', { bubbles: true});
 
-  function setInputElementValue (element, value) {
+  function setInputElementValue (element, value, isChange = false) {
     reactValueSetter.call(element, value)
     element.dispatchEvent(inputEvent);
+    if(isChange) element.dispatchEvent(changeEvent);
   }
 
   async function tvDialogChangeTabToInput() {
