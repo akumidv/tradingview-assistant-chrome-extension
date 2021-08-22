@@ -353,10 +353,14 @@
   function strategyGetRange(strategyData) {
     const paramRange = {}
     Object.keys(strategyData.properties).forEach(key => {
-      paramRange[key] = [strategyData.properties[key] === Math.round(strategyData.properties[key]) ? Math.floor(strategyData.properties[key] / 2) : strategyData.properties[key] / 2,
-                                strategyData.properties[key] * 2]
-      const step = paramRange[key][0] === Math.round(paramRange[key][0]) ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
-      paramRange[key].push(step)
+      const isInteger =  strategyData.properties[key] === Math.round(strategyData.properties[key]) // TODO or convert to string and check the point?
+      if(strategyData.properties[key]) { // Not 0 or Nan
+        paramRange[key] = [isInteger ? Math.floor(strategyData.properties[key] / 2) : strategyData.properties[key] / 2,
+          strategyData.properties[key] * 2]
+        let step = isInteger ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
+        step = isInteger && step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1 // TODO or set paramRange[key][1]?
+        paramRange[key].push(step)
+      }
     })
     return paramRange
   }
@@ -406,12 +410,15 @@
                     propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just  search point in string
                     if(!isNaN(propValue))
                       strategyData.properties[propText] = propValue
-                  } else {
-                    strategyData.properties[propText] = propValue // TODO get all other values from list
                   }
-
-                } else if(indicProperties[i].querySelector('span[role="button"]')) {
-                  strategyData.properties[propText] = indicProperties[i].querySelector('span[role="button"]').innerText
+                  else {
+                    continue
+                    // strategyData.properties[propText] = propValue // TODO get all other values from list
+                  }
+                }
+                else if(indicProperties[i].querySelector('span[role="button"]')) { // TODO as list
+                  continue
+                //   strategyData.properties[propText] = indicProperties[i].querySelector('span[role="button"]').innerText
                 }
               }
             } else if (propClassName.includes('fill-')) {
@@ -593,7 +600,7 @@
     }
   }
 
-  async function parseStrategyParamsAndGetMsg (fileData) { // TODO
+  async function parseStrategyParamsAndGetMsg (fileData) {
     console.log('parsStrategyParamsAndGetMsg filename', fileData)
     const paramRange = {}
     const csvData = await parseCSVFile(fileData)

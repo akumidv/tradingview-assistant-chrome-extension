@@ -4,8 +4,6 @@
 */
 'use strict';
 
-
-
 async function sendSignalToActiveTab (signal) {
   if(signal !== 'clearAll')
     chrome.storage.local.set({'tabId': signal === 'uploadSignals' ? 1 : 2})
