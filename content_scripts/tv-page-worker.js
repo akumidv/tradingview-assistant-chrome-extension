@@ -13,7 +13,8 @@
   let timeFrameTextPrev = null
 
   const STORAGE_KEY_PREFIX = 'iondv'
-  const STORAGE_STRATEGY_KEY_PREFIX = 'strategy'
+  const STORAGE_STRATEGY_KEY_PARAM = 'strategy_param'
+  const STORAGE_STRATEGY_KEY_RESULTS = 'strategy_result'
   const STORAGE_SIGNALS_KEY_PREFIX = 'signals'
 
   const SEL = {
@@ -37,7 +38,7 @@
     strategySummaryActive: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li.active:nth-child(2)',
     strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > div.reports-content.fade',
     strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
-    strategyReportHeader: '#bottom-area div.backtesting-content-wrapper .report-data thead > tr',
+    strategyReportHeader: '#bottom-area div.backtesting-content-wrapper .report-data thead > tr > td',
     strategyReportRow: '#bottom-area div.backtesting-content-wrapper .report-data tbody > tr'
   }
 
@@ -71,7 +72,7 @@
             const paramRange = strategyGetRange(strategyData)
             const strategyRangeParamsCSV = strategyRangeToTemplate(paramRange)
             saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
-            await storageSetKeys(STORAGE_STRATEGY_KEY_PREFIX, paramRange)
+            await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
             alert('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
           }
           break;
@@ -82,7 +83,6 @@
             alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
             return null
           }
-          console.log(strategyData)
           const allRangeParams = await getStrategyRangeParameters(strategyData)
           if(!allRangeParams)
             break
@@ -92,16 +92,22 @@
           let cycles = parseInt(cyclesStr)
           if(!cycles || cycles < 1)
             break
-          const testResults = await switchToStrategyTab()
-          console.log(testResults)
-          testResults.cycles = cycles
-          if(!testResults)
+          let testParams = await switchToStrategyTab()
+          testParams.cycles = cycles
+          if(!testParams)
             break
-          const res = await testStrategy(testResults, strategyData, allRangeParams)
-          console.log('ready')
-          // TODO realize set strategy params
-          // TODO realize optimization functions
+          const testResults = await testStrategy(testParams, strategyData, allRangeParams)  // TODO realize optimization functions
+          console.log('testResults', testResults)
+          const CSVResults = convertResultsToCSV(testResults)  // TODO realize save as CSV
+          saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}`)
           break;
+        }
+        case 'downloadStrategyTestResults': {
+          const testResults = await storageGetKey(STORAGE_STRATEGY_KEY_RESULTS)
+          console.log('testResults', testResults)
+          const CSVResults = convertResultsToCSV(testResults)
+          saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}`)
+          break
         }
         case 'clearAll': {
           const clearRes = await storageClearAll()
@@ -115,6 +121,11 @@
       workerStatus = null
     }
   );
+
+  function convertResultsToCSV(testResults) {
+    return ''
+
+  }
 
   function randomInteger (min = 0, max = 10) {
     return Math.floor( min + Math.random() * (max + 1 - min))
@@ -131,19 +142,42 @@
   }
 
   function parseReportTable() {
-    // SEL.strategyReportHeader
-    // SEL.strategyReportRow
-    return {}
+    const strategyHeaders = []
+    const allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
+    for(let headerEl of allHeadersEl) {
+      if(headerEl)
+        strategyHeaders.push(headerEl.innerText)
+    }
+
+    const report = {}
+    const allReportRowsEl = document.querySelectorAll(SEL.strategyReportRow)
+    for(let rowEl of allReportRowsEl) {
+      if(rowEl) {
+        const allTdEl = rowEl.querySelectorAll('td')
+        if(!allTdEl || allTdEl.length < 2 || !allTdEl[0])
+          continue
+        let paramName = allTdEl[0].innerText
+        for(let i = 1; i < allTdEl.length; i++) {
+          const values = allTdEl[i].innerText
+          if(values && values.trim() && strategyHeaders[i])
+            report[`${paramName} ${strategyHeaders[i]}`] = values
+        }
+      }
+    }
+
+    return report
   }
 
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
-    console.log('testStrategy', testResults.cycles, testResults.name, strategyData.name)
+    testResults.shortName = strategyData.name
+    console.log('testStrategy', testResults.shortName, testResults.cycles, 'times')
+    testResults.paramsNames = Object.keys(allRangeParams)
+
     for(let i = 0; i < testResults.cycles; i++) {
       const indicatorTitle = await checkAndOpenStrategy(strategyData.name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
       if(!indicatorTitle)
         break
-
       const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
 
       const propVal = await getOptimizedPropertiesValues(allRangeParams)
@@ -159,31 +193,19 @@
         }
       }
       document.querySelector(SEL.okBtn).click()
-      // TODO check if not equal propKeys.length === setResultNumber, becouse there is none of changes too. So calulation doesn't start
-      console.log('set params', setResultNumber, propVal)
+      // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
       const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1000)
-      console.log(!!isProcessStart)
       if (isProcessStart) {
-        console.log('Process started', i)
         const isProcessEnd = await waitForSelector(SEL.strategyReportReady, 5000)
         if(!isProcessEnd) {
           alert('The calculation of the strategy parameters took more than 30 seconds for one combination. Testing was stopped.')
           break
-        } else
-          console.log('Process ended', i)
-      } else {
-        console.log('Process did not started', i)
+        }
       }
-      const perfomanceSummary = parseReportTable() // TODO
-      testResults.perfomanceSummary.push(perfomanceSummary)
-
-      // const notFoundParam = propKeys.filter(item => !setResult.includes(item))
-      // if(notFoundParam && notFoundParam.length) {
-      //   alert(`One of the parameters named ${notFoundParam} was not found in the window. Check the script.\n`)
-      //   isMsgShown = true
-      //   return
-      // }
-
+      const report = parseReportTable()
+      propKeys.forEach(key => report[`__${key}`] = propVal[key])
+      testResults.perfomanceSummary.push(report)
+      await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
     }
     return testResults
   }
@@ -256,7 +278,7 @@
   }
 
   async function getStrategyRangeParameters(strategyData) {
-    let paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PREFIX)
+    let paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PARAM)
     console.log(paramRange)
     if(paramRange) {
       const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
@@ -270,7 +292,7 @@
       paramRange = strategyGetRange(strategyData)
     }
     console.log(paramRange)
-    await storageSetKeys(STORAGE_STRATEGY_KEY_PREFIX, paramRange)
+    await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
     const allRangeParams = createParamsFormRange(paramRange)
     console.log(allRangeParams)
     return allRangeParams
@@ -297,7 +319,8 @@
     aData.setAttribute('href', 'data:text/plain;charset=urf-8,' + encodeURIComponent(text));
     aData.setAttribute('download', filename);
     aData.click();
-    aData.parentNode.removeChild(aData);
+    if (aData.parentNode)
+      aData.parentNode.removeChild(aData);
   }
 
   function strategyGetRange(strategyData) {
@@ -552,7 +575,7 @@
     if(missColumns && missColumns.length)
       return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV. Please add all necessary columns to CSV like showed in the template. Uploading canceled.\n`
     csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step']])
-    await storageSetKeys(STORAGE_STRATEGY_KEY_PREFIX, paramRange)
+    await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
     return `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
   }
 
