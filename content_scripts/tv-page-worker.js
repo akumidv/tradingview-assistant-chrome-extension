@@ -98,15 +98,24 @@
             break
           const testResults = await testStrategy(testParams, strategyData, allRangeParams)  // TODO realize optimization functions
           console.log('testResults', testResults)
-          const CSVResults = convertResultsToCSV(testResults)  // TODO realize save as CSV
-          saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}`)
+          if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
+            alert('There is no data for conversion. Try to do test again')
+            break
+          }
+          const CSVResults = convertResultsToCSV(testResults)
+          saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
           break;
         }
         case 'downloadStrategyTestResults': {
           const testResults = await storageGetKey(STORAGE_STRATEGY_KEY_RESULTS)
+          if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
+            alert('There is no data for conversion. Try to do test again')
+            break
+          }
           console.log('testResults', testResults)
           const CSVResults = convertResultsToCSV(testResults)
-          saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}`)
+          console.log('CSVResults', CSVResults)
+          saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
           break
         }
         case 'clearAll': {
@@ -123,8 +132,19 @@
   );
 
   function convertResultsToCSV(testResults) {
-    return ''
-
+    if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)
+      return 'There is no data for conversion'
+    const headers = Object.keys(testResults.perfomanceSummary[0]).sort()
+    let csv = headers.map(header => JSON.stringify(header)).join(',')
+    csv += '\n'
+    // testResults.paramsNames.forEach(paramName => csv.replace(`__${paramName}`, paramName)) // TODO isFirst? or leave it as it is
+    testResults.perfomanceSummary.forEach(row => {
+      const rowData = headers.map(key => row[key] ? JSON.stringify(row[key]) : '')
+      csv += rowData.join(',')
+      csv += '\n'
+      // csv += `${JSON.stringify(key)},${paramRange[key][0]},${paramRange[key][1]},${paramRange[key][2]}\n`
+    })
+    return csv
   }
 
   function randomInteger (min = 0, max = 10) {
@@ -158,9 +178,22 @@
           continue
         let paramName = allTdEl[0].innerText
         for(let i = 1; i < allTdEl.length; i++) {
-          const values = allTdEl[i].innerText
-          if(values && values.trim() && strategyHeaders[i])
-            report[`${paramName} ${strategyHeaders[i]}`] = values
+          let values = allTdEl[i].innerText
+          values = values ? values.trim() : values
+          if(values && strategyHeaders[i]) {
+            if(values.includes('\n') && (values.endsWith('%') || values.includes('N/A'))) {
+              const valuesPair = values.split('\n', 2)
+              if(valuesPair && valuesPair.length == 2) {
+                report[`${paramName} ${strategyHeaders[i]}`] = valuesPair[0]
+                report[`${paramName} ${strategyHeaders[i]} %`] = valuesPair[1]
+              } else {
+                report[`${paramName} ${strategyHeaders[i]}`] = values
+              }
+            } else {
+              report[`${paramName} ${strategyHeaders[i]}`] = values
+            }
+          }
+
         }
       }
     }
@@ -279,7 +312,6 @@
 
   async function getStrategyRangeParameters(strategyData) {
     let paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PARAM)
-    console.log(paramRange)
     if(paramRange) {
       const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
       if(mismatched && mismatched.length) {
@@ -291,10 +323,8 @@
     } else {
       paramRange = strategyGetRange(strategyData)
     }
-    console.log(paramRange)
     await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
     const allRangeParams = createParamsFormRange(paramRange)
-    console.log(allRangeParams)
     return allRangeParams
   }
 
@@ -308,10 +338,7 @@
       if(allRangeParams[key][allRangeParams[key].length -1] < paramRange[key][1])
         allRangeParams[key].push(paramRange[key][1])
     })
-
-
     return allRangeParams
-
   }
 
   function saveFileAs(text, filename) {
