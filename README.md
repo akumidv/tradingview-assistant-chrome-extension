@@ -32,12 +32,11 @@ Go to the extensions tab by following the link `chrome://extensions`. Click the 
 
 ## TODO
 For implementation:
-- getting parameters from lists and logical parameters
-- implementation of automatically detect  parameters of the float type
 - implementation of the selection of optimization strategies (currently only random selection)
 - selection of a parameter for optimization from the list in the strategy
 - selection of the optimization direction - decrease or increase of the parameter
-- display of the best results
+- getting parameters from lists and logical parameters
+- implementation of automatically detect parameters of the float type
 
 ## PS
 ** The field separator for CSV files is a comma.

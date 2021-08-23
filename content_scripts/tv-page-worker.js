@@ -130,7 +130,8 @@
               propVal[paramName] = bestResult[`__${paramName}`]
           })
           await setStrategyParams(testResults.shortName, propVal)
-          alert(`${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
+          if(bestResult && bestResult.hasOwnProperty('Net Profit All'))
+            alert('The best found parameters are set for the strategy\n\nThe best Net Profit All: ' + bestResult['Net Profit All'])
           saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
           break
         }
