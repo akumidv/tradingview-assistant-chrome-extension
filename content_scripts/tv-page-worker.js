@@ -81,7 +81,7 @@
           const strategyData = await getStrategy()
           if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
             alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
-            return null
+            break
           }
           const allRangeParams = await getStrategyRangeParameters(strategyData)
           if(!allRangeParams)
@@ -103,6 +103,14 @@
             break
           }
           const CSVResults = convertResultsToCSV(testResults)
+          const bestResult = testResults.perfomanceSummary ? getBestResult(testResults.perfomanceSummary) : {}
+          const propVal = {}
+          testResults.paramsNames.forEach(paramName => {
+            if(bestResult.hasOwnProperty(`__${paramName}`))
+              propVal[paramName] = bestResult[`__${paramName}`]
+          })
+          await setStrategyParams(testResults.shortName, propVal)
+          alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
           saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
           break;
         }
@@ -114,7 +122,15 @@
           }
           console.log('testResults', testResults)
           const CSVResults = convertResultsToCSV(testResults)
-          console.log('CSVResults', CSVResults)
+
+          const bestResult = testResults.perfomanceSummary ? getBestResult(testResults.perfomanceSummary) : {}
+          const propVal = {}
+          testResults.paramsNames.forEach(paramName => {
+            if(bestResult.hasOwnProperty(`__${paramName}`))
+              propVal[paramName] = bestResult[`__${paramName}`]
+          })
+          await setStrategyParams(testResults.shortName, propVal)
+          alert(`${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
           saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
           break
         }
@@ -131,6 +147,19 @@
     }
   );
 
+  function getBestResult(perfomanceSummary) {
+    let maxProfit = null
+    const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
+      if(curResult.hasOwnProperty('Net Profit All') && (maxProfit === null || maxProfit < curResult['Net Profit All'])) {
+        maxProfit = curResult['Net Profit All']
+        return curResult
+      }
+      return curBestRes
+    })
+    console.log('bestResult:', bestResult)
+    return bestResult
+  }
+
   function convertResultsToCSV(testResults) {
     if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)
       return 'There is no data for conversion'
@@ -142,7 +171,6 @@
       const rowData = headers.map(key => row[key] ? JSON.stringify(row[key]) : '')
       csv += rowData.join(',')
       csv += '\n'
-      // csv += `${JSON.stringify(key)},${paramRange[key][0]},${paramRange[key][1]},${paramRange[key][2]}\n`
     })
     return csv
   }
@@ -179,19 +207,21 @@
         let paramName = allTdEl[0].innerText
         for(let i = 1; i < allTdEl.length; i++) {
           let values = allTdEl[i].innerText
-          values = values ? values.trim() : values
+          values = values ? values.replace(' ', ' ').trim() : values
+          const digitOfValues = Number(values)
           if(values && strategyHeaders[i]) {
             if(values.includes('\n') && (values.endsWith('%') || values.includes('N/A'))) {
               const valuesPair = values.split('\n', 2)
               if(valuesPair && valuesPair.length == 2) {
-                report[`${paramName} ${strategyHeaders[i]}`] = valuesPair[0]
-                report[`${paramName} ${strategyHeaders[i]} %`] = valuesPair[1]
-              } else {
-                report[`${paramName} ${strategyHeaders[i]}`] = values
+                report[`${paramName} ${strategyHeaders[i]}`] = valuesPair[0].includes('$') ? parseFloat(valuesPair[0].replace('$', '').trim()) : valuesPair[0]
+                report[`${paramName} ${strategyHeaders[i]} %`] = valuesPair[1].includes('%') ? parseFloat(valuesPair[1].replace('%', '').trim()) : valuesPair[1]
+                continue
               }
-            } else {
-              report[`${paramName} ${strategyHeaders[i]}`] = values
             }
+            if(digitOfValues !== NaN)
+              report[`${paramName} ${strategyHeaders[i]}`]
+            else
+              report[`${paramName} ${strategyHeaders[i]}`] = values.includes('$') ? parseFloat(values.replace('$', '').trim()) : values.includes('%') ? parseFloat(values.replace('%', '').trim()) : values
           }
 
         }
@@ -208,25 +238,11 @@
     testResults.paramsNames = Object.keys(allRangeParams)
 
     for(let i = 0; i < testResults.cycles; i++) {
-      const indicatorTitle = await checkAndOpenStrategy(strategyData.name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
-      if(!indicatorTitle)
-        break
-      const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
-
       const propVal = await getOptimizedPropertiesValues(allRangeParams)
-      const propKeys = Object.keys(propVal)
-      let setResultNumber = 0
-      for(let j = 0; j < indicProperties.length; j++) {
-        const propText = indicProperties[j].innerText
-        if(propKeys.includes(propText)) {
-          setResultNumber++
-          setInputElementValue(indicProperties[j + 1].querySelector('input'), propVal[propText])
-          if(propKeys.length === setResultNumber)
-            break
-        }
-      }
-      document.querySelector(SEL.okBtn).click()
-      // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
+      const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
+      if(!isParamsSet)
+        break
+
       const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1000)
       if (isProcessStart) {
         const isProcessEnd = await waitForSelector(SEL.strategyReportReady, 5000)
@@ -236,11 +252,32 @@
         }
       }
       const report = parseReportTable()
-      propKeys.forEach(key => report[`__${key}`] = propVal[key])
+      Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
       testResults.perfomanceSummary.push(report)
       await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
     }
     return testResults
+  }
+
+  async function setStrategyParams (name, propVal) {
+    const indicatorTitle = await checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+    if(!indicatorTitle)
+      return null
+    const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+    const propKeys = Object.keys(propVal)
+    let setResultNumber = 0
+    for(let j = 0; j < indicProperties.length; j++) {
+      const propText = indicProperties[j].innerText
+      if(propKeys.includes(propText)) {
+        setResultNumber++
+        setInputElementValue(indicProperties[j + 1].querySelector('input'), propVal[propText])
+        if(propKeys.length === setResultNumber)
+          break
+      }
+    }
+    // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
+    document.querySelector(SEL.okBtn).click()
+    return true
   }
 
   async function checkAndOpenStrategy(name) {
