@@ -117,7 +117,7 @@
         }
         case 'downloadStrategyTestResults': {
           const testResults = await storageGetKey(STORAGE_STRATEGY_KEY_RESULTS)
-          if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
+          if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
             alert('There is no data for conversion. Try to do test again')
             break
           }
