@@ -109,7 +109,6 @@
             if(bestResult.hasOwnProperty(`__${paramName}`))
               propVal[paramName] = bestResult[`__${paramName}`]
           })
-          console.log(propVal)
           await setStrategyParams(testResults.shortName, propVal)
           alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
           console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
