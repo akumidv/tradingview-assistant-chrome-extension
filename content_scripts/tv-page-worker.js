@@ -202,14 +202,11 @@
     for(let rowEl of allReportRowsEl) {
       if(rowEl) {
         const allTdEl = rowEl.querySelectorAll('td')
-        console.log('allTdEl.length', allTdEl.length)
         if(!allTdEl || allTdEl.length < 2 || !allTdEl[0])
           continue
         let paramName = allTdEl[0].innerText
-        console.log('paramName', paramName)
         for(let i = 1; i < allTdEl.length; i++) {
           let values = allTdEl[i].innerText
-          console.log('paramName', paramName, i, strategyHeaders[i], values)
           values = values ? values.replace(' ', ' ').trim() : values
           const digitOfValues = Number(values)
           if(values && strategyHeaders[i]) {
