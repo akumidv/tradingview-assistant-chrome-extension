@@ -255,7 +255,6 @@
       const report = parseReportTable()
       Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
       testResults.perfomanceSummary.push(report)
-      console.log(report)
 
       await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
     }
