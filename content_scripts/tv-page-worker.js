@@ -109,8 +109,10 @@
             if(bestResult.hasOwnProperty(`__${paramName}`))
               propVal[paramName] = bestResult[`__${paramName}`]
           })
+          console.log(propVal)
           await setStrategyParams(testResults.shortName, propVal)
           alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
+          console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
           saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
           break;
         }
@@ -149,12 +151,9 @@
   );
 
   function getBestResult(perfomanceSummary) {
-    let maxProfit = null
     const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
-      if(curResult.hasOwnProperty('Net Profit All') && (maxProfit === null || maxProfit < curResult['Net Profit All'])) {
-        maxProfit = curResult['Net Profit All']
+      if(curResult.hasOwnProperty('Net Profit All') && (!curBestRes || curBestRes['Net Profit All'] < curResult['Net Profit All']))
         return curResult
-      }
       return curBestRes
     })
     console.log('bestResult:', bestResult)
@@ -203,26 +202,29 @@
     for(let rowEl of allReportRowsEl) {
       if(rowEl) {
         const allTdEl = rowEl.querySelectorAll('td')
+        console.log('allTdEl.length', allTdEl.length)
         if(!allTdEl || allTdEl.length < 2 || !allTdEl[0])
           continue
         let paramName = allTdEl[0].innerText
+        console.log('paramName', paramName)
         for(let i = 1; i < allTdEl.length; i++) {
           let values = allTdEl[i].innerText
+          console.log('paramName', paramName, i, strategyHeaders[i], values)
           values = values ? values.replace(' ', ' ').trim() : values
           const digitOfValues = Number(values)
           if(values && strategyHeaders[i]) {
             if(values.includes('\n') && (values.endsWith('%') || values.includes('N/A'))) {
               const valuesPair = values.split('\n', 2)
               if(valuesPair && valuesPair.length == 2) {
-                report[`${paramName} ${strategyHeaders[i]}`] = valuesPair[0].includes('$') ? parseFloat(valuesPair[0].replace('$', '').trim()) : valuesPair[0]
-                report[`${paramName} ${strategyHeaders[i]} %`] = valuesPair[1].includes('%') ? parseFloat(valuesPair[1].replace('%', '').trim()) : valuesPair[1]
+                report[`${paramName} ${strategyHeaders[i]}`] = valuesPair[0].includes('$') ? parseFloat(valuesPair[0].replace('$', '').trim()) : Number(valuesPair[0]) !== NaN ? Number(valuesPair[0]) : valuesPair[0]
+                report[`${paramName} ${strategyHeaders[i]} %`] = valuesPair[1].includes('%') ? parseFloat(valuesPair[1].replace('%', '').trim()) : Number(valuesPair[1]) !== NaN ? Number(valuesPair[1]) : valuesPair[1]
                 continue
               }
             }
             if(digitOfValues !== NaN)
               report[`${paramName} ${strategyHeaders[i]}`]
             else
-              report[`${paramName} ${strategyHeaders[i]}`] = values.includes('$') ? parseFloat(values.replace('$', '').trim()) : values.includes('%') ? parseFloat(values.replace('%', '').trim()) : values
+              report[`${paramName} ${strategyHeaders[i]}`] = values.includes('$') ? parseFloat(values.replace('$', '').trim()) : values.includes('%') ? parseFloat(values.replace('%', '').trim()) : Number(values) !== NaN ? Number(values) : values
           }
 
         }
@@ -237,14 +239,13 @@
     testResults.shortName = strategyData.name
     console.log('testStrategy', testResults.shortName, testResults.cycles, 'times')
     testResults.paramsNames = Object.keys(allRangeParams)
-
     for(let i = 0; i < testResults.cycles; i++) {
       const propVal = await getOptimizedPropertiesValues(allRangeParams)
       const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
       if(!isParamsSet)
         break
 
-      const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1000)
+      const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
       if (isProcessStart) {
         const isProcessEnd = await waitForSelector(SEL.strategyReportReady, 5000)
         if(!isProcessEnd) {
@@ -252,9 +253,13 @@
           break
         }
       }
+
+      await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
       const report = parseReportTable()
       Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
       testResults.perfomanceSummary.push(report)
+      console.log(report)
+
       await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
     }
     return testResults
@@ -277,7 +282,8 @@
       }
     }
     // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
-    document.querySelector(SEL.okBtn).click()
+    if(document.querySelector(SEL.okBtn))
+      document.querySelector(SEL.okBtn).click()
     return true
   }
 
@@ -448,10 +454,8 @@
                     propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just  search point in string
                     if(!isNaN(propValue))
                       strategyData.properties[propText] = propValue
-                  }
-                  else {
-                    continue
-                    // strategyData.properties[propText] = propValue // TODO get all other values from list
+                  } else {
+                    strategyData.properties[propText] = propValue // TODO get all other values from list  // TODO not only inputmode==numbers input have digits
                   }
                 }
                 else if(indicProperties[i].querySelector('span[role="button"]')) { // TODO as list
