@@ -159,10 +159,11 @@
     }
   );
 
-  function getBestResult(perfomanceSummary) {
+  function getBestResult(perfomanceSummary, checkField = 'Net Profit All') {
     const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
-      if(curResult.hasOwnProperty('Net Profit All') && (!curBestRes || curBestRes['Net Profit All'] < curResult['Net Profit All']))
+      if(curResult.hasOwnProperty(checkField) && (!curBestRes || !curBestRes[checkField] || curBestRes[checkField] < curResult[checkField]))
         return curResult
+
       return curBestRes
     })
     console.log('bestResult:', bestResult)
@@ -183,7 +184,7 @@
 
   function statusMessage(msgText) {
     const isStatusPresent = document.getElementById('iondvStatus')
-    const msgEl =isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
+    const msgEl = isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
     if(!isStatusPresent) {
       msgEl.setAttribute("id","iondvStatus");
       msgEl.setAttribute("style","background-color: #fffcd7;" +
@@ -201,16 +202,22 @@
         "justify-content: left; " +
         "text-align: left;");
     }
-    msgEl.innerHTML = '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
-      '<div style="font-size: 18px;margin-bottom: 10px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
-      msgText;
-    if(!isStatusPresent) {
-      const tvDialog = document.getElementById('overlap-manager-root')
-      if(tvDialog)
-        document.body.insertBefore(msgEl, tvDialog) // For avoid problem if msg overlap tv dialog window
-      else
-        document.body.appendChild(msgEl);
+    if(isStatusPresent && msgEl && document.getElementById('iondvMsg')) {
+      document.getElementById('iondvMsg').innerHTML = msgText
+    } else {
+      msgEl.innerHTML = '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
+        '<div style="font-size: 18px;margin-bottom: 10px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
+        '<div id="iondvMsg" style="margin: 5px 3px">' +
+        msgText + '</div>';
+      if(!isStatusPresent) {
+        const tvDialog = document.getElementById('overlap-manager-root')
+        if(tvDialog)
+          document.body.insertBefore(msgEl, tvDialog) // For avoid problem if msg overlap tv dialog window
+        else
+          document.body.appendChild(msgEl);
+      }
     }
+
   }
 
   function statusMessageRemove() {
