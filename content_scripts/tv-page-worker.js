@@ -39,6 +39,7 @@
     strategySummaryActive: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li.active:nth-child(2)',
     strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > div.reports-content.fade',
     strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
+    strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
     strategyReportHeader: '#bottom-area div.backtesting-content-wrapper .report-data thead > tr > td',
     strategyReportRow: '#bottom-area div.backtesting-content-wrapper .report-data tbody > tr'
   }
@@ -167,7 +168,13 @@
   function convertResultsToCSV(testResults) {
     if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)
       return 'There is no data for conversion'
-    const headers = Object.keys(testResults.perfomanceSummary[0]).sort()
+    let headers = Object.keys(testResults.perfomanceSummary[0]) // The first test table can be with error and can't have rows with previous values when parsedReport
+    if(testResults.hasOwnProperty('paramsNames') && headers.length <= (Object.keys(testResults.paramsNames).length + 1)) { // Find the another header if only params names and 'comment' in headers
+      const headersAll = testResults.perfomanceSummary.find(report => Object.keys(report).length > headers.length)
+      if(headersAll)
+        headers = Object.keys(headersAll)
+    }
+
     let csv = headers.map(header => JSON.stringify(header)).join(',')
     csv += '\n'
     // testResults.paramsNames.forEach(paramName => csv.replace(`__${paramName}`, paramName)) // TODO isFirst? or leave it as it is
@@ -236,6 +243,7 @@
     return report
   }
 
+  let isShowedAboutProcessEnd = false
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
@@ -248,19 +256,29 @@
         break
 
       const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
+      let report = {}
+      let isProcessEnd = null
+      let isProcessError = null
       if (isProcessStart) {
-        const isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
+        isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
         if(!isProcessEnd) {
-          alert('The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.')
-          continue
+          if(!isShowedAboutProcessEnd) {
+            alert('The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped. \nAll others cases will be skipped automatically')
+            isShowedAboutProcessEnd = true
+          }
+        } else {
+          await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
         }
       }
+      isProcessError = document.querySelector(SEL.strategyReportError)
+      if(!isProcessError)
+        report = parseReportTable()
 
-      await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
-      const report = parseReportTable()
       Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
+      report['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
+        !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
+        isProcessEnd ? '' : 'Skipped due to waiting for result more than 30 seconds'
       testResults.perfomanceSummary.push(report)
-
       await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
     }
     return testResults
@@ -731,7 +749,6 @@
         await waitForTimeout(tikTime)
         elem = parentEl.querySelector(selector)
         iter += 1
-        // console.log(iter, tikTime * iter, timeout, selector)
       } while ((timeout === 0 ? true : (tikTime * iter) < timeout) && (isHide ? !!elem : !elem))
       // if(isHide ? elem : !elem ) {
       //   console.error(isHide ? `waitingForSelector: still present ${selector}` : `waitingForSelector: still absent ${selector}`)
