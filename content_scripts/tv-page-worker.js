@@ -7,7 +7,7 @@
 
 (async function() {
 
-  const MAX_PARAM_NAME = 'Net Profit All'
+  const MAX_PARAM_NAME = '.Margin'
 
   let isMsgShown = false
   let workerStatus = null
@@ -116,8 +116,8 @@
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
-            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
-            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best' + MAX_PARAM_NAME +': ' + bestResult[MAX_PARAM_NAME] : ''}`)
+            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME.replace('.', '') + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
+            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best' + MAX_PARAM_NAME.replace('.', '') +': ' + bestResult[MAX_PARAM_NAME] : ''}`)
             console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
             saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
             statusMessageRemove()
@@ -312,9 +312,15 @@
     return report
   }
 
-
+// console.log('###', calculateAdditionValuesToReport({ 'Percent Profitable All': 84, 'Ratio Avg Win / Avg Loss All': 1.78})) // Test
   function calculateAdditionValuesToReport(report) {
-
+    if(!report.hasOwnProperty('Percent Profitable All') || !typeof report['Percent Profitable All']  === 'number' ||
+      !report.hasOwnProperty('Ratio Avg Win / Avg Loss All') || !typeof report['Ratio Avg Win / Avg Loss All']  === 'number')
+      return report
+    report['.Percent Decimal'] = report['Percent Profitable All'] / 100
+    report['.Reward'] = report['Ratio Avg Win / Avg Loss All'] * 100
+    report['.Breakeven'] = (100 /(100+report['.Reward'])) + 0.2
+    report['.Margin'] = report['.Percent Decimal'] - report['.Breakeven']
 
     return report
   }
