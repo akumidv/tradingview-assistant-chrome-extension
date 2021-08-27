@@ -98,6 +98,7 @@
             testParams.cycles = cycles
             if(!testParams)
               break
+            statusMessage('Started')
             const testResults = await testStrategy(testParams, strategyData, allRangeParams)  // TODO realize optimization functions
             console.log('testResults', testResults)
             if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
@@ -112,9 +113,11 @@
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
+            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
             alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
             console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
             saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
+            statusMessageRemove()
             break;
           }
           case 'downloadStrategyTestResults': {
@@ -152,6 +155,7 @@
         alert(`An error has occurred.\n\nReload the page and try again.\nYou can describe the problem by following the link https://github.com/akumidv/tradingview-assistant-chrome-extension/.\n\nError message: ${err.message}`)
       }
       workerStatus = null
+      statusMessageRemove()
     }
   );
 
@@ -163,6 +167,51 @@
     })
     console.log('bestResult:', bestResult)
     return bestResult
+  }
+
+  function autoCloseAlert(msg, duration = 2000) {
+    console.log('autoCloseAlert')
+    const altEl = document.createElement("div");
+    altEl.setAttribute("style","background-color: lightgray;color:black; width: 450px;height: 300px;position: absolute;top:0;bottom:0;left:0;right:0;margin:auto;border: 1px solid black;font-family:arial;font-size:25px;font-weight:bold;display: flex; align-items: center; justify-content: center; text-align: center;");
+    altEl.setAttribute("id","iondvAlert");
+    altEl.innerHTML = msg;
+    setTimeout(function() {
+      altEl.parentNode.removeChild(altEl);
+    }, duration);
+    document.body.appendChild(altEl);
+  }
+
+  function statusMessage(msgText) {
+    const isStatusPresent = document.getElementById('iondvStatus')
+    const altEl =isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
+    if(!isStatusPresent) {
+      altEl.setAttribute("id","iondvStatus");
+      altEl.setAttribute("style","background-color: white;" +
+        "color: black;" +
+        "width: 800px;" +
+        "height: 150px;" +
+        "position: fixed;" +
+        "top: 1%;" +
+        "right: 0;" +
+        "left: 0;" +
+        "margin: auto;" +
+        "border: 1px solid lightblue;" +
+        // "display: flex;" +
+        "align-items: center; " +
+        "justify-content: left; " +
+        "text-align: left;");
+    }
+    altEl.innerHTML = '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
+      '<div style="font-size: 18px;margin-bottom: 10px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
+      msgText;
+    if(!isStatusPresent)
+      document.body.appendChild(altEl);
+  }
+
+  function statusMessageRemove() {
+    const statusMessageEl = document.getElementById('iondvStatus')
+    if(statusMessageEl)
+      statusMessageEl.parentNode.removeChild(statusMessageEl)
   }
 
   function convertResultsToCSV(testResults) {
@@ -244,6 +293,7 @@
   }
 
   let isShowedAboutProcessEnd = false
+  let maxNetProfit = null
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
@@ -261,25 +311,31 @@
       let isProcessError = null
       if (isProcessStart) {
         isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
-        if(!isProcessEnd) {
-          if(!isShowedAboutProcessEnd) {
-            alert('The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped. \nAll others cases will be skipped automatically')
-            isShowedAboutProcessEnd = true
-          }
-        } else {
-          await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
-        }
       }
       isProcessError = document.querySelector(SEL.strategyReportError)
-      if(!isProcessError)
+      if(!isProcessError && isProcessEnd) {
+        await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
         report = parseReportTable()
+      }
 
       Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
       report['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
         !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
-        isProcessEnd ? '' : 'Skipped due to waiting for result more than 30 seconds'
+        isProcessEnd ? '' : 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.'
       testResults.perfomanceSummary.push(report)
       await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
+      try {
+        if(report.hasOwnProperty('Net Profit All')) {
+          if(maxNetProfit === null)
+            maxNetProfit = report['Net Profit All']
+          else
+            maxNetProfit = maxNetProfit < report['Net Profit All'] ? report['Net Profit All'] : maxNetProfit
+        }
+        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p>
+                               <p>Max net profit: ${maxNetProfit}.</p>
+${report['comment'] ? '<p style="color: red">' + report['comment'] + '</p>' : report['Net Profit All'] ? '<p>Current Net Profit ' + report['Net Profit All'] + '.</p>': ''}`)
+      } catch {}
+
     }
     return testResults
   }
