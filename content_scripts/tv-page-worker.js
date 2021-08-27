@@ -386,12 +386,11 @@
     } else {
       const propVal = optRandomGetPropertiesValues(allRangeParams)
       const res = getTestIterationResult(testResults.shortName, propVal)
-      if(!res.data) continue
+      if(!res || !res.data)
+        return res
     }
     bestValue = optimizationState.bestEnergy
 
-    if(!res || !res.data)
-      return res
     if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
       res.currentValue = res.data[MAX_PARAM_NAME]
       if(bestValue === null || typeof bestValue === 'undefined')
@@ -432,7 +431,7 @@
           break
         case 'random':
         default:
-          optRes = optRandomIteration(allRangeParams, testResults, bestValue)
+          optRes = await optRandomIteration(allRangeParams, testResults, bestValue)
       }
       if(!optRes.data) continue
       bestValue = optRes.hasOwnProperty(bestValue) ?  optRes.bestValue : bestValue
