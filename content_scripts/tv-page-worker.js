@@ -7,6 +7,8 @@
 
 (async function() {
 
+  const MAX_PARAM_NAME = 'Net Profit All'
+
   let isMsgShown = false
   let workerStatus = null
   let tickerTextPrev = null
@@ -113,9 +115,9 @@
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
-            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
-            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
-            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
+            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
+            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best' + MAX_PARAM_NAME +': ' + bestResult[MAX_PARAM_NAME] : ''}`)
+            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
             saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
             statusMessageRemove()
             break;
@@ -136,8 +138,8 @@
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
-            if(bestResult && bestResult.hasOwnProperty('Net Profit All'))
-              alert('The best found parameters are set for the strategy\n\nThe best Net Profit All: ' + bestResult['Net Profit All'])
+            if(bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME))
+              alert(`The best found parameters are set for the strategy\n\nThe best ${MAX_PARAM_NAME}: ` + bestResult[MAX_PARAM_NAME])
             saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
             break
           }
@@ -159,7 +161,7 @@
     }
   );
 
-  function getBestResult(perfomanceSummary, checkField = 'Net Profit All') {
+  function getBestResult(perfomanceSummary, checkField = MAX_PARAM_NAME) {
     const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
       if(curResult.hasOwnProperty(checkField) && (!curBestRes || !curBestRes[checkField] || curBestRes[checkField] < curResult[checkField]))
         return curResult
@@ -304,13 +306,12 @@
     return report
   }
 
-  let isShowedAboutProcessEnd = false
-  let maxNetProfit = null
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
     console.log('testStrategy', testResults.shortName, testResults.cycles, 'times')
     testResults.paramsNames = Object.keys(allRangeParams)
+    let maxOfSearchingValue = null
     for(let i = 0; i < testResults.cycles; i++) {
       const propVal = await getOptimizedPropertiesValues(allRangeParams)
       const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
@@ -337,15 +338,14 @@
       testResults.perfomanceSummary.push(report)
       await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
       try {
-        if(report.hasOwnProperty('Net Profit All')) {
-          if(maxNetProfit === null)
-            maxNetProfit = report['Net Profit All']
+        if(report.hasOwnProperty(MAX_PARAM_NAME)) {
+          if(maxOfSearchingValue === null)
+            maxOfSearchingValue = report[MAX_PARAM_NAME]
           else
-            maxNetProfit = maxNetProfit < report['Net Profit All'] ? report['Net Profit All'] : maxNetProfit
+            maxOfSearchingValue = maxOfSearchingValue < report[MAX_PARAM_NAME] ? report[MAX_PARAM_NAME] : maxOfSearchingValue
         }
-        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p>
-                               <p>Max net profit: ${maxNetProfit}.</p>
-${report['comment'] ? '<p style="color: red">' + report['comment'] + '</p>' : report['Net Profit All'] ? '<p>Current Net Profit ' + report['Net Profit All'] + '.</p>': ''}`)
+        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Max of ${MAX_PARAM_NAME}: ${maxOfSearchingValue}.</p>
+            ${report['comment'] ? '<p style="color: red">' + report['comment'] + '</p>' : report[MAX_PARAM_NAME] ? '<p>Current ' + MAX_PARAM_NAME + ' ' + report[MAX_PARAM_NAME] + '.</p>': ''}`)
       } catch {}
 
     }
