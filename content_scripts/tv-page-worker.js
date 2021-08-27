@@ -26,7 +26,8 @@
     tabInputActive: 'div[data-name="indicator-properties-dialog"] div[class*="active"][data-value="inputs"]',
     tabProperties: 'div[data-name="indicator-properties-dialog"] div[data-value="properties"]',
     ticker: '#header-toolbar-symbol-search > div[class*="text-"]',
-    timeFrame: '#header-toolbar-intervals div[data-role^="button"][class*="isActive"]',
+    timeFrame: '#header-toolbar-intervals div[data-role^="button"]',
+    timeFrameActive: '#header-toolbar-intervals div[data-role^="button"][class*="isActive"]',
     indicatorScroll: 'div[data-name="indicator-properties-dialog"] div[class^="scrollable-"]',
     indicatorProperty: 'div[data-name="indicator-properties-dialog"] div[class^="content-"] div[class^="cell-"]',
     okBtn: 'div[data-name="indicator-properties-dialog"] div[class^="footer-"] button[name="submit"]',
@@ -54,96 +55,100 @@
       }
 
       workerStatus = request.action
+      try {
+        switch (request.action) {
+          case 'uploadSignals': {
+            await uploadFiles(parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)
+            break;
+          }
+          case 'uploadStrategyTestParameters': {
+            await uploadFiles(parseStrategyParamsAndGetMsg, '', false)
+            break;
+          }
+          case 'getStrategyTemplate': {
+            const strategyData = await getStrategy()
+            if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+              alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+            } else {
+              const paramRange = strategyGetRange(strategyData)
+              const strategyRangeParamsCSV = strategyRangeToTemplate(paramRange)
+              saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
+              await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
+              alert('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
+            }
+            break;
+          }
+          case 'testStrategy': {
+            const strategyData = await getStrategy()
+            if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+              alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+              break
+            }
+            const allRangeParams = await getStrategyRangeParameters(strategyData)
+            if(!allRangeParams)
+              break
+            const cyclesStr = prompt(`Please enter the number of cycles for optimization. The maximum value is limited to 1000.\n\nYou can interrupt the search for strategy parameters by reloading the page. All data is stored in the storage after each iteration.\nYou can download it by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+            if(!cyclesStr)
+              break
+            let cycles = parseInt(cyclesStr)
+            if(!cycles || cycles < 1)
+              break
+            let testParams = await switchToStrategyTab()
+            testParams.cycles = cycles
+            if(!testParams)
+              break
+            const testResults = await testStrategy(testParams, strategyData, allRangeParams)  // TODO realize optimization functions
+            console.log('testResults', testResults)
+            if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
+              alert('There is no data for conversion. Try to do test again')
+              break
+            }
+            const CSVResults = convertResultsToCSV(testResults)
+            const bestResult = testResults.perfomanceSummary ? getBestResult(testResults.perfomanceSummary) : {}
+            const propVal = {}
+            testResults.paramsNames.forEach(paramName => {
+              if(bestResult.hasOwnProperty(`__${paramName}`))
+                propVal[paramName] = bestResult[`__${paramName}`]
+            })
+            await setStrategyParams(testResults.shortName, propVal)
+            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
+            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
+            saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
+            break;
+          }
+          case 'downloadStrategyTestResults': {
+            const testResults = await storageGetKey(STORAGE_STRATEGY_KEY_RESULTS)
+            if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
+              alert('There is no data for conversion. Try to do test again')
+              break
+            }
+            console.log('testResults', testResults)
+            const CSVResults = convertResultsToCSV(testResults)
 
-      switch (request.action) {
-        case 'uploadSignals': {
-          await uploadFiles(parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)
-          break;
-        }
-        case 'uploadStrategyTestParameters': {
-          await uploadFiles(parseStrategyParamsAndGetMsg, '', false)
-          break;
-        }
-        case 'getStrategyTemplate': {
-          const strategyData = await getStrategy()
-          if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-            alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
-          } else {
-            const paramRange = strategyGetRange(strategyData)
-            const strategyRangeParamsCSV = strategyRangeToTemplate(paramRange)
-            saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
-            await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
-            alert('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
-          }
-          break;
-        }
-        case 'testStrategy': {
-          const strategyData = await getStrategy()
-          if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-            alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+            const bestResult = testResults.perfomanceSummary ? getBestResult(testResults.perfomanceSummary) : {}
+            const propVal = {}
+            testResults.paramsNames.forEach(paramName => {
+              if(bestResult.hasOwnProperty(`__${paramName}`))
+                propVal[paramName] = bestResult[`__${paramName}`]
+            })
+            await setStrategyParams(testResults.shortName, propVal)
+            if(bestResult && bestResult.hasOwnProperty('Net Profit All'))
+              alert('The best found parameters are set for the strategy\n\nThe best Net Profit All: ' + bestResult['Net Profit All'])
+            saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
             break
           }
-          const allRangeParams = await getStrategyRangeParameters(strategyData)
-          if(!allRangeParams)
-            break
-          const cyclesStr = prompt(`Please enter the number of cycles for optimization. The maximum value is limited to 1000.\n\nYou can interrupt the search for strategy parameters by reloading the page. All data is stored in the storage after each iteration.\nYou can download it by clicking on the "Download results" button until you launch new strategy testing.`, 100)
-          if(!cyclesStr)
-            break
-          let cycles = parseInt(cyclesStr)
-          if(!cycles || cycles < 1)
-            break
-          let testParams = await switchToStrategyTab()
-          testParams.cycles = cycles
-          if(!testParams)
-            break
-          const testResults = await testStrategy(testParams, strategyData, allRangeParams)  // TODO realize optimization functions
-          console.log('testResults', testResults)
-          if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
-            alert('There is no data for conversion. Try to do test again')
+          case 'clearAll': {
+            const clearRes = await storageClearAll()
+            alert(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
             break
           }
-          const CSVResults = convertResultsToCSV(testResults)
-          const bestResult = testResults.perfomanceSummary ? getBestResult(testResults.perfomanceSummary) : {}
-          const propVal = {}
-          testResults.paramsNames.forEach(paramName => {
-            if(bestResult.hasOwnProperty(`__${paramName}`))
-              propVal[paramName] = bestResult[`__${paramName}`]
-          })
-          await setStrategyParams(testResults.shortName, propVal)
-          alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
-          console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty('Net Profit All') ? 'The best Net Profit All: ' + bestResult['Net Profit All'] : ''}`)
-          saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
-          break;
-        }
-        case 'downloadStrategyTestResults': {
-          const testResults = await storageGetKey(STORAGE_STRATEGY_KEY_RESULTS)
-          if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
-            alert('There is no data for conversion. Try to do test again')
-            break
-          }
-          console.log('testResults', testResults)
-          const CSVResults = convertResultsToCSV(testResults)
+          default:
+            console.log('None of realisation for signal:', request)
 
-          const bestResult = testResults.perfomanceSummary ? getBestResult(testResults.perfomanceSummary) : {}
-          const propVal = {}
-          testResults.paramsNames.forEach(paramName => {
-            if(bestResult.hasOwnProperty(`__${paramName}`))
-              propVal[paramName] = bestResult[`__${paramName}`]
-          })
-          await setStrategyParams(testResults.shortName, propVal)
-          if(bestResult && bestResult.hasOwnProperty('Net Profit All'))
-            alert('The best found parameters are set for the strategy\n\nThe best Net Profit All: ' + bestResult['Net Profit All'])
-          saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
-          break
         }
-        case 'clearAll': {
-          const clearRes = await storageClearAll()
-          alert(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
-          break
-        }
-        default:
-          console.log('None of realisation for signal:', request)
-
+      } catch (err) {
+        console.error(err)
+        alert(`An error has occurred.\n\nReload the page and try again.\nYou can describe the problem by following the link https://github.com/akumidv/tradingview-assistant-chrome-extension/.\n\nError message: ${err.message}`)
       }
       workerStatus = null
     }
@@ -167,7 +172,7 @@
     csv += '\n'
     // testResults.paramsNames.forEach(paramName => csv.replace(`__${paramName}`, paramName)) // TODO isFirst? or leave it as it is
     testResults.perfomanceSummary.forEach(row => {
-      const rowData = headers.map(key => row[key] ? JSON.stringify(row[key]) : '')
+      const rowData = headers.map(key => typeof row[key] !== 'undefined' ? JSON.stringify(row[key]) : '')
       csv += rowData.join(',')
       csv += '\n'
     })
@@ -201,32 +206,33 @@
     for(let rowEl of allReportRowsEl) {
       if(rowEl) {
         const allTdEl = rowEl.querySelectorAll('td')
-        if(!allTdEl || allTdEl.length < 2 || !allTdEl[0])
+        if(!allTdEl || allTdEl.length < 2 || !allTdEl[0]) {
+          console.log(allTdEl[0].innerText)
           continue
+        }
         let paramName = allTdEl[0].innerText
         for(let i = 1; i < allTdEl.length; i++) {
           let values = allTdEl[i].innerText
-          values = values ? values.replace(' ', ' ').trim() : values
-          const digitOfValues = Number(values)
-          if(values && strategyHeaders[i]) {
+          if(values && typeof values === 'string' && values.trim() && strategyHeaders[i]) {
+            values = values.replace(' ', ' ').trim()
+            const digitOfValues = values.match(/-?\d+\.?\d*/)
             if(values.includes('\n') && (values.endsWith('%') || values.includes('N/A'))) {
               const valuesPair = values.split('\n', 2)
               if(valuesPair && valuesPair.length == 2) {
-                report[`${paramName} ${strategyHeaders[i]}`] = valuesPair[0].includes('$') ? parseFloat(valuesPair[0].replace('$', '').trim()) : Number(valuesPair[0]) !== NaN ? Number(valuesPair[0]) : valuesPair[0]
-                report[`${paramName} ${strategyHeaders[i]} %`] = valuesPair[1].includes('%') ? parseFloat(valuesPair[1].replace('%', '').trim()) : Number(valuesPair[1]) !== NaN ? Number(valuesPair[1]) : valuesPair[1]
+                const digitVal0 = valuesPair[0].match(/-?\d+\.?\d*/)
+                const digitVal1 = valuesPair[1].match(/-?\d+\.?\d*/)
+                report[`${paramName} ${strategyHeaders[i]}`] = Boolean(digitVal0) ? parseFloat(digitVal0[0]) : valuesPair[0]
+                report[`${paramName} ${strategyHeaders[i]} %`] = Boolean(digitVal1) ? parseFloat(digitVal1[0]) : valuesPair[0]
                 continue
               }
-            }
-            if(digitOfValues !== NaN)
-              report[`${paramName} ${strategyHeaders[i]}`]
+            } else if(digitOfValues)
+              report[`${paramName} ${strategyHeaders[i]}`] = parseFloat(digitOfValues)
             else
-              report[`${paramName} ${strategyHeaders[i]}`] = values.includes('$') ? parseFloat(values.replace('$', '').trim()) : values.includes('%') ? parseFloat(values.replace('%', '').trim()) : Number(values) !== NaN ? Number(values) : values
+              report[`${paramName} ${strategyHeaders[i]}`] = values
           }
-
         }
       }
     }
-
     return report
   }
 
@@ -325,20 +331,33 @@
       const strategyTabEl = document.querySelector(SEL.strategyTesterTab)
       if(strategyTabEl) {
         strategyTabEl.click()
-      }
-      else {
+      } else {
         alert('There is not strategy tester tab on the page. Open correct page please')
         return null
       }
     }
     const testResults = {}
-    testResults.ticker = document.querySelector(SEL.ticker).innerText
-    testResults.timeFrame = document.querySelector(SEL.timeFrame).innerText
-    testResults.name = document.querySelector(SEL.strategyCaption).innerText
-    if(!testResults.ticker || !testResults.timeFrame || !testResults.name) {
-      alert('There is not ticker, timeframe or strategy name on the page. Open correct page please')
+    const tickerEl = document.querySelector(SEL.ticker)
+    if(!tickerEl || !tickerEl.innerText) {
+      alert('There is not symbol element on page. Open correct page please')
       return null
     }
+    testResults.ticker = tickerEl.innerText
+    let timeFrameEl = document.querySelector(SEL.timeFrameActive)
+    if(!timeFrameEl)
+      timeFrameEl = document.querySelector(SEL.timeFrame)
+    if(!timeFrameEl || !timeFrameEl.innerText) {
+      alert('There is not timeframe element on page. Open correct page please')
+      return null
+    }
+    testResults.timeFrame = timeFrameEl.innerText
+    const strategyCaptionEl = document.querySelector(SEL.strategyCaption)
+    if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
+      alert('There is not stratagy name element on page. Open correct page please')
+      return null
+    }
+    testResults.name = strategyCaptionEl.innerText
+
     const stratSummaryEl = await waitForSelector(SEL.strategySummary, 1000)
     if(!stratSummaryEl) {
       alert('There is not strategy performance summary tab on the page. Open correct page please')
