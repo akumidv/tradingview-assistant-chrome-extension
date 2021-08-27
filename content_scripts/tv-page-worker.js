@@ -172,7 +172,7 @@
   function autoCloseAlert(msg, duration = 2000) {
     console.log('autoCloseAlert')
     const altEl = document.createElement("div");
-    altEl.setAttribute("style","background-color: lightgray;color:black; width: 450px;height: 300px;position: absolute;top:0;bottom:0;left:0;right:0;margin:auto;border: 1px solid black;font-family:arial;font-size:25px;font-weight:bold;display: flex; align-items: center; justify-content: center; text-align: center;");
+    altEl.setAttribute("style","background-color: #ffeaa7;color:black; width: 450px;height: 300px;position: absolute;top:0;bottom:0;left:0;right:0;margin:auto;border: 1px solid black;font-family:arial;font-size:25px;font-weight:bold;display: flex; align-items: center; justify-content: center; text-align: center;");
     altEl.setAttribute("id","iondvAlert");
     altEl.innerHTML = msg;
     setTimeout(function() {
@@ -186,7 +186,7 @@
     const altEl =isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
     if(!isStatusPresent) {
       altEl.setAttribute("id","iondvStatus");
-      altEl.setAttribute("style","background-color: white;" +
+      altEl.setAttribute("style","background-color: #fffcd7;" +
         "color: black;" +
         "width: 800px;" +
         "height: 150px;" +
