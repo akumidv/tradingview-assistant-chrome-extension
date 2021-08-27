@@ -308,6 +308,7 @@
     report['.Breakeven'] = (100 /(100+report['.Reward'])) + 0.2
     report['.Margin'] = report['.Percent Decimal'] - report['.Breakeven']
 
+    // TODO
     return report
   }
 
@@ -432,6 +433,59 @@
         case 'random':
         default:
           optRes = await optRandomIteration(allRangeParams, testResults, bestValue)
+      }
+      if(!optRes.data) continue
+      bestValue = optRes.hasOwnProperty(bestValue) ?  optRes.bestValue : bestValue
+      try {
+        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Best "${MAX_PARAM_NAME_TO_SHOW}": ${bestValue}</p>
+            ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + MAX_PARAM_NAME_TO_SHOW + '": ' + optRes.currentValue + '</p>': ''}`)
+
+    testResults.perfomanceSummary.push(report)
+    await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
+    return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, errMessage: reportData['comment'], data: reportData}
+  }
+
+  // Random optimization
+  async function optRandomIteration(allRangeParams, testResults, bestValue, optimizationState) {
+    const propVal = optRandomGetPropertiesValues(allRangeParams)
+    const res = await getTestIterationResult(testResults, propVal)
+    if(!res || !res.data)
+      return res
+    if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
+      res.currentValue = res.data[MAX_PARAM_NAME]
+      if(bestValue === null || typeof bestValue === 'undefined')
+        res.bestValue = res.data[MAX_PARAM_NAME]
+      else
+        res.bestValue = bestValue < res.data[MAX_PARAM_NAME] ? res.data[MAX_PARAM_NAME] : bestValue
+    } else {
+      res.bestValue = bestValue
+      res.currentValue = 'error'
+    }
+    return res
+  }
+
+  function optRandomGetPropertiesValues(allRangeParams) {
+    const res = {}
+    Object.keys(allRangeParams).forEach(paramName => {
+      res[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
+    })
+    return res
+  }
+
+
+  async function testStrategy(testResults, strategyData, allRangeParams, method = 'random') {
+    testResults.perfomanceSummary = []
+    testResults.shortName = strategyData.name
+    console.log('testStrategy', testResults.shortName, testResults.cycles, 'times')
+    testResults.paramsNames = Object.keys(allRangeParams)
+    let bestValue = null
+    const optimizationState = {}
+    for(let i = 0; i < testResults.cycles; i++) {
+      let optRes = {}
+      switch(method) {
+        case 'random':
+        default:
+          optRes = await optRandomIteration(allRangeParams, testResults, bestValue, optimizationState)
       }
       if(!optRes.data) continue
       bestValue = optRes.hasOwnProperty(bestValue) ?  optRes.bestValue : bestValue
@@ -618,14 +672,14 @@
       if(!indicatorTitleEl)
         continue
       if(strategyName) {
-       if(strategyName !== indicatorTitleEl.innerText)
-         continue
+        if(strategyName !== indicatorTitleEl.innerText)
+          continue
       }
       mouseClick(indicatorTitleEl)
       mouseClick(indicatorTitleEl)
       const dialogTitle = await waitForSelector(SEL.indicatorTitle, 2500)
       if(!dialogTitle || !dialogTitle.innerText)
-         continue
+        continue
       let isPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
       if(isPropertiesTab) {
         strategyData = {name: dialogTitle.innerText, properties: {}}
@@ -652,7 +706,7 @@
                 }
                 else if(indicProperties[i].querySelector('span[role="button"]')) { // TODO as list
                   continue
-                //   strategyData.properties[propText] = indicProperties[i].querySelector('span[role="button"]').innerText
+                  //   strategyData.properties[propText] = indicProperties[i].querySelector('span[role="button"]').innerText
                 }
               }
             } else if (propClassName.includes('fill-')) {
@@ -818,8 +872,8 @@
           const sellArr = shiftToTimeframe(tickersAndTFSignals[tktfName].tsSell,  tfVal, tfType)
           const sellConv = sellArr.map(dt => dt.getTime())
           await storageSetKeys(`${STORAGE_SIGNALS_KEY_PREFIX}_${tktfName}`,  {buy: buyConv.filter((item, idx) => buyConv.indexOf(item) === idx).join(','),
-                                                sell: sellConv.filter((item, idx) => sellConv.indexOf(item) === idx).join(','),
-                                                loadData: (new Date()).toISOString()})
+            sell: sellConv.filter((item, idx) => sellConv.indexOf(item) === idx).join(','),
+            loadData: (new Date()).toISOString()})
           console.log(`For ${tktfName} loaded ${buyConv.length + sellConv.length} timestamps`)
           msgArr.push(`${tktfName} (${buyConv.length + sellConv.length})`)
         } catch (err) {
