@@ -259,6 +259,9 @@
     const res = {}
     const paramsNames = Object.keys(allRangeParams)
     switch(method) {
+      case 'annealing': {
+        break
+      }
       case 'random':
       default: {
         paramsNames.forEach(param => {
