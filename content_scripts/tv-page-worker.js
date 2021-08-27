@@ -8,6 +8,7 @@
 (async function() {
 
   const MAX_PARAM_NAME = '.Margin'
+  const MAX_PARAM_NAME_TO_SHOW = MAX_PARAM_NAME.startsWith('.') ? MAX_PARAM_NAME.substring(1) : MAX_PARAM_NAME
 
   let isMsgShown = false
   let workerStatus = null
@@ -116,9 +117,9 @@
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
-            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME.replace('.', '') + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
-            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best' + MAX_PARAM_NAME.replace('.', '') +': ' + bestResult[MAX_PARAM_NAME] : ''}`)
-            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
+            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME_TO_SHOW + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
+            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME_TO_SHOW +': ' + bestResult[MAX_PARAM_NAME] : ''}`)
+            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME_TO_SHOW + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
             saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
             statusMessageRemove()
             break;
@@ -254,24 +255,6 @@
     return Math.floor( min + Math.random() * (max + 1 - min))
   }
 
-
-  async function getOptimizedPropertiesValues(allRangeParams, testResults, method = 'random') {
-    const res = {}
-    const paramsNames = Object.keys(allRangeParams)
-    switch(method) {
-      case 'annealing': {
-        break
-      }
-      case 'random':
-      default: {
-        paramsNames.forEach(param => {
-          res[param] = allRangeParams[param][randomInteger(0, allRangeParams[param].length - 1)]
-        })
-      }
-    }
-    return res
-  }
-
   function parseReportTable() {
     const strategyHeaders = []
     const allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
@@ -328,49 +311,132 @@
     return report
   }
 
-  async function testStrategy(testResults, strategyData, allRangeParams) {
+  async function getTestIterationResult (testResults, propVal) {
+    let reportData = {}
+    const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
+    if(!isParamsSet)
+      return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
+
+    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
+    let isProcessEnd = null
+    let isProcessError
+    if (isProcessStart)
+      isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
+    isProcessError = document.querySelector(SEL.strategyReportError)
+    if(!isProcessError && isProcessEnd) {
+      await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+      reportData = parseReportTable()
+      reportData = calculateAdditionValuesToReport(report)
+    }
+
+    Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
+    reportData['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
+      !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
+        isProcessEnd ? '' : 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.'
+
+    testResults.perfomanceSummary.push(report)
+    await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
+    return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, errMessage: reportData['comment'], data: reportData}
+  }
+
+  // Random optimization
+  async function optRandomIteration(allRangeParams, testResults, bestValue) {
+    const propVal = optRandomGetPropertiesValues(allRangeParams)
+    const res = await getTestIterationResult(testResults, propVal)
+    if(!res || !res.data)
+      return res
+    if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
+      res.currentValue = res.data[MAX_PARAM_NAME]
+      if(bestValue === null || typeof bestValue === 'undefined')
+        res.bestValue = res.data[MAX_PARAM_NAME]
+      else
+        res.bestValue = bestValue < res.data[MAX_PARAM_NAME] ? res.data[MAX_PARAM_NAME] : bestValue
+    } else {
+      res.bestValue = bestValue
+      res.currentValue = 'error'
+    }
+    return res
+  }
+
+  function optRandomGetPropertiesValues(allRangeParams) {
+    const res = {}
+    Object.keys(allRangeParams).forEach(paramName => {
+      res[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
+    })
+    return res
+  }
+
+  // Annealing optimization
+  function optAnnealingIteration(allRangeParams, testResults, bestValue) {
+    if (!optimizationState.isInit) {
+      optimizationState.currentTemp = 1 // TODO to param?
+      const propVal = optRandomGetPropertiesValues(allRangeParams)
+      optimizationState.lastState = propVal
+      const res = getTestIterationResult(testResults.shortName, propVal)
+      if(!res.data) continue
+      optimizationState.lastEnergy = report[MAX_PARAM_NAME]
+      optimizationState.bestState = optimizationState.lastState;
+      optimizationState.bestEnergy = optimizationState.lastEnergy;
+
+      optimizationState.isInit = true
+    } else {
+      const propVal = optRandomGetPropertiesValues(allRangeParams)
+      const res = getTestIterationResult(testResults.shortName, propVal)
+      if(!res.data) continue
+    }
+    bestValue = optimizationState.bestEnergy
+
+    if(!res || !res.data)
+      return res
+    if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
+      res.currentValue = res.data[MAX_PARAM_NAME]
+      if(bestValue === null || typeof bestValue === 'undefined')
+        res.bestValue = res.data[MAX_PARAM_NAME]
+      else
+        res.bestValue = bestValue < res.data[MAX_PARAM_NAME] ? res.data[MAX_PARAM_NAME] : bestValue
+    } else {
+      res.bestValue = bestValue
+      res.currentValue = 'error'
+    }
+    return res
+  }
+
+  function optAnnealingGetTemp(prevTemperature) {
+    return prevTemperature - 0.0001; // TODO
+  }
+
+  function optAnnealingNewState(curState) {
+    return curState + (Math.random() - 0.5); // TODO
+  }
+
+  function optAnnealingGetEnergy(v) {
+    return Math.abs(v * v - 16);
+  }
+
+  async function testStrategy(testResults, strategyData, allRangeParams, method = 'random') {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
     console.log('testStrategy', testResults.shortName, testResults.cycles, 'times')
     testResults.paramsNames = Object.keys(allRangeParams)
-    let maxOfSearchingValue = null
+    let bestValue = null
+    const optimizationState = {}
     for(let i = 0; i < testResults.cycles; i++) {
-      const propVal = await getOptimizedPropertiesValues(allRangeParams, testResults)
-      const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
-      if(!isParamsSet)
-        break
+      let optRes = {}
+      switch(method) {
+        case 'annealing':
+          optRes = await optAnnealingIteration(allRangeParams, testResults, bestValue)
+          break
 
-      const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
-      let report = {}
-      let isProcessEnd = null
-      let isProcessError = null
-      if (isProcessStart) {
-        isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
+        case 'random':
+        default:
+          optRes = optRandomIteration(allRangeParams, testResults, bestValue)
       }
-      isProcessError = document.querySelector(SEL.strategyReportError)
-      if(!isProcessError && isProcessEnd) {
-        await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
-        report = parseReportTable()
-        report = calculateAdditionValuesToReport(report)
-      }
-
-      Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
-      report['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
-        !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
-        isProcessEnd ? '' : 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.'
-      testResults.perfomanceSummary.push(report)
-      await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
+      if(!optRes.data) continue
+      bestValue = optRes.hasOwnProperty(bestValue) ?  optRes.bestValue : bestValue
       try {
-        if(report.hasOwnProperty(MAX_PARAM_NAME)) {
-          if(maxOfSearchingValue === null)
-            maxOfSearchingValue = report[MAX_PARAM_NAME]
-          else
-            maxOfSearchingValue = maxOfSearchingValue < report[MAX_PARAM_NAME] ? report[MAX_PARAM_NAME] : maxOfSearchingValue
-        }
-        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Max of ${MAX_PARAM_NAME.replace('.', '')}: ${maxOfSearchingValue}.</p>
-            ${report['comment'] ? '<p style="color: red">' + report['comment'] + '</p>' : report[MAX_PARAM_NAME] ? '<p>Current ' + MAX_PARAM_NAME.replace('.', '') + ' ' + report[MAX_PARAM_NAME] + '.</p>': ''}`)
+        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Best "${MAX_PARAM_NAME_TO_SHOW}": ${bestValue}</p>
+            ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + MAX_PARAM_NAME_TO_SHOW + '": ' + optRes.currentValue + '</p>': ''}`)
       } catch {}
-
     }
     return testResults
   }
