@@ -75,8 +75,8 @@
             } else {
               const paramRange = strategyGetRange(strategyData)
               const strategyRangeParamsCSV = strategyRangeToTemplate(paramRange)
-              saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
               await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
+              saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
               alert('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
             }
             break;
@@ -87,6 +87,7 @@
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
               break
             }
+            const paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PARAM)
             const allRangeParams = await getStrategyRangeParameters(strategyData)
             if(!allRangeParams)
               break
@@ -254,12 +255,17 @@
   }
 
 
-  async function getOptimizedPropertiesValues(allRangeParams) {
+  async function getOptimizedPropertiesValues(allRangeParams, testResults, method = 'random') {
     const res = {}
     const paramsNames = Object.keys(allRangeParams)
-    paramsNames.forEach(param => {
-      res[param] = allRangeParams[param][randomInteger(0, allRangeParams[param].length - 1)]
-    })
+    switch(method) {
+      case 'random':
+      default: {
+        paramsNames.forEach(param => {
+          res[param] = allRangeParams[param][randomInteger(0, allRangeParams[param].length - 1)]
+        })
+      }
+    }
     return res
   }
 
@@ -306,8 +312,10 @@
     return report
   }
 
+
   function calculateAdditionValuesToReport(report) {
-    // TODO
+
+
     return report
   }
 
@@ -318,7 +326,7 @@
     testResults.paramsNames = Object.keys(allRangeParams)
     let maxOfSearchingValue = null
     for(let i = 0; i < testResults.cycles; i++) {
-      const propVal = await getOptimizedPropertiesValues(allRangeParams)
+      const propVal = await getOptimizedPropertiesValues(allRangeParams, testResults)
       const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
       if(!isParamsSet)
         break
@@ -350,8 +358,8 @@
           else
             maxOfSearchingValue = maxOfSearchingValue < report[MAX_PARAM_NAME] ? report[MAX_PARAM_NAME] : maxOfSearchingValue
         }
-        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Max of ${MAX_PARAM_NAME}: ${maxOfSearchingValue}.</p>
-            ${report['comment'] ? '<p style="color: red">' + report['comment'] + '</p>' : report[MAX_PARAM_NAME] ? '<p>Current ' + MAX_PARAM_NAME + ' ' + report[MAX_PARAM_NAME] + '.</p>': ''}`)
+        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Max of ${MAX_PARAM_NAME.replace('.', '')}: ${maxOfSearchingValue}.</p>
+            ${report['comment'] ? '<p style="color: red">' + report['comment'] + '</p>' : report[MAX_PARAM_NAME] ? '<p>Current ' + MAX_PARAM_NAME.replace('.', '') + ' ' + report[MAX_PARAM_NAME] + '.</p>': ''}`)
       } catch {}
 
     }
@@ -473,6 +481,7 @@
     } else {
       paramRange = strategyGetRange(strategyData)
     }
+    console.log('paramRange', paramRange)
     await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
     const allRangeParams = createParamsFormRange(paramRange)
     return allRangeParams
