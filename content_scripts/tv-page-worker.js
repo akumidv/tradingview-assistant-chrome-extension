@@ -87,7 +87,7 @@
             const allRangeParams = await getStrategyRangeParameters(strategyData)
             if(!allRangeParams)
               break
-            const cyclesStr = prompt(`Please enter the number of cycles for optimization. The maximum value is limited to 1000.\n\nYou can interrupt the search for strategy parameters by reloading the page. All data is stored in the storage after each iteration.\nYou can download it by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+            const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
             if(!cyclesStr)
               break
             let cycles = parseInt(cyclesStr)
@@ -249,10 +249,10 @@
 
       const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
       if (isProcessStart) {
-        const isProcessEnd = await waitForSelector(SEL.strategyReportReady, 5000)
+        const isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
         if(!isProcessEnd) {
-          alert('The calculation of the strategy parameters took more than 30 seconds for one combination. Testing was stopped.')
-          break
+          alert('The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.')
+          continue
         }
       }
 
