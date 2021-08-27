@@ -306,6 +306,11 @@
     return report
   }
 
+  function calculateAdditionValuesToReport(report) {
+    // TODO
+    return report
+  }
+
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
@@ -329,6 +334,7 @@
       if(!isProcessError && isProcessEnd) {
         await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
         report = parseReportTable()
+        report = calculateAdditionValuesToReport(report)
       }
 
       Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
