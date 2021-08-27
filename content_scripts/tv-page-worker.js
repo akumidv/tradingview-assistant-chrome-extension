@@ -367,13 +367,17 @@
   }
 
   // Annealing optimization
-  function optAnnealingIteration(allRangeParams, testResults, bestValue) {
+  function optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState) {
     if (!optimizationState.isInit) {
       optimizationState.currentTemp = 1 // TODO to param?
+
       const propVal = optRandomGetPropertiesValues(allRangeParams)
       optimizationState.lastState = propVal
+
       const res = getTestIterationResult(testResults.shortName, propVal)
-      if(!res.data) continue
+      if(!res || !res.data)
+        return res
+
       optimizationState.lastEnergy = report[MAX_PARAM_NAME]
       optimizationState.bestState = optimizationState.lastState;
       optimizationState.bestEnergy = optimizationState.lastEnergy;
@@ -424,9 +428,8 @@
       let optRes = {}
       switch(method) {
         case 'annealing':
-          optRes = await optAnnealingIteration(allRangeParams, testResults, bestValue)
+          optRes = await optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState)
           break
-
         case 'random':
         default:
           optRes = optRandomIteration(allRangeParams, testResults, bestValue)
