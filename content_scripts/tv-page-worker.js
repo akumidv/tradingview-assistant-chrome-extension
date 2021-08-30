@@ -7,8 +7,11 @@
 
 (async function() {
 
-  const MAX_PARAM_NAME = '.Margin'
+  const MAX_PARAM_NAME = 'Net Profit All'
   const MAX_PARAM_NAME_TO_SHOW = MAX_PARAM_NAME.startsWith('.') ? MAX_PARAM_NAME.substring(1) : MAX_PARAM_NAME
+
+  let reportNode = null
+  let isReportChanged = false
 
   let isMsgShown = false
   let workerStatus = null
@@ -40,6 +43,7 @@
     strategyDialogParam: '#bottom-area div.backtesting-head-wrapper .js-backtesting-open-format-dialog',
     strategySummary: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li:nth-child(2)',
     strategySummaryActive: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li.active:nth-child(2)',
+    strategyReport: '#bottom-area div.backtesting-content-wrapper > div.reports-content',
     strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > div.reports-content.fade',
     strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
     strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
@@ -88,10 +92,10 @@
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
               break
             }
-            const paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PARAM)
             const allRangeParams = await getStrategyRangeParameters(strategyData)
             if(!allRangeParams)
               break
+            console.log('allRangeParams', allRangeParams)
             const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
             if(!cyclesStr)
               break
@@ -103,7 +107,7 @@
             if(!testParams)
               break
             statusMessage('Started')
-            const testResults = await testStrategy(testParams, strategyData, allRangeParams)  // TODO realize optimization functions
+            const testResults = await testStrategy(testParams, strategyData, allRangeParams, 'annealing')  // TODO realize optimization functions
             console.log('testResults', testResults)
             if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
               alert('There is no data for conversion. Try to do test again')
@@ -164,6 +168,8 @@
   );
 
   function getBestResult(perfomanceSummary, checkField = MAX_PARAM_NAME) {
+    if(!perfomanceSummary || !perfomanceSummary.length)
+      return ''
     const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
       if(curResult.hasOwnProperty(checkField) && (!curBestRes || !curBestRes[checkField] || curBestRes[checkField] < curResult[checkField]))
         return curResult
@@ -231,7 +237,7 @@
   }
 
   function convertResultsToCSV(testResults) {
-    if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)
+    if(!testResults || !testResults.perfomanceSummary || !testResults.perfomanceSummary.length)
       return 'There is no data for conversion'
     let headers = Object.keys(testResults.perfomanceSummary[0]) // The first test table can be with error and can't have rows with previous values when parsedReport
     if(testResults.hasOwnProperty('paramsNames') && headers.length <= (Object.keys(testResults.paramsNames).length + 1)) { // Find the another header if only params names and 'comment' in headers
@@ -298,7 +304,6 @@
     return report
   }
 
-// console.log('###', calculateAdditionValuesToReport({ 'Percent Profitable All': 84, 'Ratio Avg Win / Avg Loss All': 1.78})) // Test
   function calculateAdditionValuesToReport(report) {
     if(!report.hasOwnProperty('Percent Profitable All') || !typeof report['Percent Profitable All']  === 'number' ||
       !report.hasOwnProperty('Ratio Avg Win / Avg Loss All') || !typeof report['Ratio Avg Win / Avg Loss All']  === 'number')
@@ -314,133 +319,31 @@
 
   async function getTestIterationResult (testResults, propVal) {
     let reportData = {}
+    isReportChanged = false
     const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
 
-    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
+    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 2000)
     let isProcessEnd = null
     let isProcessError
     if (isProcessStart)
       isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
+    else if (isReportChanged)
+      isProcessEnd = true
     isProcessError = document.querySelector(SEL.strategyReportError)
     if(!isProcessError && isProcessEnd) {
       await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
       reportData = parseReportTable()
-      reportData = calculateAdditionValuesToReport(report)
+      reportData = calculateAdditionValuesToReport(reportData)
     }
 
-    Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
+    Object.keys(propVal).forEach(key => reportData[`__${key}`] = propVal[key])
     reportData['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
       !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
         isProcessEnd ? '' : 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.'
 
-    testResults.perfomanceSummary.push(report)
-    await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
-    return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, errMessage: reportData['comment'], data: reportData}
-  }
-
-  // Random optimization
-  async function optRandomIteration(allRangeParams, testResults, bestValue) {
-    const propVal = optRandomGetPropertiesValues(allRangeParams)
-    const res = await getTestIterationResult(testResults, propVal)
-    if(!res || !res.data)
-      return res
-    if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
-      res.currentValue = res.data[MAX_PARAM_NAME]
-      if(bestValue === null || typeof bestValue === 'undefined')
-        res.bestValue = res.data[MAX_PARAM_NAME]
-      else
-        res.bestValue = bestValue < res.data[MAX_PARAM_NAME] ? res.data[MAX_PARAM_NAME] : bestValue
-    } else {
-      res.bestValue = bestValue
-      res.currentValue = 'error'
-    }
-    return res
-  }
-
-  function optRandomGetPropertiesValues(allRangeParams) {
-    const res = {}
-    Object.keys(allRangeParams).forEach(paramName => {
-      res[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
-    })
-    return res
-  }
-
-  // Annealing optimization
-  function optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState) {
-    if (!optimizationState.isInit) {
-      optimizationState.currentTemp = 1 // TODO to param?
-
-      const propVal = optRandomGetPropertiesValues(allRangeParams)
-      optimizationState.lastState = propVal
-
-      const res = getTestIterationResult(testResults.shortName, propVal)
-      if(!res || !res.data)
-        return res
-
-      optimizationState.lastEnergy = report[MAX_PARAM_NAME]
-      optimizationState.bestState = optimizationState.lastState;
-      optimizationState.bestEnergy = optimizationState.lastEnergy;
-
-      optimizationState.isInit = true
-    } else {
-      const propVal = optRandomGetPropertiesValues(allRangeParams)
-      const res = getTestIterationResult(testResults.shortName, propVal)
-      if(!res || !res.data)
-        return res
-    }
-    bestValue = optimizationState.bestEnergy
-
-    if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
-      res.currentValue = res.data[MAX_PARAM_NAME]
-      if(bestValue === null || typeof bestValue === 'undefined')
-        res.bestValue = res.data[MAX_PARAM_NAME]
-      else
-        res.bestValue = bestValue < res.data[MAX_PARAM_NAME] ? res.data[MAX_PARAM_NAME] : bestValue
-    } else {
-      res.bestValue = bestValue
-      res.currentValue = 'error'
-    }
-    return res
-  }
-
-  function optAnnealingGetTemp(prevTemperature) {
-    return prevTemperature - 0.0001; // TODO
-  }
-
-  function optAnnealingNewState(curState) {
-    return curState + (Math.random() - 0.5); // TODO
-  }
-
-  function optAnnealingGetEnergy(v) {
-    return Math.abs(v * v - 16);
-  }
-
-  async function testStrategy(testResults, strategyData, allRangeParams, method = 'random') {
-    testResults.perfomanceSummary = []
-    testResults.shortName = strategyData.name
-    console.log('testStrategy', testResults.shortName, testResults.cycles, 'times')
-    testResults.paramsNames = Object.keys(allRangeParams)
-    let bestValue = null
-    const optimizationState = {}
-    for(let i = 0; i < testResults.cycles; i++) {
-      let optRes = {}
-      switch(method) {
-        case 'annealing':
-          optRes = await optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState)
-          break
-        case 'random':
-        default:
-          optRes = await optRandomIteration(allRangeParams, testResults, bestValue)
-      }
-      if(!optRes.data) continue
-      bestValue = optRes.hasOwnProperty(bestValue) ?  optRes.bestValue : bestValue
-      try {
-        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Best "${MAX_PARAM_NAME_TO_SHOW}": ${bestValue}</p>
-            ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + MAX_PARAM_NAME_TO_SHOW + '": ' + optRes.currentValue + '</p>': ''}`)
-
-    testResults.perfomanceSummary.push(report)
+    testResults.perfomanceSummary.push(reportData)
     await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
     return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, errMessage: reportData['comment'], data: reportData}
   }
@@ -472,23 +375,155 @@
     return res
   }
 
+  // Annealing optimization
+  async function optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState) {
+    const initTemp = 1// TODO to param? Find teh best match?
+    const sign = optimizationState.hasOwnProperty('sign') && typeof optimizationState.sign === 'number' ? optimizationState.sign : 1
+    if (!optimizationState.isInit) {
+      optimizationState.currentTemp = initTemp
+
+      const propVal = optAnnealingNewState(allRangeParams) // Random value
+      optimizationState.lastState = propVal
+
+      const res = await getTestIterationResult(testResults, optimizationState.lastState)
+      // const res = await optAnnealingGetEnergy(testResults, optimizationState.lastState)
+      if(!res || !res.data)
+        return res
+      // console.log('Init', res.data[MAX_PARAM_NAME], propVal)
+
+      optimizationState.lastEnergy = res.data[MAX_PARAM_NAME]
+      optimizationState.bestState = optimizationState.lastState;
+      optimizationState.bestEnergy = optimizationState.lastEnergy;
+      optimizationState.isInit = true
+    }
+    const iteration = testResults.perfomanceSummary.length
+
+    const propVal = optAnnealingNewState(allRangeParams, optimizationState.currentTemp, optimizationState.lastState)
+    const currentState = propVal
+    const res = await getTestIterationResult(testResults, currentState)
+    // const res = await optAnnealingGetEnergy(testResults, currentState)
+    if(!res || !res.data)
+      return res
+
+    if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
+      console.log('ITER', testResults.perfomanceSummary.length, 'CUR RES', res.data[MAX_PARAM_NAME], 'BEST', optimizationState.bestEnergy, 'TEMP', optimizationState.currentTemp)
+      const currentEnergy = res.data[MAX_PARAM_NAME]
+      res.currentValue = currentEnergy
+      if (sign > 0 ? currentEnergy < optimizationState.lastEnergy : currentEnergy > optimizationState.lastEnergy) {
+        optimizationState.lastState = currentState;
+        optimizationState.lastEnergy = currentEnergy;
+      } else {
+        const randVal = Math.random()
+        const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
+        if (randVal <= expVal) {
+          optimizationState.lastState = currentState;
+          optimizationState.lastEnergy = currentEnergy;
+        }
+      }
+
+      if (sign > 0 ? optimizationState.lastEnergy < optimizationState.bestEnergy : optimizationState.lastEnergy > optimizationState.bestEnergy ) {
+        // console.log('!!!Found best better then last', optimizationState.lastEnergy, optimizationState.bestEnergy)
+        optimizationState.bestState = optimizationState.lastState;
+        optimizationState.bestEnergy = optimizationState.lastEnergy;
+      }
+      // optimizationState.currentTemp = optAnnealingGetTemp(optimizationState.currentTemp, testResults.cycles);
+      // optimizationState.currentTemp = optAnnealingGetBoltzmannTemp(initTemp, iteration);
+      optimizationState.currentTemp = optAnnealingGetExpTemp(initTemp, iteration, Object.keys(allRangeParams).length);
+
+      res.bestValue = optimizationState.bestEnergy
+    } else {
+      console.error(`Absent ${MAX_PARAM_NAME}`)
+      res.bestValue = bestValue
+      res.currentValue = 'error'
+    }
+    return res
+  }
+
+  function optAnnealingGetTemp(prevTemperature, cylces) {
+    return prevTemperature * 1-1/cylces;
+  }
+
+  function optAnnealingGetBoltzmannTemp(initTemperature, iter) {
+    return iter === 1 ? 1 : initTemperature/Math.log(1 + iter);
+  }
+
+  function optAnnealingGetExpTemp(initTemperature, iter, dimensionSize) {
+    return initTemperature/Math.pow(iter, 1 / dimensionSize);
+  }
+
+
+  function randomNormalDistribution(min, max) {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+    num = num / 10.0 + 0.5; // Translate to 0 -> 1
+    if (num > 1 || num < 0) return randomNormalDistribution() // resample between 0 and 1
+    else{
+      num *= max - min // Stretch to fill range
+      num += min // offset to min
+    }
+    return num
+  }
+
+
+  function optAnnealingNewState(allRangeParams, temperature, curState) {
+    const res = {}
+    if(!curState) { // || randomInteger(0,1) // for more variable search
+      Object.keys(allRangeParams).forEach(paramName => {
+        res[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
+      })
+    } else {
+      Object.keys(allRangeParams).forEach(paramName => {
+        const curIndex = allRangeParams[paramName].indexOf(curState[paramName])
+        const sign = randomInteger(0,1) === 0 ? -1 : 1
+        // Is not proportional chances for edges of array
+        const offset = sign * Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+        const newIndex = curIndex + offset > allRangeParams[paramName].length - 1 ? allRangeParams[paramName].length - 1 : // TODO +/-
+          curIndex + offset < 0 ? 0 : curIndex + offset
+        res[paramName] = allRangeParams[paramName][newIndex]
+        // Second variant
+        // const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+        // const offsetIndex = (curIndex + sign*baseOffset) % (allRangeParams[paramName].length)
+        // const newIndex2 = offsetIndex >= 0 ?offsetIndex : allRangeParams[paramName].length + offsetIndex
+        // res[paramName] = allRangeParams[paramName][newIndex2]
+      })
+    }
+    return res
+  }
+
+  async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del
+    const allDimensionVal = Object.keys(propVal).map(name => Math.abs(propVal[name] * propVal[name] - 16))
+    testResults.perfomanceSummary.push(allDimensionVal)
+    const resData = {}
+    resData[MAX_PARAM_NAME] = allDimensionVal.reduce((sum, item) => item + sum, 0)
+    return {error: 0, data: resData};
+  }
+
 
   async function testStrategy(testResults, strategyData, allRangeParams, method = 'random') {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
-    console.log('testStrategy', testResults.shortName, testResults.cycles, 'times')
+    console.log('testStrategy', testResults.shortName, 'by', method, testResults.cycles, 'times')
     testResults.paramsNames = Object.keys(allRangeParams)
     let bestValue = null
     const optimizationState = {}
+    if(method === 'annealing') {
+      optimizationState.sign=-1
+    }
     for(let i = 0; i < testResults.cycles; i++) {
       let optRes = {}
       switch(method) {
+        case 'annealing':
+          optRes = await optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState)
+          break
         case 'random':
         default:
           optRes = await optRandomIteration(allRangeParams, testResults, bestValue, optimizationState)
       }
-      if(!optRes.data) continue
-      bestValue = optRes.hasOwnProperty(bestValue) ?  optRes.bestValue : bestValue
+      if(!optRes.hasOwnProperty('data'))
+        continue
+      bestValue = optRes.hasOwnProperty('bestValue') ? optRes.bestValue : bestValue
       try {
         statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Best "${MAX_PARAM_NAME_TO_SHOW}": ${bestValue}</p>
             ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + MAX_PARAM_NAME_TO_SHOW + '": ' + optRes.currentValue + '</p>': ''}`)
@@ -596,6 +631,24 @@
     }
     stratSummaryEl.click()
     await waitForSelector(SEL.strategySummaryActive, 1000)
+
+    await waitForSelector(SEL.strategyReport, 0)
+    if(!reportNode) {
+      reportNode = await waitForSelector(SEL.strategyReport, 0)
+      if(reportNode) {
+        const reportObserver = new MutationObserver(()=> {
+          isReportChanged = true
+        });
+        reportObserver.observe(reportNode, {
+          childList: true,
+          subtree: true,
+          attributes: false,
+          characterData: false
+        });
+      }
+    }
+
+
     return testResults
   }
 
