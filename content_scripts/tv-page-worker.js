@@ -125,9 +125,9 @@
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
-            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ testResults.isMaximizing ? '(max) ':'(min) ' + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
-            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + testResults.isMaximizing ? '(max) ':'(min) ' + testParams.optParamName +': ' + bestResult[testParams.optParamName] : ''}`)
-            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + testResults.isMaximizing ? '(max) ':'(min) '  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
+            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
+            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName +': ' + bestResult[testParams.optParamName] : ''}`)
+            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
             saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
             statusMessageRemove()
             break;
@@ -341,7 +341,7 @@
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
 
-    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 2000)
+    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1000)
     let isProcessEnd = null
     let isProcessError
     if (isProcessStart)
@@ -370,7 +370,7 @@
     const sign = testResults.isMaximizing ? 1 : -1
     const propVal = optRandomGetPropertiesValues(allRangeParams)
     const res = await getTestIterationResult(testResults, propVal)
-    if(!res || !res.data)
+    if(!res || !res.data || res.error !== null)
       return res
     if(res.data.hasOwnProperty(testResults.optParamName)) {
       res.currentValue = res.data[testResults.optParamName]
