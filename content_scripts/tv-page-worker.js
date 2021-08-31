@@ -328,13 +328,14 @@
   }
 
   function calculateAdditionValuesToReport(report) {
-    if(!report.hasOwnProperty('Percent Profitable All') || !typeof report['Percent Profitable All']  === 'number' ||
-      !report.hasOwnProperty('Ratio Avg Win / Avg Loss All') || !typeof report['Ratio Avg Win / Avg Loss All']  === 'number')
+    if(!report.hasOwnProperty('Percent Profitable: All') || !typeof report['Percent Profitable: All']  === 'number' ||
+      !report.hasOwnProperty('Ratio Avg Win / Avg Loss: All') || !typeof report['Ratio Avg Win / Avg Loss: All']  === 'number')
       return report
-    report['.Percent Decimal'] = report['Percent Profitable All'] / 100
-    report['.Reward'] = report['Ratio Avg Win / Avg Loss All'] * 100
+    report['.Percent Decimal'] = report['Percent Profitable: All'] / 100
+    report['.Reward'] = report['Ratio Avg Win / Avg Loss: All'] * 100
     report['.Breakeven'] = (100 /(100+report['.Reward'])) + 0.2
     report['.Margin'] = report['.Percent Decimal'] - report['.Breakeven']
+    report['.maxProfitFromTrades'] = report['Total Closed Trades: All'] &&  report['Total Closed Trades: All'] > 50 ? report['Net Profit: All'] :  report['Net Profit: All'] * 0.1
 
     // TODO
     return report
@@ -404,7 +405,7 @@
   // Annealing optimization
   async function optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState) {
     const initTemp = 1// TODO to param? Find teh best match?
-    const sign = optimizationState.hasOwnProperty('sign') && typeof optimizationState.sign === 'number' ? optimizationState.sign : 1
+    const isMaximizing = testResults.hasOwnProperty('isMaximizing') ? testResults.isMaximizing : true
     if (!optimizationState.isInit) {
       optimizationState.currentTemp = initTemp
 
@@ -415,9 +416,9 @@
       // const res = await optAnnealingGetEnergy(testResults, optimizationState.lastState)
       if(!res || !res.data)
         return res
-      // console.log('Init', res.data[MAX_PARAM_NAME], propVal)
+      // console.log('Init', res.data[testResults.optParamName], propVal)
 
-      optimizationState.lastEnergy = res.data[MAX_PARAM_NAME]
+      optimizationState.lastEnergy = res.data[testResults.optParamName]
       optimizationState.bestState = optimizationState.lastState;
       optimizationState.bestEnergy = optimizationState.lastEnergy;
       optimizationState.isInit = true
@@ -431,11 +432,11 @@
     if(!res || !res.data)
       return res
 
-    if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
-      console.log('ITER', testResults.perfomanceSummary.length, 'CUR RES', res.data[MAX_PARAM_NAME], 'BEST', optimizationState.bestEnergy, 'TEMP', optimizationState.currentTemp)
-      const currentEnergy = res.data[MAX_PARAM_NAME]
+    if(res.data.hasOwnProperty(testResults.optParamName)) {
+      console.log('ITER', testResults.perfomanceSummary.length, 'CUR RES', res.data[testResults.optParamName], 'BEST', optimizationState.bestEnergy, 'TEMP', optimizationState.currentTemp)
+      const currentEnergy = res.data[testResults.optParamName]
       res.currentValue = currentEnergy
-      if (sign > 0 ? currentEnergy < optimizationState.lastEnergy : currentEnergy > optimizationState.lastEnergy) {
+      if (isMaximizing !== true ? currentEnergy < optimizationState.lastEnergy : currentEnergy > optimizationState.lastEnergy) {
         optimizationState.lastState = currentState;
         optimizationState.lastEnergy = currentEnergy;
       } else {
@@ -447,7 +448,7 @@
         }
       }
 
-      if (sign > 0 ? optimizationState.lastEnergy < optimizationState.bestEnergy : optimizationState.lastEnergy > optimizationState.bestEnergy ) {
+      if (isMaximizing !== true ? optimizationState.lastEnergy < optimizationState.bestEnergy : optimizationState.lastEnergy > optimizationState.bestEnergy ) {
         // console.log('!!!Found best better then last', optimizationState.lastEnergy, optimizationState.bestEnergy)
         optimizationState.bestState = optimizationState.lastState;
         optimizationState.bestEnergy = optimizationState.lastEnergy;
@@ -458,7 +459,7 @@
 
       res.bestValue = optimizationState.bestEnergy
     } else {
-      console.error(`Absent ${MAX_PARAM_NAME}`)
+      console.error(`Absent ${testResults.optParamName}`)
       res.bestValue = bestValue
       res.currentValue = 'error'
     }
@@ -518,11 +519,11 @@
     return res
   }
 
-  async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del
+  async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del test function annealing
     const allDimensionVal = Object.keys(propVal).map(name => Math.abs(propVal[name] * propVal[name] - 16))
     testResults.perfomanceSummary.push(allDimensionVal)
     const resData = {}
-    resData[MAX_PARAM_NAME] = allDimensionVal.reduce((sum, item) => item + sum, 0)
+    resData[testResults.optParamName] = allDimensionVal.reduce((sum, item) => item + sum, 0)
     return {error: 0, data: resData};
   }
 

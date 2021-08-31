@@ -163,13 +163,20 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                   <option value="Margin Calls: All">Margin Calls: All</option>
                   <option value="Margin Calls: Long">Margin Calls: Long</option>
                   <option value="Margin Calls: Short">Margin Calls: Short</option>
+
+                  <option value=".Percent Decimal">Percent Decimal</option>
+                  <option value=".Reward">Reward</option>
+                  <option value=".Margin">Margin</option>
+                  <option value=".Breakeven">Breakeven</option>
+                  <option value=".maxProfitFromTrades">Net profit if trades > 50</option>
                 </select>
               </div>
               <div>by</div>
               <div>
 <!--                <select class="js-example-basic-single" name="state">-->
                 <select id="optMethod" name="method">
-                  <option value="random" selected="selected">Random</option>
+                  <option value="annealing" selected="selected">Annealing</option>
+                  <option value="random">Random</option>
                   <option value="sequential">Sequential</option>
                 </select>
               </div>
