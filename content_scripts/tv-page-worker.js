@@ -10,6 +10,9 @@
   const MAX_PARAM_NAME = 'Net Profit All'
   const MAX_PARAM_NAME_TO_SHOW = MAX_PARAM_NAME.startsWith('.') ? MAX_PARAM_NAME.substring(1) : MAX_PARAM_NAME
 
+  let reportNode = null
+  let isReportChanged = false
+
   let isMsgShown = false
   let workerStatus = null
   let tickerTextPrev = null
@@ -40,6 +43,7 @@
     strategyDialogParam: '#bottom-area div.backtesting-head-wrapper .js-backtesting-open-format-dialog',
     strategySummary: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li:nth-child(2)',
     strategySummaryActive: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li.active:nth-child(2)',
+    strategyReport: '#bottom-area div.backtesting-content-wrapper > div.reports-content',
     strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > div.reports-content.fade',
     strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
     strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
@@ -88,10 +92,10 @@
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
               break
             }
-            const paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PARAM)
             const allRangeParams = await getStrategyRangeParameters(strategyData)
             if(!allRangeParams)
               break
+            console.log('allRangeParams', allRangeParams)
             const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
             if(!cyclesStr)
               break
@@ -99,11 +103,13 @@
             if(!cycles || cycles < 1)
               break
             let testParams = await switchToStrategyTab()
-            testParams.cycles = cycles
             if(!testParams)
               break
+            testParams.cycles = cycles
+            testParams.isMaximizing = true
+            testParams.method = 'random'
             statusMessage('Started')
-            const testResults = await testStrategy(testParams, strategyData, allRangeParams)  // TODO realize optimization functions
+            const testResults = await testStrategy(testParams, strategyData, allRangeParams)
             console.log('testResults', testResults)
             if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
               alert('There is no data for conversion. Try to do test again')
@@ -164,6 +170,8 @@
   );
 
   function getBestResult(perfomanceSummary, checkField = MAX_PARAM_NAME) {
+    if(!perfomanceSummary || !perfomanceSummary.length)
+      return ''
     const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
       if(curResult.hasOwnProperty(checkField) && (!curBestRes || !curBestRes[checkField] || curBestRes[checkField] < curResult[checkField]))
         return curResult
@@ -231,7 +239,7 @@
   }
 
   function convertResultsToCSV(testResults) {
-    if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)
+    if(!testResults || !testResults.perfomanceSummary || !testResults.perfomanceSummary.length)
       return 'There is no data for conversion'
     let headers = Object.keys(testResults.perfomanceSummary[0]) // The first test table can be with error and can't have rows with previous values when parsedReport
     if(testResults.hasOwnProperty('paramsNames') && headers.length <= (Object.keys(testResults.paramsNames).length + 1)) { // Find the another header if only params names and 'comment' in headers
@@ -255,6 +263,19 @@
     return Math.floor( min + Math.random() * (max + 1 - min))
   }
 
+  function randomNormalDistribution(min, max) {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+    num = num / 10.0 + 0.5; // Translate to 0 -> 1
+    if (num > 1 || num < 0) return randomNormalDistribution() // resample between 0 and 1
+    else{
+      num *= max - min // Stretch to fill range
+      num += min // offset to min
+    }
+    return num
+  }
   function parseReportTable() {
     const strategyHeaders = []
     const allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
@@ -299,34 +320,39 @@
   }
 
   function calculateAdditionValuesToReport(report) {
+
+
     // TODO
     return report
   }
 
   async function getTestIterationResult (testResults, propVal) {
     let reportData = {}
+    isReportChanged = false
     const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
 
-    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
+    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 2000)
     let isProcessEnd = null
     let isProcessError
     if (isProcessStart)
       isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
+    else if (isReportChanged)
+      isProcessEnd = true
     isProcessError = document.querySelector(SEL.strategyReportError)
     if(!isProcessError && isProcessEnd) {
       await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
       reportData = parseReportTable()
-      reportData = calculateAdditionValuesToReport(report)
+      reportData = calculateAdditionValuesToReport(reportData)
     }
 
-    Object.keys(propVal).forEach(key => report[`__${key}`] = propVal[key])
+    Object.keys(propVal).forEach(key => reportData[`__${key}`] = propVal[key])
     reportData['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
       !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
         isProcessEnd ? '' : 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.'
 
-    testResults.perfomanceSummary.push(report)
+    testResults.perfomanceSummary.push(reportData)
     await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
     return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, errMessage: reportData['comment'], data: reportData}
   }
@@ -359,22 +385,23 @@
   }
 
 
-  async function testStrategy(testResults, strategyData, allRangeParams, method = 'random') {
+  async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
-    console.log('testStrategy', testResults.shortName, testResults.cycles, 'times')
+    console.log('testStrategy', testResults.shortName, 'by', method, testResults.cycles, 'times')
     testResults.paramsNames = Object.keys(allRangeParams)
     let bestValue = null
     const optimizationState = {}
     for(let i = 0; i < testResults.cycles; i++) {
       let optRes = {}
-      switch(method) {
+      switch(testResults.method) {
         case 'random':
         default:
           optRes = await optRandomIteration(allRangeParams, testResults, bestValue, optimizationState)
       }
-      if(!optRes.data) continue
-      bestValue = optRes.hasOwnProperty(bestValue) ?  optRes.bestValue : bestValue
+      if(!optRes.hasOwnProperty('data'))
+        continue
+      bestValue = optRes.hasOwnProperty('bestValue') ? optRes.bestValue : bestValue
       try {
         statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Best "${MAX_PARAM_NAME_TO_SHOW}": ${bestValue}</p>
             ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + MAX_PARAM_NAME_TO_SHOW + '": ' + optRes.currentValue + '</p>': ''}`)
@@ -482,6 +509,24 @@
     }
     stratSummaryEl.click()
     await waitForSelector(SEL.strategySummaryActive, 1000)
+
+    await waitForSelector(SEL.strategyReport, 0)
+    if(!reportNode) {
+      reportNode = await waitForSelector(SEL.strategyReport, 0)
+      if(reportNode) {
+        const reportObserver = new MutationObserver(()=> {
+          isReportChanged = true
+        });
+        reportObserver.observe(reportNode, {
+          childList: true,
+          subtree: true,
+          attributes: false,
+          characterData: false
+        });
+      }
+    }
+
+
     return testResults
   }
 
