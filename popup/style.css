@@ -1,18 +1,54 @@
 * {
     box-sizing: border-box;
 }
+
+
+.details {
+    border: 1px blue;
+}
+
+.param-container {overflow:hidden}
+.param-box{
+    white-space:nowrap
+}
+.param-box div {
+    display:inline-block;
+    border:0px;
+    margin:5px
+}
+
+.checkbox-minmax {
+    position: relative;
+}
+
+.checkbox-minmax input[type=checkbox] {
+    display: none;
+}
+
+.checkbox-minmax input[type=checkbox]:checked~b:after {
+    content: '\2191 Max';
+
+}
+
+.checkbox-minmax input[type=checkbox]:not(checked)~b:after {
+    content: '\2193 Min';
+
+}
+
+
 body {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 90%;
     color: #2A2E43;
     margin: 0;
     padding: 0;
+    min-width: 600px;
 }
 .header {
-    padding: 5px;
+    padding: 5px 0px;
     text-align: center;
     font-size: 125%;
-    min-width: 500px;
+
 }
 
 .p {
@@ -137,7 +173,7 @@ body {
     overflow-y: hidden;
     margin-left: auto;
     margin-right: auto;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     order: 0;
     white-space: nowrap;
     background-color: #fff;
@@ -190,7 +226,7 @@ body {
 }
 
 .msg-header {
-    padding: 5px;
+    padding: 5px 0px;
     text-align: center;
     font-size: 125%;
 }

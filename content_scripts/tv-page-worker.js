@@ -7,8 +7,8 @@
 
 (async function() {
 
-  const MAX_PARAM_NAME = 'Net Profit All'
-  const MAX_PARAM_NAME_TO_SHOW = MAX_PARAM_NAME.startsWith('.') ? MAX_PARAM_NAME.substring(1) : MAX_PARAM_NAME
+  const DEF_MAX_PARAM_NAME = 'Net Profit All'
+  const MAX_PARAM_NAME_TO_SHOW = DEF_MAX_PARAM_NAME.startsWith('.') ? DEF_MAX_PARAM_NAME.substring(1) : DEF_MAX_PARAM_NAME
 
   let reportNode = null
   let isReportChanged = false
@@ -88,7 +88,8 @@
           }
           case 'testStrategy': {
             const strategyData = await getStrategy()
-            if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+            console.log('request', request)
+             if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
               break
             }
@@ -106,8 +107,9 @@
             if(!testParams)
               break
             testParams.cycles = cycles
-            testParams.isMaximizing = true
-            testParams.method = 'random'
+            testParams.isMaximizing = request.options && request.options.hasOwnProperty('isMaximizing') ? request.options.isMaximizing : true
+            testParams.optParamName = request.options && request.options.optParamName ? request.options.optParamName : DEF_MAX_PARAM_NAME
+            testParams.method = request.options && request.options.optMethod ? request.options.optMethod : 'random'
             statusMessage('Started')
             const testResults = await testStrategy(testParams, strategyData, allRangeParams)
             console.log('testResults', testResults)
@@ -116,17 +118,17 @@
               break
             }
             const CSVResults = convertResultsToCSV(testResults)
-            const bestResult = testResults.perfomanceSummary ? getBestResult(testResults.perfomanceSummary) : {}
+            const bestResult = testResults.perfomanceSummary ? getBestResult(testResults) : {}
             const propVal = {}
             testResults.paramsNames.forEach(paramName => {
               if(bestResult.hasOwnProperty(`__${paramName}`))
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
-            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME_TO_SHOW + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
-            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME_TO_SHOW +': ' + bestResult[MAX_PARAM_NAME] : ''}`)
-            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME) ? 'The best ' + MAX_PARAM_NAME_TO_SHOW + ': ' + bestResult[MAX_PARAM_NAME] : ''}`)
-            saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
+            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ testResults.isMaximizing ? '(max) ':'(min) ' + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
+            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + testResults.isMaximizing ? '(max) ':'(min) ' + testParams.optParamName +': ' + bestResult[testParams.optParamName] : ''}`)
+            console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + testResults.isMaximizing ? '(max) ':'(min) '  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
+            saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
             statusMessageRemove()
             break;
           }
@@ -136,19 +138,19 @@
               alert('There is no data for conversion. Try to do test again')
               break
             }
+            testResults.optParamName = testResults.optParamName || DEF_MAX_PARAM_NAME
             console.log('testResults', testResults)
             const CSVResults = convertResultsToCSV(testResults)
-
-            const bestResult = testResults.perfomanceSummary ? getBestResult(testResults.perfomanceSummary) : {}
+            const bestResult = testResults.perfomanceSummary ? getBestResult(testResults) : {}
             const propVal = {}
             testResults.paramsNames.forEach(paramName => {
               if(bestResult.hasOwnProperty(`__${paramName}`))
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
-            if(bestResult && bestResult.hasOwnProperty(MAX_PARAM_NAME))
-              alert(`The best found parameters are set for the strategy\n\nThe best ${MAX_PARAM_NAME}: ` + bestResult[MAX_PARAM_NAME])
-            saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}.csv`)
+            if(bestResult && bestResult.hasOwnProperty(testResults.optParamName))
+              alert(`The best found parameters are set for the strategy\n\nThe best ${testResults.isMaximizing ? '(max) ':'(min)'} ${testResults.optParamName}: ` + bestResult[testResults.optParamName])
+            saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
             break
           }
           case 'clearAll': {
@@ -169,13 +171,19 @@
     }
   );
 
-  function getBestResult(perfomanceSummary, checkField = MAX_PARAM_NAME) {
+  function getBestResult(testResults) {
+    const perfomanceSummary = testResults.perfomanceSummary
+    const checkField = testResults.optParamName || DEF_MAX_PARAM_NAME
+    const isMaximizing = testResults.hasOwnProperty('isMaximizing') ?  testResults.isMaximizing : true
     if(!perfomanceSummary || !perfomanceSummary.length)
       return ''
     const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
-      if(curResult.hasOwnProperty(checkField) && (!curBestRes || !curBestRes[checkField] || curBestRes[checkField] < curResult[checkField]))
-        return curResult
-
+      if(curResult.hasOwnProperty(checkField)) {
+        if(isMaximizing && (!curBestRes || !curBestRes[checkField] || curBestRes[checkField] < curResult[checkField]))
+          return curResult
+        else if (!isMaximizing && (!curBestRes || !curBestRes[checkField] || curBestRes[checkField] > curResult[checkField]))
+          return curResult
+      }
       return curBestRes
     })
     console.log('bestResult:', bestResult)
@@ -304,14 +312,14 @@
               if(valuesPair && valuesPair.length == 2) {
                 const digitVal0 = valuesPair[0].match(/-?\d+\.?\d*/)
                 const digitVal1 = valuesPair[1].match(/-?\d+\.?\d*/)
-                report[`${paramName} ${strategyHeaders[i]}`] = Boolean(digitVal0) ? parseFloat(digitVal0[0]) : valuesPair[0]
-                report[`${paramName} ${strategyHeaders[i]} %`] = Boolean(digitVal1) ? parseFloat(digitVal1[0]) : valuesPair[0]
+                report[`${paramName}: ${strategyHeaders[i]}`] = Boolean(digitVal0) ? parseFloat(digitVal0[0]) : valuesPair[0]
+                report[`${paramName}: ${strategyHeaders[i]} %`] = Boolean(digitVal1) ? parseFloat(digitVal1[0]) : valuesPair[0]
                 continue
               }
             } else if(digitOfValues)
-              report[`${paramName} ${strategyHeaders[i]}`] = parseFloat(digitOfValues)
+              report[`${paramName}: ${strategyHeaders[i]}`] = parseFloat(digitOfValues)
             else
-              report[`${paramName} ${strategyHeaders[i]}`] = values
+              report[`${paramName}: ${strategyHeaders[i]}`] = values
           }
         }
       }
@@ -359,16 +367,20 @@
 
   // Random optimization
   async function optRandomIteration(allRangeParams, testResults, bestValue, optimizationState) {
+    const sign = testResults.isMaximizing ? 1 : -1
     const propVal = optRandomGetPropertiesValues(allRangeParams)
     const res = await getTestIterationResult(testResults, propVal)
     if(!res || !res.data)
       return res
-    if(res.data.hasOwnProperty(MAX_PARAM_NAME)) {
-      res.currentValue = res.data[MAX_PARAM_NAME]
+    if(res.data.hasOwnProperty(testResults.optParamName)) {
+      res.currentValue = res.data[testResults.optParamName]
       if(bestValue === null || typeof bestValue === 'undefined')
-        res.bestValue = res.data[MAX_PARAM_NAME]
+        res.bestValue = res.data[testResults.optParamName]
       else
-        res.bestValue = bestValue < res.data[MAX_PARAM_NAME] ? res.data[MAX_PARAM_NAME] : bestValue
+        if(testResults.isMaximizing)
+          res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
+        else
+          res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
     } else {
       res.bestValue = bestValue
       res.currentValue = 'error'
@@ -388,13 +400,16 @@
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
-    console.log('testStrategy', testResults.shortName, 'by', method, testResults.cycles, 'times')
+    console.log('testStrategy', testResults.shortName, testResults.isMaximizing ? 'max' : 'min', 'value of', testResults.optParamName, 'by', testResults.method, testResults.cycles, 'times')
     testResults.paramsNames = Object.keys(allRangeParams)
     let bestValue = null
     const optimizationState = {}
     for(let i = 0; i < testResults.cycles; i++) {
       let optRes = {}
       switch(testResults.method) {
+        case 'sequential':
+          console.error(`Sequential strategy optimization method don't implement yet`)
+          return testResults
         case 'random':
         default:
           optRes = await optRandomIteration(allRangeParams, testResults, bestValue, optimizationState)
@@ -403,8 +418,8 @@
         continue
       bestValue = optRes.hasOwnProperty('bestValue') ? optRes.bestValue : bestValue
       try {
-        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Best "${MAX_PARAM_NAME_TO_SHOW}": ${bestValue}</p>
-            ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + MAX_PARAM_NAME_TO_SHOW + '": ' + optRes.currentValue + '</p>': ''}`)
+        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Best "${testResults.optParamName}": ${bestValue}</p>
+            ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + testResults.optParamName + '": ' + optRes.currentValue + '</p>': ''}`)
       } catch {}
     }
     return testResults
