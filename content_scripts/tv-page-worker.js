@@ -48,7 +48,8 @@
     strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
     strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
     strategyReportHeader: '#bottom-area div.backtesting-content-wrapper .report-data thead > tr > td',
-    strategyReportRow: '#bottom-area div.backtesting-content-wrapper .report-data tbody > tr'
+    strategyReportRow: '#bottom-area div.backtesting-content-wrapper .report-data tbody > tr',
+    strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] div[class^="label-"]'
   }
 
   chrome.runtime.onMessage.addListener(
@@ -367,7 +368,6 @@
 
   // Random optimization
   async function optRandomIteration(allRangeParams, testResults, bestValue, optimizationState) {
-    const sign = testResults.isMaximizing ? 1 : -1
     const propVal = optRandomGetPropertiesValues(allRangeParams)
     const res = await getTestIterationResult(testResults, propVal)
     if(!res || !res.data || res.error !== null)
@@ -589,13 +589,19 @@
   function strategyGetRange(strategyData) {
     const paramRange = {}
     Object.keys(strategyData.properties).forEach(key => {
-      const isInteger =  strategyData.properties[key] === Math.round(strategyData.properties[key]) // TODO or convert to string and check the point?
-      if(strategyData.properties[key]) { // Not 0 or Nan
-        paramRange[key] = [isInteger ? Math.floor(strategyData.properties[key] / 2) : strategyData.properties[key] / 2,
-          strategyData.properties[key] * 2]
-        let step = isInteger ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
-        step = isInteger && step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1 // TODO or set paramRange[key][1]?
-        paramRange[key].push(step)
+      if(typeof strategyData.properties[key] === 'boolean') {
+        paramRange[key] = [true, false, 0]
+      } else if (typeof strategyData.properties[key] === 'string' && strategyData.properties[key].includes(';')) {
+        paramRange[key] = [strategyData.properties[key], '', 0]
+      } else {
+        const isInteger = strategyData.properties[key] === Math.round(strategyData.properties[key]) // TODO or convert to string and check the point?
+        if(strategyData.properties[key]) { // Not 0 or Nan
+          paramRange[key] = [isInteger ? Math.floor(strategyData.properties[key] / 2) : strategyData.properties[key] / 2,
+            strategyData.properties[key] * 2]
+          let step = isInteger ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
+          step = isInteger && step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1 // TODO or set paramRange[key][1]?
+          paramRange[key].push(step)
+        }
       }
     })
     return paramRange
@@ -606,6 +612,21 @@
       csv += `${JSON.stringify(key)},${paramRange[key][0]},${paramRange[key][1]},${paramRange[key][2]}\n`
     })
     return csv
+  }
+
+  function setSelByText(selector, textValue) {
+    let isSet = false
+    const selectorAllVal = document.querySelectorAll(selector)
+    if (!selectorAllVal || !selectorAllVal.length)
+      return isSet
+    for (let options of selectorAllVal) {
+      if(options && options.innerText.startsWith(textValue)) {
+        mouseClickEl(options)
+        isSet = true
+        break
+      }
+    }
+    return isSet
   }
 
   async function getStrategy(strategyName) {
@@ -632,31 +653,55 @@
         if(await tvDialogChangeTabToInput()) {
           const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
           for(let i = 0; i < indicProperties.length; i++) {
+            if(!indicProperties[i])
+              continue
             const propClassName = indicProperties[i].getAttribute('class')
+            const propText = indicProperties[i].innerText
+            if(!propClassName || !propText)
+              continue
             if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
               i++ // Skip get the next cell because it content values
               continue // Doesn't realise to manage this kind of properties (two rows)
             } else if (propClassName.includes('first-')) {
-              const propText = indicProperties[i].innerText
               i++
-              if(indicProperties[i]) {
-                if(indicProperties[i].querySelector('input')) {
-                  let propValue = indicProperties[i].querySelector('input').value
-                  if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') {
-                    propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just  search point in string
-                    if(!isNaN(propValue))
-                      strategyData.properties[propText] = propValue
-                  } else {
-                    strategyData.properties[propText] = propValue // TODO get all other values from list  // TODO not only inputmode==numbers input have digits
-                  }
+              if(indicProperties[i].querySelector('input')) {
+                let propValue = indicProperties[i].querySelector('input').value
+                if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') {
+                  propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just  search point in string
+                  if(!isNaN(propValue))
+                    strategyData.properties[propText] = propValue
+                } else {
+                  strategyData.properties[propText] = propValue  // TODO not only inputmode==numbers input have digits
                 }
-                else if(indicProperties[i].querySelector('span[role="button"]')) { // TODO as list
+              } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
+                const buttonEl = indicProperties[i].querySelector('span[role="button"]')
+                if(!buttonEl)
                   continue
-                  //   strategyData.properties[propText] = indicProperties[i].querySelector('span[role="button"]').innerText
+                const propValue = buttonEl.innerText
+                if(propValue) {
+                  buttonEl.scrollIntoView()
+                  await waitForTimeout(100)
+                  mouseClick(buttonEl)
+                  const isOptions = await waitForSelector(SEL.strategyListOptions, 1000)
+                  if(isOptions) {
+                    const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
+                    let allOptionsList = ''
+                    for(let optionEl of allOptionsEl) {
+                      if(optionEl && optionEl.innerText) {
+                        allOptionsList += optionEl.innerText + ';'
+                      }
+                    }
+                    if(allOptionsList)
+                      strategyData.properties[propText] = allOptionsList
+                    mouseClick(buttonEl)
+                  } else {
+                    strategyData.properties[propText] = propValue
+                  }
                 }
               }
             } else if (propClassName.includes('fill-')) {
-              continue // Doesn't realise to manage this kind of properties (bool)
+              if(indicProperties[i].querySelector('input[type="checkbox"]'))
+                strategyData.properties[propText] = indicProperties[i].querySelector('input[type="checkbox"]').getAttribute('checked') !== null
             }
           }
         } else {
@@ -671,7 +716,7 @@
   }
 
   function parseCSVLine(text) {
-    return text.match( /\s*(\".*?\"|'.*?'|[^,]+)\s*(,|$)/g ).map(function (text) {
+    return text.match( /\s*(\".*?\"|'.*?'|[^,]+|)\s*(,|$)/g ).map(function (text) {
       let m;
       if (m = text.match(/^\s*\"(.*?)\"\s*,?$/)) return m[1]; // Double Quoted Text
       if (m = text.match(/^\s*'(.*?)'\s*,?$/)) return m[1]; // Single Quoted Text
@@ -843,6 +888,7 @@
     if(missColumns && missColumns.length)
       return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV. Please add all necessary columns to CSV like showed in the template. Uploading canceled.\n`
     csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step']])
+    console.log('paramRange', paramRange)
     await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
     return `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
   }
@@ -889,7 +935,7 @@
   function mouseTrigger (el, eventType) {
     var clickEvent = document.createEvent ('MouseEvents');
     clickEvent.initEvent (eventType, true, true);
-    el.dispatchEvent (clickEvent);
+    el.dispatchEvent(clickEvent);
   }
   function mouseClick (el) {
     mouseTrigger (el, "mouseover");
