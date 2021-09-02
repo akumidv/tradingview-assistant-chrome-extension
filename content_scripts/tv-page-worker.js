@@ -409,6 +409,7 @@
       switch(testResults.method) {
         case 'sequential':
           console.error(`Sequential strategy optimization method don't implement yet`)
+          alert(`Sequential strategy optimization method don't implement yet`)
           return testResults
         case 'random':
         default:
@@ -432,11 +433,32 @@
     const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
     const propKeys = Object.keys(propVal)
     let setResultNumber = 0
-    for(let j = 0; j < indicProperties.length; j++) {
-      const propText = indicProperties[j].innerText
-      if(propKeys.includes(propText)) {
+    for(let i = 0; i < indicProperties.length; i++) {
+      const propText = indicProperties[i].innerText
+      if(propText && propKeys.includes(propText)) {
         setResultNumber++
-        setInputElementValue(indicProperties[j + 1].querySelector('input'), propVal[propText])
+        const propClassName = indicProperties[i].getAttribute('class')
+        if (propClassName.includes('first-')) {
+          i++
+          if(indicProperties[i].querySelector('input')) {
+            setInputElementValue(indicProperties[i].querySelector('input'), propVal[propText])
+          } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
+            const buttonEl = indicProperties[i].querySelector('span[role="button"]')
+            if(!buttonEl || !buttonEl.innerText)
+              continue
+            buttonEl.scrollIntoView()
+            mouseClick(buttonEl)
+            setSelByText(SEL.strategyListOptions, propVal[propText])
+          }
+        } else if (propClassName.includes('fill-')) {
+          const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
+          if(checkboxEl) {
+            const isChecked = checkboxEl.getAttribute('checked') !== null
+            if(propVal[propText] !== isChecked) {
+              mouseClick(checkboxEl)
+            }
+          }
+        }
         if(propKeys.length === setResultNumber)
           break
       }
@@ -628,14 +650,14 @@
     return csv
   }
 
-  function setSelByText(selector, textValue) {
+ function setSelByText(selector, textValue) {
     let isSet = false
     const selectorAllVal = document.querySelectorAll(selector)
     if (!selectorAllVal || !selectorAllVal.length)
       return isSet
     for (let options of selectorAllVal) {
       if(options && options.innerText.startsWith(textValue)) {
-        mouseClickEl(options)
+        mouseClick(options)
         isSet = true
         break
       }
