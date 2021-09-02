@@ -106,15 +106,15 @@ function optAnnealingNewState(allRangeParams, temperature, curState) {
       const curIndex = allRangeParams[paramName].indexOf(curState[paramName])
       const sign = randomInteger(0,1) === 0 ? -1 : 1
       // Is not proportional chances for edges of array
-      const offset = sign * Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
-      const newIndex = curIndex + offset > allRangeParams[paramName].length - 1 ? allRangeParams[paramName].length - 1 : // TODO +/-
-        curIndex + offset < 0 ? 0 : curIndex + offset
-      res[paramName] = allRangeParams[paramName][newIndex]
+      // const offset = sign * Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+      // const newIndex = curIndex + offset > allRangeParams[paramName].length - 1 ? allRangeParams[paramName].length - 1 : // TODO +/-
+      //   curIndex + offset < 0 ? 0 : curIndex + offset
+      // res[paramName] = allRangeParams[paramName][newIndex]
 
-      // const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
-      // const offsetIndex = (curIndex + sign*baseOffset) % (allRangeParams[paramName].length)
-      // const newIndex2 = offsetIndex >= 0 ?offsetIndex : allRangeParams[paramName].length + offsetIndex
-      // res[paramName] = allRangeParams[paramName][newIndex2]
+      const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+      const offsetIndex = (curIndex + sign*baseOffset) % (allRangeParams[paramName].length)
+      const newIndex2 = offsetIndex >= 0 ?offsetIndex : allRangeParams[paramName].length + offsetIndex
+      res[paramName] = allRangeParams[paramName][newIndex2]
     })
   }
   return res
@@ -133,7 +133,7 @@ async function testStrategy(testResults, strategyData, allRangeParams, method = 
   testResults.shortName = strategyData.name
   testResults.paramsNames = Object.keys(allRangeParams)
   let bestValue = null
-  const optimizationState = {sign: -1}
+  const optimizationState = {sign: 1}
   let bestFoundIter = testResults.cycles
   for(let i = 0; i < testResults.cycles; i++) {
     let optRes = {}
