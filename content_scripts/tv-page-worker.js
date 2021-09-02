@@ -569,10 +569,22 @@
 
     Object.keys(paramRange).forEach(key => {
       allRangeParams[key] = []
-      for(let i = paramRange[key][0]; i < paramRange[key][1]; i = i + paramRange[key][2])
-        allRangeParams[key].push(i)
-      if(allRangeParams[key][allRangeParams[key].length -1] < paramRange[key][1])
-        allRangeParams[key].push(paramRange[key][1])
+      if(paramRange[key].length != 3) {
+        console.error('Errors in param length', key, paramRange[key])
+      } else if(typeof paramRange[key][0] === 'boolean' && typeof paramRange[key][1] === 'boolean') {
+        allRangeParams[key] = [true, false]
+      } else if (typeof paramRange[key][0] === 'string' && paramRange[key][1] === '' && paramRange[key][0].includes(';')) {
+        allRangeParams[key] = paramRange[key][0].split(';').filter(item => item)
+      } else if(paramRange[key][2] === 0) {
+          allRangeParams[key] = [paramRange[key][0], paramRange[key][1]]
+      } else if (typeof  paramRange[key][0] === 'number' && typeof paramRange[key][1] === 'number' && typeof paramRange[key][2] === 'number') {
+        for(let i = paramRange[key][0]; i < paramRange[key][1]; i = i + paramRange[key][2])
+          allRangeParams[key].push(i)
+        if(allRangeParams[key][allRangeParams[key].length - 1] < paramRange[key][1])
+          allRangeParams[key].push(paramRange[key][1])
+      } else {
+        console.error('Unsupported param values combination', key, paramRange[key])
+      }
     })
     return allRangeParams
   }
@@ -601,6 +613,8 @@
           let step = isInteger ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
           step = isInteger && step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1 // TODO or set paramRange[key][1]?
           paramRange[key].push(step)
+        } else {
+          paramRange[key] = [strategyData.properties[key], '', 0]
         }
       }
     })
@@ -888,7 +902,6 @@
     if(missColumns && missColumns.length)
       return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV. Please add all necessary columns to CSV like showed in the template. Uploading canceled.\n`
     csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step']])
-    console.log('paramRange', paramRange)
     await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
     return `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
   }
