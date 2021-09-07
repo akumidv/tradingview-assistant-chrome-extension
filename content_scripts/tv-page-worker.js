@@ -455,8 +455,8 @@
         optimizationState.bestEnergy = optimizationState.lastEnergy;
       }
       // optimizationState.currentTemp = optAnnealingGetTemp(optimizationState.currentTemp, testResults.cycles);
-      // optimizationState.currentTemp = optAnnealingGetBoltzmannTemp(initTemp, iteration);
-      optimizationState.currentTemp = optAnnealingGetExpTemp(initTemp, iteration, Object.keys(allRangeParams).length);
+      optimizationState.currentTemp = optAnnealingGetBoltzmannTemp(initTemp, iteration, Object.keys(allRangeParams).length);
+      // optimizationState.currentTemp = optAnnealingGetExpTemp(initTemp, iteration, Object.keys(allRangeParams).length);
 
       res.bestValue = optimizationState.bestEnergy
     } else {
@@ -471,8 +471,8 @@
     return prevTemperature * 1-1/cylces;
   }
 
-  function optAnnealingGetBoltzmannTemp(initTemperature, iter) {
-    return iter === 1 ? 1 : initTemperature/Math.log(1 + iter);
+  function optAnnealingGetBoltzmannTemp(initTemperature, iter, cylces, dimensionSize) {
+    return iter === 1 ? 1 : initTemperature/Math.log(1 + iter/(dimensionSize*2));
   }
 
   function optAnnealingGetExpTemp(initTemperature, iter, dimensionSize) {
@@ -497,7 +497,7 @@
 
   function optAnnealingNewState(allRangeParams, temperature, curState) {
     const res = {}
-    if(!curState) { // || randomInteger(0,1) // for more variable search
+    if(!curState || randomInteger(0,1)) { // || randomInteger(0,1) // for more variable search
       Object.keys(allRangeParams).forEach(paramName => {
         res[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
       })
@@ -506,15 +506,15 @@
         const curIndex = allRangeParams[paramName].indexOf(curState[paramName])
         const sign = randomInteger(0,1) === 0 ? -1 : 1
         // Is not proportional chances for edges of array
-        const offset = sign * Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
-        const newIndex = curIndex + offset > allRangeParams[paramName].length - 1 ? allRangeParams[paramName].length - 1 : // TODO +/-
-          curIndex + offset < 0 ? 0 : curIndex + offset
-        res[paramName] = allRangeParams[paramName][newIndex]
+        // const offset = sign * Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+        // const newIndex = curIndex + offset > allRangeParams[paramName].length - 1 ? allRangeParams[paramName].length - 1 : // TODO +/-
+        //   curIndex + offset < 0 ? 0 : curIndex + offset
+        // res[paramName] = allRangeParams[paramName][newIndex]
         // Second variant
-        // const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
-        // const offsetIndex = (curIndex + sign*baseOffset) % (allRangeParams[paramName].length)
-        // const newIndex2 = offsetIndex >= 0 ?offsetIndex : allRangeParams[paramName].length + offsetIndex
-        // res[paramName] = allRangeParams[paramName][newIndex2]
+        const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+        const offsetIndex = (curIndex + sign*baseOffset) % (allRangeParams[paramName].length)
+        const newIndex2 = offsetIndex >= 0 ?offsetIndex : allRangeParams[paramName].length + offsetIndex
+        res[paramName] = allRangeParams[paramName][newIndex2]
       })
     }
     return res
