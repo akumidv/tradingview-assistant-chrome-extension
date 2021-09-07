@@ -1,6 +1,7 @@
 {
     "manifest_version": 3,
- 
+    "author": "Andrei Kuminov (akumidv)",
+    "url": "https://github.com/akumidv/tradingview-assistant-chrome-extension",
     "name": "Tradingview assistant",
     "version": "1.0",    
     "icons": {
