@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "author": "Andrei Kuminov (akumidv)",
-    "url": "https://github.com/akumidv/tradingview-assistant-chrome-extension",
+    "description": "An assistant for backtesting trading strategies and checking (showing) external signals in Tradingview implemented as a browser extension.",
     "name": "Tradingview assistant",
     "version": "1.0",    
     "icons": {
@@ -13,7 +13,7 @@
     },
     "content_scripts": [
         {
-            "matches": ["https://*.tradingview.com/*"],
+            "matches": ["https://*.tradingview.com/chart/*"],
             "js": [ "content_scripts/tv-page-worker.js"],
             "run_at": "document_end"
         }

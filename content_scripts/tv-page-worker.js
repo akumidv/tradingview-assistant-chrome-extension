@@ -8,7 +8,6 @@
 (async function() {
 
   const DEF_MAX_PARAM_NAME = 'Net Profit All'
-  const MAX_PARAM_NAME_TO_SHOW = DEF_MAX_PARAM_NAME.startsWith('.') ? DEF_MAX_PARAM_NAME.substring(1) : DEF_MAX_PARAM_NAME
 
   let reportNode = null
   let isReportChanged = false
@@ -80,6 +79,7 @@
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
             } else {
               const paramRange = strategyGetRange(strategyData)
+              console.log(paramRange)
               const strategyRangeParamsCSV = strategyRangeToTemplate(paramRange)
               await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
               saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
@@ -94,10 +94,14 @@
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
               break
             }
-            const allRangeParams = await getStrategyRangeParameters(strategyData)
+            const paramRange = await getStrategyParameters(strategyData)
+            console.log('paramRange', paramRange)
+            if(!paramRange)
+              break
+            const allRangeParams = createParamsFormRange(paramRange)
+            console.log('allRangeParams', allRangeParams)
             if(!allRangeParams)
               break
-            console.log('allRangeParams', allRangeParams)
             const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
             if(!cyclesStr)
               break
@@ -107,11 +111,17 @@
             let testParams = await switchToStrategyTab()
             if(!testParams)
               break
+
+            testParams.startParams = await getStartParamValues(paramRange)
+            console.log('testParams.startParams', testParams.startParams)
             testParams.cycles = cycles
             testParams.isMaximizing = request.options && request.options.hasOwnProperty('isMaximizing') ? request.options.isMaximizing : true
             testParams.optParamName = request.options && request.options.optParamName ? request.options.optParamName : DEF_MAX_PARAM_NAME
             testParams.method = request.options && request.options.optMethod ? request.options.optMethod : 'random'
-            statusMessage('Started')
+            const paramSpaceNumber = Object.keys(allRangeParams).reduce((mult, param) => mult *= allRangeParams[param].length, 1)
+            let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
+            extraHeader += paramSpaceNumber/cycles > 10 ? '<br />This is too large. It is recommended to use up to 3-4 parameters, remove the rest from the template file.' : ''
+            statusMessage('Started', extraHeader)
             const testResults = await testStrategy(testParams, strategyData, allRangeParams)
             console.log('testResults', testResults)
             if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
@@ -187,7 +197,7 @@
       }
       return curBestRes
     })
-    console.log('bestResult:', bestResult)
+    console.log('bestResult', bestResult)
     return bestResult
   }
 
@@ -203,7 +213,7 @@
     document.body.appendChild(altEl);
   }
 
-  function statusMessage(msgText) {
+  function statusMessage(msgText, extraHeader) {
     const isStatusPresent = document.getElementById('iondvStatus')
     const msgEl = isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
     if(!isStatusPresent) {
@@ -226,9 +236,11 @@
     if(isStatusPresent && msgEl && document.getElementById('iondvMsg')) {
       document.getElementById('iondvMsg').innerHTML = msgText
     } else {
+      extraHeader = extraHeader ? `<div style="font-size: 12px;margin-left: 5px;margin-right: 5px;text-align: left;">${extraHeader}</div>` : '' //;margin-bottom: 10px
       msgEl.innerHTML = '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
-        '<div style="font-size: 18px;margin-bottom: 10px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
-        '<div id="iondvMsg" style="margin: 5px 3px">' +
+        '<div style="font-size: 18px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
+        extraHeader +
+        '<div id="iondvMsg" style="margin: 5px 10px">' +
         msgText + '</div>';
       if(!isStatusPresent) {
         const tvDialog = document.getElementById('overlap-manager-root')
@@ -238,7 +250,6 @@
           document.body.appendChild(msgEl);
       }
     }
-
   }
 
   function statusMessageRemove() {
@@ -366,9 +377,33 @@
     return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, errMessage: reportData['comment'], data: reportData}
   }
 
-  // Random optimization
-  async function optRandomIteration(allRangeParams, testResults, bestValue, optimizationState) {
-    const propVal = optRandomGetPropertiesValues(allRangeParams)
+  // Random optimization TODO add search near the best values
+  async function optRandomIteration(allRangeParams, testResults, bestValue, optimizationState) { // const isNear = randomInteger(0,1) === 0 ? -1 : 1
+    let propVal
+    if(!optimizationState.__runStartDefault || !optimizationState.__runStartBest) { // Start from the default and best values
+      if(!testResults.hasOwnProperty('startParams')) {
+        optimizationState.__runStartDefault = true
+        optimizationState.__runStartBest = true
+      } else if (!testResults.startParams.hasOwnProperty('default')) {
+        optimizationState.__runStartDefault = true
+      } else if (!testResults.startParams.hasOwnProperty('best')) {
+        optimizationState.__runStartBest = true
+      }
+      if(!optimizationState.__runStartDefault && testResults.hasOwnProperty('startParams') && testResults.startParams.default) {
+        optimizationState.__runStartDefault = true
+        propVal = testResults.startParams.default
+      } else if (!optimizationState.__runStartDefault && testResults.hasOwnProperty('startParams') && testResults.startParams.best) {
+        optimizationState.__runStartBest = true
+        propVal = testResults.startParams.best
+      } else {
+        optimizationState.__runStartBest = true
+        optimizationState.__runStartDefault = true
+        propVal = optRandomGetPropertiesValues(allRangeParams)
+      }
+    } else {
+      propVal = optRandomGetPropertiesValues(allRangeParams)
+    }
+
     const res = await getTestIterationResult(testResults, propVal)
     if(!res || !res.data || res.error !== null)
       return res
@@ -403,7 +438,7 @@
     console.log('testStrategy', testResults.shortName, testResults.isMaximizing ? 'max' : 'min', 'value of', testResults.optParamName, 'by', testResults.method, testResults.cycles, 'times')
     testResults.paramsNames = Object.keys(allRangeParams)
     let bestValue = null
-    const optimizationState = {}
+    const optimizationState = {'__runStartDefault': false, '__runStartBest': false}
     for(let i = 0; i < testResults.cycles; i++) {
       let optRes = {}
       switch(testResults.method) {
@@ -419,7 +454,7 @@
         continue
       bestValue = optRes.hasOwnProperty('bestValue') ? optRes.bestValue : bestValue
       try {
-        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}.</p><p>Best "${testResults.optParamName}": ${bestValue}</p>
+        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${bestValue}</p>
             ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + testResults.optParamName + '": ' + optRes.currentValue + '</p>': ''}`)
       } catch {}
     }
@@ -567,7 +602,7 @@
     return testResults
   }
 
-  async function getStrategyRangeParameters(strategyData) {
+  async function getStrategyParameters(strategyData) {
     let paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PARAM)
     if(paramRange) {
       const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
@@ -580,10 +615,8 @@
     } else {
       paramRange = strategyGetRange(strategyData)
     }
-    console.log('paramRange', paramRange)
     await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
-    const allRangeParams = createParamsFormRange(paramRange)
-    return allRangeParams
+    return paramRange
   }
 
   function createParamsFormRange(paramRange) {
@@ -591,14 +624,14 @@
 
     Object.keys(paramRange).forEach(key => {
       allRangeParams[key] = []
-      if(paramRange[key].length != 3) {
+      if(paramRange[key].length !== 4) {
         console.error('Errors in param length', key, paramRange[key])
       } else if(typeof paramRange[key][0] === 'boolean' && typeof paramRange[key][1] === 'boolean') {
         allRangeParams[key] = [true, false]
       } else if (typeof paramRange[key][0] === 'string' && paramRange[key][1] === '' && paramRange[key][0].includes(';')) {
         allRangeParams[key] = paramRange[key][0].split(';').filter(item => item)
       } else if(paramRange[key][2] === 0) {
-          allRangeParams[key] = [paramRange[key][0], paramRange[key][1]]
+        allRangeParams[key] = [paramRange[key][0], paramRange[key][1]]
       } else if (typeof  paramRange[key][0] === 'number' && typeof paramRange[key][1] === 'number' && typeof paramRange[key][2] === 'number') {
         for(let i = paramRange[key][0]; i < paramRange[key][1]; i = i + paramRange[key][2])
           allRangeParams[key].push(i)
@@ -609,6 +642,33 @@
       }
     })
     return allRangeParams
+  }
+
+  async function getStartParamValues(paramRange) {
+    const startValues = {'default': {}}
+
+    Object.keys(paramRange).forEach(key => {
+      if(paramRange[key].length !== 4)
+        console.error('Errors in param length', key, paramRange[key])
+      else
+        startValues.default[key] = paramRange[key][3]
+    })
+
+    const testResults = await storageGetKey(STORAGE_STRATEGY_KEY_RESULTS)
+    if(testResults && testResults.perfomanceSummary && testResults.perfomanceSummary.length) {
+      const bestResult = testResults.perfomanceSummary ? getBestResult(testResults) : {}
+      const allParamsName = Object.keys(startValues.default)
+      if(bestResult) {
+        const propVal = {}
+        testResults.paramsNames.forEach(paramName => {
+          if(bestResult.hasOwnProperty(`__${paramName}`))
+            propVal[paramName] = bestResult[`__${paramName}`]
+        })
+        if(propVal && Object.keys(propVal).every(key => allParamsName.includes(key)))
+          startValues.best = propVal
+      }
+    }
+    return startValues
   }
 
   function saveFileAs(text, filename) {
@@ -624,9 +684,9 @@
     const paramRange = {}
     Object.keys(strategyData.properties).forEach(key => {
       if(typeof strategyData.properties[key] === 'boolean') {
-        paramRange[key] = [true, false, 0]
+        paramRange[key] = [true, false, 0, strategyData.properties[key]]
       } else if (typeof strategyData.properties[key] === 'string' && strategyData.properties[key].includes(';')) {
-        paramRange[key] = [strategyData.properties[key], '', 0]
+        paramRange[key] = [strategyData.properties[key], '', 0, strategyData.properties[key].split(';')[0]]
       } else {
         const isInteger = strategyData.properties[key] === Math.round(strategyData.properties[key]) // TODO or convert to string and check the point?
         if(strategyData.properties[key]) { // Not 0 or Nan
@@ -635,17 +695,19 @@
           let step = isInteger ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
           step = isInteger && step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1 // TODO or set paramRange[key][1]?
           paramRange[key].push(step)
+          paramRange[key].push(strategyData.properties[key])
         } else {
-          paramRange[key] = [strategyData.properties[key], '', 0]
+          paramRange[key] = [strategyData.properties[key], '', 0, strategyData.properties[key]]
         }
       }
     })
     return paramRange
   }
   function strategyRangeToTemplate(paramRange) {
-    let csv = 'Parameter,From,To,Step\n'
+    let csv = 'Parameter,From,To,Step,Default\n'
     Object.keys(paramRange).forEach(key => {
-      csv += `${JSON.stringify(key)},${paramRange[key][0]},${paramRange[key][1]},${paramRange[key][2]}\n`
+      csv += `${JSON.stringify(key)},${typeof paramRange[key][0] === 'string' ? JSON.stringify(paramRange[key][0]) : paramRange[key][0]},`+
+        `${paramRange[key][1]},${paramRange[key][2]},${typeof paramRange[key][3] === 'string' ? JSON.stringify(paramRange[key][3]) : paramRange[key][3]}\n`
     })
     return csv
   }
@@ -721,9 +783,9 @@
                   const isOptions = await waitForSelector(SEL.strategyListOptions, 1000)
                   if(isOptions) {
                     const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
-                    let allOptionsList = ''
+                    let allOptionsList = propValue
                     for(let optionEl of allOptionsEl) {
-                      if(optionEl && optionEl.innerText) {
+                      if(optionEl && optionEl.innerText && optionEl.innerText !== propValue) {
                         allOptionsList += optionEl.innerText + ';'
                       }
                     }
@@ -920,11 +982,12 @@
     const paramRange = {}
     const csvData = await parseCSVFile(fileData)
     const headers = Object.keys(csvData[0])
-    const missColumns = ['parameter','from','to','step'].filter(columnName => !headers.includes(columnName.toLowerCase()))
+    const missColumns = ['parameter','from','to','step','default'].filter(columnName => !headers.includes(columnName.toLowerCase()))
     if(missColumns && missColumns.length)
       return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV. Please add all necessary columns to CSV like showed in the template. Uploading canceled.\n`
-    csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step']])
+    csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step'], row['default']])
     await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
+    console.log(paramRange)
     return `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
   }
 

@@ -1,5 +1,5 @@
 # About
-Chrome extension as an assistant for working with parameters of indicators and strategies in Tradingview
+An assistant for backtesting trading strategies and checking (showing) external signals in Tradingview implemented as a Chrome browser extension.
 
 ## Functionality
 
@@ -7,14 +7,21 @@ Chrome extension as an assistant for working with parameters of indicators and s
 
 Loading external buy or sell signals by timestamps from a CSV file**
 
-### Optimization of the parameters of the tradingview strategy:
+### Backtesting trading strategies, optimisation of the strategy's parameters:
 
-* generating a CSV** template for setting a range of parameters and their step for the current strategy
-* loading a range of parameters from CSV file**
-* running up to 1000 cycles of randomly selecting values from a range and getting the results of the strategy
-* saving all strategy results and parameters to a CSV file**
+* automatic getting a list of parameters and their types (numeric, lists and checkboxes are supported)
+* generation of the testing range according to the rule: the beginning value is 2 times less than the current one, the end is 2 times more than the current one.
+* saving the generated parameters of testing a trading strategy for their correction as a template in a file in CSV format
+* Loading adjusted parameter ranges from a CSV file
+* Configuring the optimisation model:
+    * Choosing the type of optimisation: searching for the maximum or minimum values
+    * Selecting an optimised value from the entire list of strategy results in Tradingview (Net Profit, Ratio Avg Win / Avg Loss, Sharpe Ratio, Sortino Ratio, etc.)
+    * Choosing a search strategy in the parameter space(random, sequential)
+* Setting the number of cycles to search for parameters.
+* Performing automatic selection of parameters with storing all the results in the browser storage and the ability to save them as CSV files after testing, including in case of an error or page reloading
 
-It is planned to implement the annealing method to optimize the parameters.
+It is planned to implement the genetic method to optimise the parameters.
+
 
 ## Setup
 Click on the browser's address bar, insert `chrome://extensions` and follow this link. Click on the "Developer mode" switch.
