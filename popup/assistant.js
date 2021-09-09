@@ -4,12 +4,21 @@
 */
 'use strict';
 
- function getOptions(signal) {
-    const iondvOptions = {signal}
+function getOptions(signal) {
+    const iondvOptions = {}
     iondvOptions.isMaximizing = document.getElementById('optMinmax').checked
     iondvOptions.optParamName = document.getElementById('optParamName').value || 'Net Profit: All'
     iondvOptions.optMethod = document.getElementById('optMethod').value || 'random'
-    iondvOptions.tabId = signal === 'uploadSignals' ? 1 : 2
+
+    iondvOptions.isMaximizing = document.getElementById('optMinmax').checked
+    iondvOptions.optParamName = document.getElementById('optParamName').value || 'Net Profit: All'
+    iondvOptions.optMethod = document.getElementById('optMethod').value || 'random'
+
+    iondvOptions.optFilterAscending  = document.getElementById('optFilterMore').checked ? true : document.getElementById('optFilterLess').checked ? false : null
+    iondvOptions.optFilterValue = document.getElementById('optFilterValue').value || '50'
+    iondvOptions.optFilterParamName = document.getElementById('optFilterParamName').value || 'Total Closed Trades: All'
+
+    iondvOptions.tabId = (signal === 'uploadSignals') ? 1 : 2
     return iondvOptions
 }
 
@@ -59,6 +68,29 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('optParamName').value = iondvOptions.optParamName
       if(document.getElementById('optMethod') && iondvOptions.hasOwnProperty('optMethod'))
         document.getElementById('optMethod').value = iondvOptions.optMethod
+
+      if(iondvOptions.hasOwnProperty('optFilterAscending') && document.getElementById('optFilterMore') &&
+        document.getElementById('optFilterLess') && document.getElementById('optFilterOff')) {
+        if(iondvOptions.optFilterAscending === true) {
+          document.getElementById('optFilterOff').checked = false
+          document.getElementById('optFilterMore').checked = true
+          document.getElementById('optFilterLess').checked = false
+        } else if (iondvOptions.optFilterAscending === false) {
+          document.getElementById('optFilterOff').checked = false
+          document.getElementById('optFilterMore').checked = false
+          document.getElementById('optFilterLess').checked = true
+        } else {
+          document.getElementById('optFilterOff').checked = true
+          document.getElementById('optFilterMore').checked = false
+          document.getElementById('optFilterLess').checked = false
+        }
+      }
+      if(document.getElementById('optFilterValue') && iondvOptions.hasOwnProperty('optFilterValue'))
+        document.getElementById('optFilterValue').value = iondvOptions.optFilterValue
+      if(document.getElementById('optFilterParamName') && iondvOptions.hasOwnProperty('optFilterParamName'))
+        document.getElementById('optFilterParamName').value = iondvOptions.optFilterParamName
+
+
     }
   })
   document.getElementById('uploadSignals').addEventListener('click', () => {
@@ -92,6 +124,22 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('optMethod').addEventListener('change', () => {
     saveOptions('optMethod')
   });
+  document.getElementById('optFilterOff').addEventListener('change', () => {
+    saveOptions('optFilterOff')
+  });
+  document.getElementById('optFilterMore').addEventListener('change', () => {
+    saveOptions('optFilterMore')
+  });
+  document.getElementById('optFilterLess').addEventListener('change', () => {
+    saveOptions('optFilterLess')
+  });
+  document.getElementById('optFilterValue').addEventListener('change', () => {
+    saveOptions('optFilterValue')
+  });
+  document.getElementById('optFilterParamName').addEventListener('change', () => {
+    saveOptions('optFilterParamName')
+  });
+
 });
 
 

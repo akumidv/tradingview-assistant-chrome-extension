@@ -1,20 +1,22 @@
-* {
-    box-sizing: border-box;
-}
+/** {*/
+/*    box-sizing: border-box;*/
+/*}*/
 
 
 .details {
-    border: 1px blue;
+
 }
 
-.param-container {overflow:hidden}
+.param-container {
+    overflow:hidden
+}
 .param-box{
     white-space:nowrap
 }
 .param-box div {
     display:inline-block;
-    border:0px;
-    margin:5px
+    border: 0px;
+    margin: 5px
 }
 
 .checkbox-minmax {
@@ -245,6 +247,42 @@ body {
     -webkit-box-shadow: 3px 3px 7px #777;
     -moz-border-radius: 22px;
     -webkit-border-radius: 22px;
-    z-index:999;
+    z-index: 999;
     display: none
+
+}
+
+.switch-toggle {
+    /*box-shadow: 3px 3px 7px #777;*/
+    /*background: #a9c7d0;*/
+    /*width: 125px;*/
+}
+.switch-toggle > input {
+    /*position: absolute;*/
+    opacity: 0;
+}
+.switch-toggle > input + label {
+    padding: 5px 0px;
+    margin: 5px ;
+    float:left;
+    border: 1px solid #ccc;
+    color: #3e3e3e;
+    cursor: pointer;
+    height: 10px;
+    font-size: 90%;
+}
+.switch-toggle > input:not([id="optFilterOff"]):checked + label {
+    background: lightgreen;
+}
+
+.switch-toggle > input[id="optFilterOff"]:checked + label {
+    background: lightcoral;
+}
+
+.switch-toggle > input[id="optFilterOff"]:checked ~ div[id="filterParam"] {
+    display: none
+}
+
+.switch-toggle > input[id="optFilterOff"]:not(checked) ~ div[id="filterParam"] {
+    display: inline;
 }
