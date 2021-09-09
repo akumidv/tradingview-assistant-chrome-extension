@@ -108,6 +108,8 @@
             let cycles = parseInt(cyclesStr)
             if(!cycles || cycles < 1)
               break
+
+            statusMessage('Getting the initial parameters.')
             let testParams = await switchToStrategyTab()
             if(!testParams)
               break
@@ -115,13 +117,20 @@
             testParams.startParams = await getStartParamValues(paramRange)
             console.log('testParams.startParams', testParams.startParams)
             testParams.cycles = cycles
-            testParams.isMaximizing = request.options && request.options.hasOwnProperty('isMaximizing') ? request.options.isMaximizing : true
-            testParams.optParamName = request.options && request.options.optParamName ? request.options.optParamName : DEF_MAX_PARAM_NAME
-            testParams.method = request.options && request.options.optMethod ? request.options.optMethod : 'random'
+            if(request.options) {
+              testParams.isMaximizing = request.options.hasOwnProperty('isMaximizing') ? request.options.isMaximizing : true
+              testParams.optParamName =  request.options.optParamName ? request.options.optParamName : DEF_MAX_PARAM_NAME
+              testParams.method = request.options.optMethod ? request.options.optMethod : 'random'
+              testParams.filterAscending = request.options.hasOwnProperty('optFilterAscending') ? request.options.optFilterAscending : null
+              testParams.filterValue = request.options.hasOwnProperty('optFilterValue') ? request.options.optFilterValue : 50
+              testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total Closed Trades: All'
+            }
+
             const paramSpaceNumber = Object.keys(allRangeParams).reduce((mult, param) => mult *= allRangeParams[param].length, 1)
             let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
             extraHeader += paramSpaceNumber/cycles > 10 ? '<br />This is too large. It is recommended to use up to 3-4 parameters, remove the rest from the template file.' : ''
-            statusMessage('Started', extraHeader)
+
+            statusMessage('Started.', extraHeader)
             const testResults = await testStrategy(testParams, strategyData, allRangeParams)
             console.log('testResults', testResults)
             if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
@@ -346,14 +355,14 @@
     return report
   }
 
-  async function getTestIterationResult (testResults, propVal) {
+  async function getTestIterationResult (testResults, propVal, isIgnoreError = false) {
     let reportData = {}
     isReportChanged = false
     const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
 
-    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1000)
+    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
     let isProcessEnd = null
     let isProcessError
     if (isProcessStart)
@@ -361,84 +370,165 @@
     else if (isReportChanged)
       isProcessEnd = true
     isProcessError = document.querySelector(SEL.strategyReportError)
-    if(!isProcessError && isProcessEnd) {
-      await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
-      reportData = parseReportTable()
+    await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+    reportData = parseReportTable()
+    if (!isProcessEnd && testResults.perfomanceSummary.length) {
+      const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1]
+      if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
+        reportData[testResults.optParamName] !== lastRes[testResults.optParamName])
+        isProcessEnd = true
+    }
+    if((!isProcessError && isProcessEnd) || isIgnoreError) {
       reportData = calculateAdditionValuesToReport(reportData)
     }
-
     Object.keys(propVal).forEach(key => reportData[`__${key}`] = propVal[key])
     reportData['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
       !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
         isProcessEnd ? '' : 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.'
 
+    // TODO filter?
     testResults.perfomanceSummary.push(reportData)
     await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
-    return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, errMessage: reportData['comment'], data: reportData}
+    return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
   }
 
-  // Random optimization TODO add search near the best values
-  async function optRandomIteration(allRangeParams, testResults, bestValue, optimizationState) { // const isNear = randomInteger(0,1) === 0 ? -1 : 1
-    let propVal
-    if(!optimizationState.__runStartDefault || !optimizationState.__runStartBest) { // Start from the default and best values
-      if(!testResults.hasOwnProperty('startParams')) {
-        optimizationState.__runStartDefault = true
-        optimizationState.__runStartBest = true
-      } else if (!testResults.startParams.hasOwnProperty('default')) {
-        optimizationState.__runStartDefault = true
-      } else if (!testResults.startParams.hasOwnProperty('best')) {
-        optimizationState.__runStartBest = true
-      }
-      if(!optimizationState.__runStartDefault && testResults.hasOwnProperty('startParams') && testResults.startParams.default) {
-        optimizationState.__runStartDefault = true
-        propVal = testResults.startParams.default
-      } else if (!optimizationState.__runStartDefault && testResults.hasOwnProperty('startParams') && testResults.startParams.best) {
-        optimizationState.__runStartBest = true
-        propVal = testResults.startParams.best
-      } else {
-        optimizationState.__runStartBest = true
-        optimizationState.__runStartDefault = true
-        propVal = optRandomGetPropertiesValues(allRangeParams)
-      }
-    } else {
-      propVal = optRandomGetPropertiesValues(allRangeParams)
-    }
+  function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
+    // TODO filter or also in getTestIteration? of filter when save CSV?
 
-    const res = await getTestIterationResult(testResults, propVal)
-    if(!res || !res.data || res.error !== null)
-      return res
     if(res.data.hasOwnProperty(testResults.optParamName)) {
       res.currentValue = res.data[testResults.optParamName]
-      if(bestValue === null || typeof bestValue === 'undefined')
+      if(bestValue === null || typeof bestValue === 'undefined') {
         res.bestValue = res.data[testResults.optParamName]
-      else
-        if(testResults.isMaximizing)
-          res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
-        else
-          res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
+        res.bestPropVal = propVale
+      } else if(testResults.isMaximizing) {
+        res.bestValue = bestValue > res.data[testResults.optParamName] ? bestValue : res.data[testResults.optParamName]
+        res.bestPropVal = bestValue > res.data[testResults.optParamName] ? bestPropVal : propVale
+      } else {
+        res.bestValue = bestValue < res.data[testResults.optParamName] ? bestValue : res.data[testResults.optParamName]
+        res.bestPropVal  = bestValue < res.data[testResults.optParamName] ? bestPropVal : propVale
+      }
     } else {
       res.bestValue = bestValue
+      res.bestPropVal = bestPropVal
       res.currentValue = 'error'
     }
     return res
   }
 
-  function optRandomGetPropertiesValues(allRangeParams) {
-    const res = {}
-    Object.keys(allRangeParams).forEach(paramName => {
-      res[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
-    })
-    return res
+  // Random optimization
+  async function optRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
+    const propData = optRandomGetPropertiesValues(allRangeParams, bestPropVal)
+    const propVal = propData.data
+
+    const res = await getTestIterationResult(testResults, propVal)
+    if(!res || !res.data || res.error !== null)
+      return res
+    if (!res.message)
+      res.message = propData.message
+    return getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
   }
+
+  function optRandomGetPropertiesValues(allRangeParams, curPropVal) {
+    const propVal = {}
+    let msg = ''
+    const allParamNames = Object.keys(allRangeParams)
+    if(propVal) {
+      allParamNames.forEach(paramName => {
+        propVal[paramName] = curPropVal[paramName]
+      })
+      const indexToChange = randomInteger(0, allParamNames.length - 1)
+      const paramName = allParamNames[indexToChange]
+      const tmp = propVal[paramName]
+      propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
+      msg = `Changed ${paramName}: ${tmp} => ${propVal[paramName]}.`
+    } else {
+      allParamNames.forEach(paramName => {
+        propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
+      })
+      msg = `Changed all parameters.`
+    }
+    return {message: msg, data: propVal}
+  }
+
+  async function getInitBestValues(testResults) { // TODO Add get current values(!) to startParams
+    if(!testResults.hasOwnProperty('startParams'))
+      return null
+    let defaultVal = null
+    let bestVal = null
+
+    let resVal =  null
+    let resPropVal = null
+
+    // TODO get curVal and cur paramVal
+    // let resData = parseReportTable()
+    // resData = calculateAdditionValuesToReport(resData)
+    // let curVal = null
+    // if (resData && resData.hasOwnProperty(testResults.optParamName)) {
+    //   curVal = res.data[testResults.optParamName]
+    // } // TODO also get curren paramVal
+
+    if(testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
+      const res = await getTestIterationResult(testResults, testResults.startParams.default, true) // Ignore error because propValues can be the same
+      console.log('def', res)
+      if(res && res.data && res.data.hasOwnProperty(testResults.optParamName))
+        defaultVal  = res.data[testResults.optParamName]
+    }
+    if(testResults.startParams.hasOwnProperty('best') && testResults.startParams.best) {
+      const res = await getTestIterationResult(testResults, testResults.startParams.best, true)  // Ignore error because propValues can be the same
+      console.log('best', res)
+      if(res && res.data && res.data.hasOwnProperty(testResults.optParamName))
+        bestVal  = res.data[testResults.optParamName]
+    }
+
+    if(defaultVal !== null && bestVal !== null) {
+      if(testResults.isMaximizing) {
+        resVal = bestVal > defaultVal ? bestVal : defaultVal
+        resPropVal = bestVal > defaultVal ? testResults.startParams.best : testResults.startParams.default
+      } else {
+        resVal = bestVal < defaultVal ? bestVal : defaultVal
+        resPropVal  =  bestVal < defaultVal ? testResults.startParams.best : testResults.startParams.default
+      }
+    } else if (bestVal !== null) {
+      resVal = bestValue
+      resPropVal  =  testResults.startParams.best
+    } else if (defaultVal !== null) {
+      resVal = defaultVal
+      resPropVal  =  testResults.startParams.default
+    }
+
+    if(resVal !== null && resPropVal !== null)
+      return {bestValue: resVal,  bestPropVal: resPropVal}
+    return null
+  }
+
 
 
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
     testResults.shortName = strategyData.name
-    console.log('testStrategy', testResults.shortName, testResults.isMaximizing ? 'max' : 'min', 'value of', testResults.optParamName, 'by', testResults.method, testResults.cycles, 'times')
+    console.log('testStrategy', testResults.shortName, testResults.isMaximizing ? 'max' : 'min', 'value of', testResults.optParamName,
+      'by', testResults.method,
+      (testResults.filterAscending === null ? 'filter off' : 'filter ascending' + testResults.filterAscending + ' value ' +
+        testResults.filterValue + ' by ' + testResults.filterParamName),
+      testResults.cycles, 'times')
     testResults.paramsNames = Object.keys(allRangeParams)
+
+    // Get best init value and properties values
     let bestValue = null
-    const optimizationState = {'__runStartDefault': false, '__runStartBest': false}
+    let bestPropVal = null
+    const initRes = await getInitBestValues(testResults)
+    if(initRes && initRes.hasOwnProperty('bestValue') && initRes.bestValue !== null && initRes.hasOwnProperty('bestPropVal')) {
+      bestValue = initRes.bestValue
+      bestPropVal = initRes.bestPropVal
+      try {
+        statusMessage(`<p>From default and previus test. Best "${testResults.optParamName}": ${bestValue}</p>`)
+      } catch {}
+    }
+    console.log('bestValue', bestValue)
+    console.log('bestPropVal', bestPropVal)
+
+    // Test strategy
+    const optimizationState = {}
     for(let i = 0; i < testResults.cycles; i++) {
       let optRes = {}
       switch(testResults.method) {
@@ -448,15 +538,18 @@
           return testResults
         case 'random':
         default:
-          optRes = await optRandomIteration(allRangeParams, testResults, bestValue, optimizationState)
+          optRes = await optRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
       }
-      if(!optRes.hasOwnProperty('data'))
-        continue
-      bestValue = optRes.hasOwnProperty('bestValue') ? optRes.bestValue : bestValue
-      try {
-        statusMessage(`<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${bestValue}</p>
-            ${optRes.error !== null  ? '<p style="color: red">' + optRes.errMessage + '</p>' : optRes.currentValue ? '<p>Current "' + testResults.optParamName + '": ' + optRes.currentValue + '</p>': ''}`)
-      } catch {}
+      if(optRes.hasOwnProperty('data') && optRes.hasOwnProperty('bestValue') && optRes.bestValue !== null && optRes.hasOwnProperty('bestPropVal')) {
+        bestValue = optRes.bestValue
+        bestPropVal = optRes.bestPropVal
+        try {
+          let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${bestValue}</p>`
+          text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
+          text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : ''
+          statusMessage(text)
+        } catch {}
+      }
     }
     return testResults
   }
