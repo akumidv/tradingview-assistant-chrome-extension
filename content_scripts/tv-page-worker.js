@@ -430,9 +430,6 @@
       !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
       !isProcessEnd ? 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.' : ''
 
-    // testResults.perfomanceSummary.push(reportData)
-    // await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
-
     return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
   }
 
@@ -462,15 +459,17 @@
       if(bestValue === null || typeof bestValue === 'undefined') {
         res.bestValue = res.data[testResults.optParamName]
         res.bestPropVal = propVale
-        console.log(`Best value: ${bestValue} => ${res.bestValue}`)
+        console.log(`Best value undef: ${bestValue} => ${res.bestValue}`)
       } else if(!isFiltered && testResults.isMaximizing) {
-        res.bestValue = bestValue > res.data[testResults.optParamName] ? bestValue : res.data[testResults.optParamName]
-        res.bestPropVal = bestValue > res.data[testResults.optParamName] ? bestPropVal : propVale
-        console.log(`Best value: ${bestValue} => ${res.bestValue}`)
+        res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
+        res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
+        if(bestValue < res.data[testResults.optParamName])
+          console.log(`Best value max: ${bestValue} => ${res.bestValue}`)
       } else if (!isFiltered) {
-        res.bestValue = bestValue < res.data[testResults.optParamName] ? bestValue : res.data[testResults.optParamName]
-        res.bestPropVal  = bestValue < res.data[testResults.optParamName] ? bestPropVal : propVale
-        console.log(`Best value: ${bestValue} => ${res.bestValue}`)
+        res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
+        res.bestPropVal  = bestValue > res.data[testResults.optParamName] ? propVale : bestPropVal
+        if(bestValue > res.data[testResults.optParamName])
+          console.log(`Best value min: ${bestValue} => ${res.bestValue}`)
       }
     } else {
       res.bestValue = bestValue
@@ -623,14 +622,16 @@
         }
       }
     }
-    const valIdx = optimizationState.valIdx // TODO skip current value
-    // TODO bestPropVal changed
+    const valIdx = optimizationState.valIdx
+
 
     const propVal = {}
     Object.keys(bestPropVal).forEach(paramName => {
       propVal[paramName] = bestPropVal[paramName]
     })
     propVal[paramName] = allRangeParams[paramName][valIdx]
+    if(bestPropVal[paramName] === propVal[paramName])
+      return {error: null, currentValue: bestValue, message: `The same value of the "${paramName}" parameter equal to ${propVal[paramName]} is skipped`}
     const msg = `Changed "${paramName}": ${bestPropVal[paramName]} => ${propVal[paramName]}.`
 
     const res = await getTestIterationResult(testResults, propVal)
@@ -696,7 +697,7 @@
         bestPropVal = optRes.bestPropVal
         try {
           let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${bestValue}</p>`
-          text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : ''
+          text += optRes.hasOwnProperty('currentValue') ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : ''
           text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
           statusMessage(text)
         } catch {}
