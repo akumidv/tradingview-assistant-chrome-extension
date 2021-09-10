@@ -297,7 +297,7 @@
     // testResults.paramsNames.forEach(paramName => csv.replace(`__${paramName}`, paramName)) // TODO isFirst? or leave it as it is
     testResults.perfomanceSummary.forEach(row => {
       const rowData = headers.map(key => typeof row[key] !== 'undefined' ? JSON.stringify(row[key]) : '')
-      csv += rowData.join(',')
+      csv += rowData.join(',').replaceAll('\\"', '""')
       csv += '\n'
     })
     if(testResults.filteredSummary && testResults.filteredSummary.length) {
@@ -305,7 +305,7 @@
       csv += '\n'
       testResults.filteredSummary.forEach(row => {
         const rowData = headers.map(key => typeof row[key] !== 'undefined' ? JSON.stringify(row[key]) : '')
-        csv += rowData.join(',')
+        csv += rowData.join(',').replaceAll('\\"', '""')
         csv += '\n'
       })
     }
@@ -373,34 +373,35 @@
   }
 
   function calculateAdditionValuesToReport(report) {
-
-
     // TODO
     return report
   }
 
   async function getTestIterationResult (testResults, propVal, isIgnoreError = false) {
     let reportData = {}
-    isReportChanged = false
+    isReportChanged = false // Global value
     const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
 
-    const isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
-    let isProcessEnd = null
-    let isProcessError
+    let isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
+    let isProcessEnd = isReportChanged
+
     if (isProcessStart)
       isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
-    else if (isReportChanged)
-      isProcessEnd = true
-    isProcessError = document.querySelector(SEL.strategyReportError)
+    else if (isProcessEnd)
+      isProcessStart = true
+
+    let isProcessError = document.querySelector(SEL.strategyReportError)
     await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
     reportData = parseReportTable()
-    if (!isProcessEnd && testResults.perfomanceSummary.length) {
-      const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1]
+    if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
+      const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
       if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
-        reportData[testResults.optParamName] !== lastRes[testResults.optParamName])
+        reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {
         isProcessEnd = true
+        isProcessStart = true
+      }
     }
     if((!isProcessError && isProcessEnd) || isIgnoreError) {
       reportData = calculateAdditionValuesToReport(reportData)
@@ -426,9 +427,10 @@
           (testResults.filterAscending && res.data[testResults.filterParamName] < testResults.filterValue) ||
           (!testResults.filterAscending  && res.data[testResults.filterParamName] > testResults.filterValue)
         ) {
-          isFiltered =  true
-          res.data['comment'] = `Skipped for '${testResults.filterParamName}': ${res.data[testResults.filterParamName]}.${res.data['comment'] ? ' ' + res.data['comment'] : ''}`
+          isFiltered = true
+          res.data['comment'] = `Skipped for "${testResults.filterParamName}": ${res.data[testResults.filterParamName]}.${res.data['comment'] ? ' ' + res.data['comment'] : ''}`
           res.message = res.data['comment']
+          res.isFiltered = true
         }
       }
       if(isFiltered)
@@ -479,15 +481,17 @@
     const propVal = {}
     let msg = ''
     const allParamNames = Object.keys(allRangeParams)
-    if(propVal) {
+    if(curPropVal) {
       allParamNames.forEach(paramName => {
         propVal[paramName] = curPropVal[paramName]
       })
       const indexToChange = randomInteger(0, allParamNames.length - 1)
       const paramName = allParamNames[indexToChange]
-      const tmp = propVal[paramName]
-      propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
-      msg = `Changed '${paramName}': ${tmp} => ${propVal[paramName]}.`
+      const curVal = propVal[paramName]
+      const diffParams = allRangeParams[paramName].filter(paramVal => paramVal !== curVal)
+      propVal[paramName] = diffParams.length === 0 ? curVal : diffParams.length === 1 ? diffParams[0] : diffParams[randomInteger(0, diffParams.length - 1)]
+      // propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
+      msg = `Changed "${paramName}": ${curVal} => ${propVal[paramName]}.`
     } else {
       allParamNames.forEach(paramName => {
         propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
@@ -514,34 +518,41 @@
 
     let resVal =  null
     let resPropVal = testResults.startParams.current
+    let resData = null
 
-    function setBestVal (newVal, newPropVal) {
+    function setBestVal (newVal, newPropVal, newResData) {
       if(resVal === null || resPropVal === null) {
         resVal = newVal
         resPropVal = newPropVal
+        resData = newResData
       } else if(testResults.isMaximizing) {
         resVal = newVal > resVal ? newVal : resVal
         resPropVal = newVal > resVal ? newPropVal : resPropVal
+        resData = newVal > resVal ?  newResData : resData
       } else {
         resVal = newVal < resVal ? newVal : resVal
         resPropVal =  newVal < resVal ? newPropVal : resPropVal
+        resData = newVal < resVal ?  newResData : resData
       }
     }
 
-    let resData = parseReportTable()
+    resData = parseReportTable()
     resData = calculateAdditionValuesToReport(resData)
     if (resData && resData.hasOwnProperty(testResults.optParamName)) {
       console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
       resVal = resData[testResults.optParamName]
+      resData['comment'] = resData['comment'] ? `Current parameters. ${resData['comment']}` : 'Current parameters.'
     }
 
     if(testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
       const defPropVal = expandPropVal(testResults.startParams.default, resPropVal)
       if(resPropVal === null || Object.keys(resPropVal).some(key => resPropVal[key] !== defPropVal[key])) {
         const res = await getTestIterationResult(testResults, defPropVal, true) // Ignore error because propValues can be the same
-        console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
-        if(res && res.data && res.data.hasOwnProperty(testResults.optParamName))
-          setBestVal(res.data[testResults.optParamName], defPropVal)
+        if(res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
+          console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
+          res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
+          setBestVal(res.data[testResults.optParamName], defPropVal, res.data)
+        }
       } else {
         console.log(`Default "${testResults.optParamName}" equal current:`, res.data[testResults.optParamName])
       }
@@ -555,20 +566,26 @@
       ) {
         const bestPropVal = expandPropVal(testResults.startParams.best, resPropVal)
         const res = await getTestIterationResult(testResults, bestPropVal, true)  // Ignore error because propValues can be the same
-        console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
-        if (res && res.data && res.data.hasOwnProperty(testResults.optParamName))
-          setBestVal(res.data[testResults.optParamName], bestPropVal)
+        if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
+          console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
+          res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
+          setBestVal(res.data[testResults.optParamName], bestPropVal, res.data)
+        }
+
       } else {
         console.log(`Best "${testResults.optParamName}" equal previous (current or default):`, res.data[testResults.optParamName])
       }
     }
     console.log(`For init "${testResults.optParamName}":`, resVal)
 
-    if(resVal !== null && resPropVal !== null)
-      return {bestValue: resVal,  bestPropVal: resPropVal}
+    if(resVal !== null && resPropVal !== null && resData !== null)
+      return {bestValue: resVal, bestPropVal: resPropVal, data: resData}
     return null
   }
 
+  function optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
+
+  }
 
 
   async function testStrategy(testResults, strategyData, allRangeParams) {
@@ -587,10 +604,11 @@
     let bestPropVal = null
     statusMessage('Get the best initial values.')
     const initRes = await getInitBestValues(testResults, allRangeParams)
-    if(initRes && initRes.hasOwnProperty('bestValue') && initRes.bestValue !== null && initRes.hasOwnProperty('bestPropVal')) {
+    if(initRes && initRes.hasOwnProperty('bestValue') && initRes.bestValue !== null && initRes.hasOwnProperty('bestPropVal') && initRes.hasOwnProperty('data')) {
       testResults.initBestValue = initRes.bestValue
       bestValue = initRes.bestValue
       bestPropVal = initRes.bestPropVal
+      testResults.perfomanceSummary.push(initRes.data)
       try {
         statusMessage(`<p>From default and previus test. Best "${testResults.optParamName}": ${bestValue}</p>`)
       } catch {}
@@ -604,6 +622,8 @@
       let optRes = {}
       switch(testResults.method) {
         case 'sequential':
+          // optRes = await optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
+          // break
           console.error(`Sequential strategy optimization method don't implement yet`)
           alert(`Sequential strategy optimization method don't implement yet`)
           return testResults
@@ -616,8 +636,15 @@
         bestPropVal = optRes.bestPropVal
         try {
           let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${bestValue}</p>`
-          text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
           text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : ''
+          text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
+          statusMessage(text)
+        } catch {}
+      } else {
+        try {
+          let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${bestValue}</p>`
+          text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : `<p>Current "${testResults.optParamName}": error</p>`
+          text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
           statusMessage(text)
         } catch {}
       }
@@ -1110,7 +1137,7 @@
           try {
             const [tfVal, tfType] = parseTF(row['timeframe'])
             if(!['h', 'm', 'd'].includes(tfType) || !(tfVal > 0))
-              return `  - ${fileData.name}: only minute(m) and hour(h) timeframes are supported. There is a timeframe '${row['timeframe']}' in the file. Uploading canceled.\n`
+              return `  - ${fileData.name}: only minute(m) and hour(h) timeframes are supported. There is a timeframe "${row['timeframe']}" in the file. Uploading canceled.\n`
             const tktfName = `${row['ticker']}::${tfVal}${tfType}`.toLowerCase()
             if(!tickersAndTFSignals.hasOwnProperty(tktfName))
               tickersAndTFSignals[tktfName] = {tsBuy: [], tsSell: []}
