@@ -88,9 +88,10 @@
             break;
           }
           case 'testStrategy': {
-            const strategyData = await getStrategy()
             console.log('request', request)
-             if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+            statusMessage('Get the initial parameters.')
+            const strategyData = await getStrategy()
+            if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
               break
             }
@@ -102,31 +103,40 @@
             console.log('allRangeParams', allRangeParams)
             if(!allRangeParams)
               break
+
+            let testParams = await switchToStrategyTab()
+            if(!testParams)
+              break
+
+            testParams.startParams = await getStartParamValues(paramRange, strategyData)
+            console.log('testParams.startParams', testParams.startParams)
+            if(!testParams.hasOwnProperty('startParams') || !testParams.startParams.hasOwnProperty('current') || !testParams.startParams.current) {
+              alert('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
+              break
+            }
+
             const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
             if(!cyclesStr)
               break
             let cycles = parseInt(cyclesStr)
             if(!cycles || cycles < 1)
               break
-
-            statusMessage('Getting the initial parameters.')
-            let testParams = await switchToStrategyTab()
-            if(!testParams)
-              break
-
-            testParams.startParams = await getStartParamValues(paramRange)
-            console.log('testParams.startParams', testParams.startParams)
             testParams.cycles = cycles
+
             if(request.options) {
               testParams.isMaximizing = request.options.hasOwnProperty('isMaximizing') ? request.options.isMaximizing : true
               testParams.optParamName =  request.options.optParamName ? request.options.optParamName : DEF_MAX_PARAM_NAME
-              testParams.method = request.options.optMethod ? request.options.optMethod : 'random'
+              testParams.method = request.options.optMethod ? request.options.optMethod.toLowerCase() : 'random'
               testParams.filterAscending = request.options.hasOwnProperty('optFilterAscending') ? request.options.optFilterAscending : null
               testParams.filterValue = request.options.hasOwnProperty('optFilterValue') ? request.options.optFilterValue : 50
               testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total Closed Trades: All'
             }
 
-            const paramSpaceNumber = Object.keys(allRangeParams).reduce((mult, param) => mult *= allRangeParams[param].length, 1)
+            let paramSpaceNumber = 0
+            if(['sequential'].includes(testParams.method))
+              Object.keys(allRangeParams).reduce((sum, param) => sum += allRangeParams[param].length, 0)
+            else
+              Object.keys(allRangeParams).reduce((mult, param) => mult *= allRangeParams[param].length, 1)
             let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
             extraHeader += paramSpaceNumber/cycles > 10 ? '<br />This is too large. It is recommended to use up to 3-4 parameters, remove the rest from the template file.' : ''
 
@@ -137,16 +147,21 @@
               alert('There is no data for conversion. Try to do test again')
               break
             }
+
             const CSVResults = convertResultsToCSV(testResults)
             const bestResult = testResults.perfomanceSummary ? getBestResult(testResults) : {}
+            const initBestValue = testResults.hasOwnProperty('initBestValue') ? testResults.initBestValue : null
             const propVal = {}
             testResults.paramsNames.forEach(paramName => {
               if(bestResult.hasOwnProperty(`__${paramName}`))
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
             await setStrategyParams(testResults.shortName, propVal)
-            statusMessage(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
-            alert(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName +': ' + bestResult[testParams.optParamName] : ''}`)
+            let text = `All done.\n\n`
+            text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''
+            text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${initBestValue}` : ''
+            statusMessage(text)
+            alert(text)
             console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
             saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
             statusMessageRemove()
@@ -206,7 +221,6 @@
       }
       return curBestRes
     })
-    console.log('bestResult', bestResult)
     return bestResult
   }
 
@@ -237,6 +251,7 @@
         "left: 0;" +
         "margin: auto;" +
         "border: 1px solid lightblue;" +
+        "box-shadow: 3px 3px 7px #777;" +
         // "display: flex;" +
         "align-items: center; " +
         "justify-content: left; " +
@@ -285,6 +300,15 @@
       csv += rowData.join(',')
       csv += '\n'
     })
+    if(testResults.filteredSummary && testResults.filteredSummary.length) {
+      csv += headers.map(key => key !== 'comment' ? '' : 'Bellow filtered results of tests') // Empty line
+      csv += '\n'
+      testResults.filteredSummary.forEach(row => {
+        const rowData = headers.map(key => typeof row[key] !== 'undefined' ? JSON.stringify(row[key]) : '')
+        csv += rowData.join(',')
+        csv += '\n'
+      })
+    }
     return csv
   }
 
@@ -384,26 +408,43 @@
     Object.keys(propVal).forEach(key => reportData[`__${key}`] = propVal[key])
     reportData['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
       !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
-        isProcessEnd ? '' : 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.'
+      !isProcessEnd ? 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.' : ''
 
-    // TODO filter?
-    testResults.perfomanceSummary.push(reportData)
-    await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
+    // testResults.perfomanceSummary.push(reportData)
+    // await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
+
     return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
   }
 
-  function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
-    // TODO filter or also in getTestIteration? of filter when save CSV?
+  async function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
+    let isFiltered = false
 
     if(res.data.hasOwnProperty(testResults.optParamName)) {
+      if(testResults.filterAscending !== null &&
+        res.data.hasOwnProperty(testResults.filterParamName) && testResults.hasOwnProperty('filterValue')) {
+        if(typeof res.data[testResults.filterParamName] !== 'number' ||
+          (testResults.filterAscending && res.data[testResults.filterParamName] < testResults.filterValue) ||
+          (!testResults.filterAscending  && res.data[testResults.filterParamName] > testResults.filterValue)
+        ) {
+          isFiltered =  true
+          res.data['comment'] = `Skipped for '${testResults.filterParamName}': ${res.data[testResults.filterParamName]}.${res.data['comment'] ? ' ' + res.data['comment'] : ''}`
+          res.message = res.data['comment']
+        }
+      }
+      if(isFiltered)
+        testResults.filteredSummary.push(res.data)
+      else
+        testResults.perfomanceSummary.push(res.data)
+      await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
+
       res.currentValue = res.data[testResults.optParamName]
       if(bestValue === null || typeof bestValue === 'undefined') {
         res.bestValue = res.data[testResults.optParamName]
         res.bestPropVal = propVale
-      } else if(testResults.isMaximizing) {
+      } else if(!isFiltered && testResults.isMaximizing) {
         res.bestValue = bestValue > res.data[testResults.optParamName] ? bestValue : res.data[testResults.optParamName]
         res.bestPropVal = bestValue > res.data[testResults.optParamName] ? bestPropVal : propVale
-      } else {
+      } else if (!isFiltered) {
         res.bestValue = bestValue < res.data[testResults.optParamName] ? bestValue : res.data[testResults.optParamName]
         res.bestPropVal  = bestValue < res.data[testResults.optParamName] ? bestPropVal : propVale
       }
@@ -418,14 +459,20 @@
   // Random optimization
   async function optRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
     const propData = optRandomGetPropertiesValues(allRangeParams, bestPropVal)
-    const propVal = propData.data
+    let propVal = propData.data
+
+    if(bestPropVal)
+      propVal = expandPropVal(propVal, bestPropVal)
 
     const res = await getTestIterationResult(testResults, propVal)
     if(!res || !res.data || res.error !== null)
       return res
+    res.data['comment'] = res.data['comment'] ? res.data['comment'] + propData.message : propData.message
     if (!res.message)
       res.message = propData.message
-    return getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+    else
+      res.message += propData.message
+    return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
   }
 
   function optRandomGetPropertiesValues(allRangeParams, curPropVal) {
@@ -440,7 +487,7 @@
       const paramName = allParamNames[indexToChange]
       const tmp = propVal[paramName]
       propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
-      msg = `Changed ${paramName}: ${tmp} => ${propVal[paramName]}.`
+      msg = `Changed '${paramName}': ${tmp} => ${propVal[paramName]}.`
     } else {
       allParamNames.forEach(paramName => {
         propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
@@ -450,51 +497,72 @@
     return {message: msg, data: propVal}
   }
 
+  function expandPropVal(propVal, basePropVal) {
+    const newPropVal = {}
+    Object.keys(basePropVal).forEach(key => {
+      if(propVal.hasOwnProperty(key))
+        newPropVal[key] = propVal[key]
+      else
+        newPropVal[key] = basePropVal[key]
+    })
+    return newPropVal
+  }
+
   async function getInitBestValues(testResults) { // TODO Add get current values(!) to startParams
-    if(!testResults.hasOwnProperty('startParams'))
+    if(!testResults.hasOwnProperty('startParams') || !testResults.startParams.hasOwnProperty('current') || !testResults.startParams.current)
       return null
-    let defaultVal = null
-    let bestVal = null
 
     let resVal =  null
-    let resPropVal = null
+    let resPropVal = testResults.startParams.current
 
-    // TODO get curVal and cur paramVal
-    // let resData = parseReportTable()
-    // resData = calculateAdditionValuesToReport(resData)
-    // let curVal = null
-    // if (resData && resData.hasOwnProperty(testResults.optParamName)) {
-    //   curVal = res.data[testResults.optParamName]
-    // } // TODO also get curren paramVal
+    function setBestVal (newVal, newPropVal) {
+      if(resVal === null || resPropVal === null) {
+        resVal = newVal
+        resPropVal = newPropVal
+      } else if(testResults.isMaximizing) {
+        resVal = newVal > resVal ? newVal : resVal
+        resPropVal = newVal > resVal ? newPropVal : resPropVal
+      } else {
+        resVal = newVal < resVal ? newVal : resVal
+        resPropVal =  newVal < resVal ? newPropVal : resPropVal
+      }
+    }
+
+    let resData = parseReportTable()
+    resData = calculateAdditionValuesToReport(resData)
+    if (resData && resData.hasOwnProperty(testResults.optParamName)) {
+      console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
+      resVal = resData[testResults.optParamName]
+    }
 
     if(testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
-      const res = await getTestIterationResult(testResults, testResults.startParams.default, true) // Ignore error because propValues can be the same
-      console.log('def', res)
-      if(res && res.data && res.data.hasOwnProperty(testResults.optParamName))
-        defaultVal  = res.data[testResults.optParamName]
+      const defPropVal = expandPropVal(testResults.startParams.default, resPropVal)
+      if(resPropVal === null || Object.keys(resPropVal).some(key => resPropVal[key] !== defPropVal[key])) {
+        const res = await getTestIterationResult(testResults, defPropVal, true) // Ignore error because propValues can be the same
+        console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
+        if(res && res.data && res.data.hasOwnProperty(testResults.optParamName))
+          setBestVal(res.data[testResults.optParamName], defPropVal)
+      } else {
+        console.log(`Default "${testResults.optParamName}" equal current:`, res.data[testResults.optParamName])
+      }
     }
     if(testResults.startParams.hasOwnProperty('best') && testResults.startParams.best) {
-      const res = await getTestIterationResult(testResults, testResults.startParams.best, true)  // Ignore error because propValues can be the same
-      console.log('best', res)
-      if(res && res.data && res.data.hasOwnProperty(testResults.optParamName))
-        bestVal  = res.data[testResults.optParamName]
-    }
-
-    if(defaultVal !== null && bestVal !== null) {
-      if(testResults.isMaximizing) {
-        resVal = bestVal > defaultVal ? bestVal : defaultVal
-        resPropVal = bestVal > defaultVal ? testResults.startParams.best : testResults.startParams.default
+      if(resPropVal === null ||
+        (
+          (testResults.startParams.current && Object.keys(testResults.startParams.current).some(key => testResults.startParams.current[key] !== testResults.startParams.best[key])) &&
+          (testResults.startParams.default && Object.keys(testResults.startParams.default).some(key => testResults.startParams.default[key] !== testResults.startParams.best[key]))
+        )
+      ) {
+        const bestPropVal = expandPropVal(testResults.startParams.best, resPropVal)
+        const res = await getTestIterationResult(testResults, bestPropVal, true)  // Ignore error because propValues can be the same
+        console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
+        if (res && res.data && res.data.hasOwnProperty(testResults.optParamName))
+          setBestVal(res.data[testResults.optParamName], bestPropVal)
       } else {
-        resVal = bestVal < defaultVal ? bestVal : defaultVal
-        resPropVal  =  bestVal < defaultVal ? testResults.startParams.best : testResults.startParams.default
+        console.log(`Best "${testResults.optParamName}" equal previous (current or default):`, res.data[testResults.optParamName])
       }
-    } else if (bestVal !== null) {
-      resVal = bestValue
-      resPropVal  =  testResults.startParams.best
-    } else if (defaultVal !== null) {
-      resVal = defaultVal
-      resPropVal  =  testResults.startParams.default
     }
+    console.log(`For init "${testResults.optParamName}":`, resVal)
 
     if(resVal !== null && resPropVal !== null)
       return {bestValue: resVal,  bestPropVal: resPropVal}
@@ -505,6 +573,7 @@
 
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
+    testResults.filteredSummary = []
     testResults.shortName = strategyData.name
     console.log('testStrategy', testResults.shortName, testResults.isMaximizing ? 'max' : 'min', 'value of', testResults.optParamName,
       'by', testResults.method,
@@ -516,8 +585,10 @@
     // Get best init value and properties values
     let bestValue = null
     let bestPropVal = null
-    const initRes = await getInitBestValues(testResults)
+    statusMessage('Get the best initial values.')
+    const initRes = await getInitBestValues(testResults, allRangeParams)
     if(initRes && initRes.hasOwnProperty('bestValue') && initRes.bestValue !== null && initRes.hasOwnProperty('bestPropVal')) {
+      testResults.initBestValue = initRes.bestValue
       bestValue = initRes.bestValue
       bestPropVal = initRes.bestPropVal
       try {
@@ -690,8 +761,6 @@
         });
       }
     }
-
-
     return testResults
   }
 
@@ -716,7 +785,6 @@
     const allRangeParams = {}
 
     Object.keys(paramRange).forEach(key => {
-      allRangeParams[key] = []
       if(paramRange[key].length !== 4) {
         console.error('Errors in param length', key, paramRange[key])
       } else if(typeof paramRange[key][0] === 'boolean' && typeof paramRange[key][1] === 'boolean') {
@@ -724,8 +792,13 @@
       } else if (typeof paramRange[key][0] === 'string' && paramRange[key][1] === '' && paramRange[key][0].includes(';')) {
         allRangeParams[key] = paramRange[key][0].split(';').filter(item => item)
       } else if(paramRange[key][2] === 0) {
-        allRangeParams[key] = [paramRange[key][0], paramRange[key][1]]
+        if(paramRange[key][1] !== '')
+          allRangeParams[key] = [paramRange[key][0], paramRange[key][1]]
+        else
+          console.log(`Parameter "${key}" will be skipped, because it have only one value in range`)
+          // allRangeParams[key] = [paramRange[key][0]] // Or skip this param?
       } else if (typeof  paramRange[key][0] === 'number' && typeof paramRange[key][1] === 'number' && typeof paramRange[key][2] === 'number') {
+        allRangeParams[key] = []
         for(let i = paramRange[key][0]; i < paramRange[key][1]; i = i + paramRange[key][2])
           allRangeParams[key].push(i)
         if(allRangeParams[key][allRangeParams[key].length - 1] < paramRange[key][1])
@@ -737,8 +810,9 @@
     return allRangeParams
   }
 
-  async function getStartParamValues(paramRange) {
-    const startValues = {'default': {}}
+  async function getStartParamValues(paramRange, strategyData) {
+    const currenPropVal = getCurrentPropValues(strategyData)
+    const startValues = {'default': {}, 'current': currenPropVal}
 
     Object.keys(paramRange).forEach(key => {
       if(paramRange[key].length !== 4)
@@ -771,6 +845,17 @@
     aData.click();
     if (aData.parentNode)
       aData.parentNode.removeChild(aData);
+  }
+
+  function getCurrentPropValues(strategyData) {
+    const propVal = {}
+    Object.keys(strategyData.properties).forEach(key => {
+      if (typeof strategyData.properties[key] === 'string' && strategyData.properties[key].includes(';'))
+        propVal[key] = strategyData.properties[key].split(';')[0]
+      else
+        propVal[key] = strategyData.properties[key]
+    })
+    return propVal
   }
 
   function strategyGetRange(strategyData) {
