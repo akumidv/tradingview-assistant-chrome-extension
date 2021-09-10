@@ -105,12 +105,25 @@
               break
             }
 
+            const testMethod = request.options.optMethod ? request.options.optMethod.toLowerCase() : 'random'
+            let paramSpaceNumber = 0
+            let isSequential = false
+            if(['sequential'].includes(testMethod)) {
+              paramSpaceNumber = Object.keys(allRangeParams).reduce((sum, param) => sum += allRangeParams[param].length, 0)
+              isSequential = true
+            } else {
+              paramSpaceNumber = Object.keys(allRangeParams).reduce((mult, param) => mult *= allRangeParams[param].length, 1)
+            }
+            console.log('paramSpaceNumber', paramSpaceNumber)
+
             let testParams = await switchToStrategyTab()
             if(!testParams)
               break
 
-            testParams.paramPriority = getParamPriorityList(paramRange) // Filter by allRangeParams
-            console.log('paramPriority list', testParams.paramPriority)
+            let paramPriority = getParamPriorityList(paramRange) // Filter by allRangeParams
+            paramPriority = paramPriority.filter(key => allRangeParams.hasOwnProperty(key))
+            console.log('paramPriority list', paramPriority)
+            testParams.paramPriority = paramPriority
 
             testParams.startParams = await getStartParamValues(paramRange, strategyData)
             console.log('testParams.startParams', testParams.startParams)
@@ -119,30 +132,32 @@
               break
             }
 
-            const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
-            if(!cyclesStr)
-              break
-            let cycles = parseInt(cyclesStr)
-            if(!cycles || cycles < 1)
-              break
-            testParams.cycles = cycles
+            if(isSequential) {
+              alert(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+              testParams.cycles = paramSpaceNumber
+            } else {
+              const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+              if(!cyclesStr)
+                break
+              let cycles = parseInt(cyclesStr)
+              if(!cycles || cycles < 1)
+                break
+              testParams.cycles = cycles
+            }
+
 
             if(request.options) {
               testParams.isMaximizing = request.options.hasOwnProperty('isMaximizing') ? request.options.isMaximizing : true
               testParams.optParamName =  request.options.optParamName ? request.options.optParamName : DEF_MAX_PARAM_NAME
-              testParams.method = request.options.optMethod ? request.options.optMethod.toLowerCase() : 'random'
+              testParams.method = testMethod
               testParams.filterAscending = request.options.hasOwnProperty('optFilterAscending') ? request.options.optFilterAscending : null
               testParams.filterValue = request.options.hasOwnProperty('optFilterValue') ? request.options.optFilterValue : 50
               testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total Closed Trades: All'
             }
 
-            let paramSpaceNumber = 0
-            if(['sequential'].includes(testParams.method))
-              Object.keys(allRangeParams).reduce((sum, param) => sum += allRangeParams[param].length, 0)
-            else
-              Object.keys(allRangeParams).reduce((mult, param) => mult *= allRangeParams[param].length, 1)
+
             let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
-            extraHeader += paramSpaceNumber/cycles > 10 ? '<br />This is too large. It is recommended to use up to 3-4 parameters, remove the rest from the template file.' : ''
+            extraHeader += (paramSpaceNumber/testParams.cycles > 10) ? '<br />This is too large. It is recommended to use up to 3-4 parameters, remove the rest from the template file.' : ''
 
             statusMessage('Started.', extraHeader)
             const testResults = await testStrategy(testParams, strategyData, allRangeParams)
@@ -240,7 +255,7 @@
     document.body.appendChild(altEl);
   }
 
-  function statusMessage(msgText, extraHeader) {
+  function statusMessage(msgText, extraHeader = null) {
     const isStatusPresent = document.getElementById('iondvStatus')
     const msgEl = isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
     if(!isStatusPresent) {
@@ -264,7 +279,7 @@
     if(isStatusPresent && msgEl && document.getElementById('iondvMsg')) {
       document.getElementById('iondvMsg').innerHTML = msgText
     } else {
-      extraHeader = extraHeader ? `<div style="font-size: 12px;margin-left: 5px;margin-right: 5px;text-align: left;">${extraHeader}</div>` : '' //;margin-bottom: 10px
+      extraHeader = extraHeader !== null ? `<div style="font-size: 12px;margin-left: 5px;margin-right: 5px;text-align: left;">${extraHeader}</div>` : '' //;margin-bottom: 10px
       msgEl.innerHTML = '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
         '<div style="font-size: 18px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
         extraHeader +
@@ -447,12 +462,15 @@
       if(bestValue === null || typeof bestValue === 'undefined') {
         res.bestValue = res.data[testResults.optParamName]
         res.bestPropVal = propVale
+        console.log(`Best value: ${bestValue} => ${res.bestValue}`)
       } else if(!isFiltered && testResults.isMaximizing) {
         res.bestValue = bestValue > res.data[testResults.optParamName] ? bestValue : res.data[testResults.optParamName]
         res.bestPropVal = bestValue > res.data[testResults.optParamName] ? bestPropVal : propVale
+        console.log(`Best value: ${bestValue} => ${res.bestValue}`)
       } else if (!isFiltered) {
         res.bestValue = bestValue < res.data[testResults.optParamName] ? bestValue : res.data[testResults.optParamName]
         res.bestPropVal  = bestValue < res.data[testResults.optParamName] ? bestPropVal : propVale
+        console.log(`Best value: ${bestValue} => ${res.bestValue}`)
       }
     } else {
       res.bestValue = bestValue
@@ -557,7 +575,7 @@
           setBestVal(res.data[testResults.optParamName], defPropVal, res.data)
         }
       } else {
-        console.log(`Default "${testResults.optParamName}" equal current:`, res.data[testResults.optParamName])
+        console.log(`Default "${testResults.optParamName}" equal current:`, resData[testResults.optParamName])
       }
     }
     if(testResults.startParams.hasOwnProperty('best') && testResults.startParams.best) {
@@ -576,7 +594,7 @@
         }
 
       } else {
-        console.log(`Best "${testResults.optParamName}" equal previous (current or default):`, res.data[testResults.optParamName])
+        console.log(`Best "${testResults.optParamName}" equal previous (current or default):`, resData[testResults.optParamName])
       }
     }
     console.log(`For init "${testResults.optParamName}":`, resVal)
@@ -587,26 +605,44 @@
   }
 
   async function optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
+    if (!optimizationState.hasOwnProperty('paramIdx')) {
+      optimizationState.paramIdx = 0
+    }
+    let paramName = testResults.paramPriority[optimizationState.paramIdx]
+    if (!optimizationState.hasOwnProperty('valIdx')) {
+      optimizationState.valIdx = 0
+    } else {
+      optimizationState.valIdx += 1
+      if(optimizationState.valIdx >= allRangeParams[paramName].length) {
+        optimizationState.valIdx = 0
+        optimizationState.paramIdx += 1
+        if( optimizationState.paramIdx >= testResults.paramPriority.length) {
+          return null // End
+        } else {
+          paramName = testResults.paramPriority[optimizationState.paramIdx]
+        }
+      }
+    }
+    const valIdx = optimizationState.valIdx // TODO skip current value
+    // TODO bestPropVal changed
 
-    // testParams.paramPriority => todo to optimizationState
-
-    const propData = optRandomGetPropertiesValues(allRangeParams, bestPropVal)
-    let propVal = propData.data
-
-    if(bestPropVal)
-      propVal = expandPropVal(propVal, bestPropVal)
+    const propVal = {}
+    Object.keys(bestPropVal).forEach(paramName => {
+      propVal[paramName] = bestPropVal[paramName]
+    })
+    propVal[paramName] = allRangeParams[paramName][valIdx]
+    const msg = `Changed "${paramName}": ${bestPropVal[paramName]} => ${propVal[paramName]}.`
 
     const res = await getTestIterationResult(testResults, propVal)
     if(!res || !res.data || res.error !== null)
       return res
-    res.data['comment'] = res.data['comment'] ? res.data['comment'] + propData.message : propData.message
+    res.data['comment'] = res.data['comment'] ? res.data['comment'] + msg : msg
     if (!res.message)
-      res.message = propData.message
+      res.message = msg
     else
-      res.message += propData.message
+      res.message += msg
     return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
   }
-
 
   async function testStrategy(testResults, strategyData, allRangeParams) {
     testResults.perfomanceSummary = []
@@ -638,19 +674,23 @@
 
     // Test strategy
     const optimizationState = {}
+    let isEnd = false
     for(let i = 0; i < testResults.cycles; i++) {
       let optRes = {}
       switch(testResults.method) {
         case 'sequential':
           optRes = await optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
+          if(optRes === null)
+            isEnd = true
           break
-          // console.error(`Sequential strategy optimization method don't implement yet`)
-          // alert(`Sequential strategy optimization method don't implement yet`)
-          // return testResults
         case 'random':
         default:
           optRes = await optRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
+          if(optRes === null)
+            isEnd = true
       }
+      if(isEnd)
+        break
       if(optRes.hasOwnProperty('data') && optRes.hasOwnProperty('bestValue') && optRes.bestValue !== null && optRes.hasOwnProperty('bestPropVal')) {
         bestValue = optRes.bestValue
         bestPropVal = optRes.bestPropVal
@@ -861,7 +901,8 @@
     const paramPriorityPair = {}
     const priorityList = []
     Object.keys(paramRange).forEach(key => paramRange[key].length === 5 ? priorityList.push(paramRange[key][4]) : null)
-    const maxVal = Math.max.apply(null, priorityList)
+    let maxVal = Math.max.apply(null, priorityList)
+    maxVal = Math.max(maxVal, Object.keys(paramRange).length)
     Object.keys(paramRange).forEach(key => {
       if(paramRange[key].length !== 5) {
         console.error('Errors in param length', key, paramRange[key])
