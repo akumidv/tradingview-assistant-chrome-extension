@@ -80,8 +80,8 @@
             } else {
               const paramRange = strategyGetRange(strategyData)
               console.log(paramRange)
+              // await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
               const strategyRangeParamsCSV = strategyRangeToTemplate(paramRange)
-              await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
               saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
               alert('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
             }
@@ -101,12 +101,16 @@
               break
             const allRangeParams = createParamsFormRange(paramRange)
             console.log('allRangeParams', allRangeParams)
-            if(!allRangeParams)
+            if(!allRangeParams) {
               break
+            }
 
             let testParams = await switchToStrategyTab()
             if(!testParams)
               break
+
+            testParams.paramPriority = getParamPriorityList(paramRange) // Filter by allRangeParams
+            console.log('paramPriority list', testParams.paramPriority)
 
             testParams.startParams = await getStartParamValues(paramRange, strategyData)
             console.log('testParams.startParams', testParams.startParams)
@@ -490,7 +494,6 @@
       const curVal = propVal[paramName]
       const diffParams = allRangeParams[paramName].filter(paramVal => paramVal !== curVal)
       propVal[paramName] = diffParams.length === 0 ? curVal : diffParams.length === 1 ? diffParams[0] : diffParams[randomInteger(0, diffParams.length - 1)]
-      // propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
       msg = `Changed "${paramName}": ${curVal} => ${propVal[paramName]}.`
     } else {
       allParamNames.forEach(paramName => {
@@ -583,8 +586,25 @@
     return null
   }
 
-  function optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
+  async function optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
 
+    // testParams.paramPriority => todo to optimizationState
+
+    const propData = optRandomGetPropertiesValues(allRangeParams, bestPropVal)
+    let propVal = propData.data
+
+    if(bestPropVal)
+      propVal = expandPropVal(propVal, bestPropVal)
+
+    const res = await getTestIterationResult(testResults, propVal)
+    if(!res || !res.data || res.error !== null)
+      return res
+    res.data['comment'] = res.data['comment'] ? res.data['comment'] + propData.message : propData.message
+    if (!res.message)
+      res.message = propData.message
+    else
+      res.message += propData.message
+    return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
   }
 
 
@@ -622,11 +642,11 @@
       let optRes = {}
       switch(testResults.method) {
         case 'sequential':
-          // optRes = await optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
-          // break
-          console.error(`Sequential strategy optimization method don't implement yet`)
-          alert(`Sequential strategy optimization method don't implement yet`)
-          return testResults
+          optRes = await optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
+          break
+          // console.error(`Sequential strategy optimization method don't implement yet`)
+          // alert(`Sequential strategy optimization method don't implement yet`)
+          // return testResults
         case 'random':
         default:
           optRes = await optRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
@@ -812,7 +832,7 @@
     const allRangeParams = {}
 
     Object.keys(paramRange).forEach(key => {
-      if(paramRange[key].length !== 4) {
+      if(paramRange[key].length !== 5) {
         console.error('Errors in param length', key, paramRange[key])
       } else if(typeof paramRange[key][0] === 'boolean' && typeof paramRange[key][1] === 'boolean') {
         allRangeParams[key] = [true, false]
@@ -837,12 +857,40 @@
     return allRangeParams
   }
 
+  function getParamPriorityList(paramRange) {
+    const paramPriorityPair = {}
+    const priorityList = []
+    Object.keys(paramRange).forEach(key => paramRange[key].length === 5 ? priorityList.push(paramRange[key][4]) : null)
+    const maxVal = Math.max.apply(null, priorityList)
+    Object.keys(paramRange).forEach(key => {
+      if(paramRange[key].length !== 5) {
+        console.error('Errors in param length', key, paramRange[key])
+      } else {
+        const idx = paramRange[key][4] * maxVal
+        if(paramPriorityPair.hasOwnProperty(idx)) {
+          for(let i = 1; i < maxVal; i++) {
+            if(!paramPriorityPair.hasOwnProperty(idx + i)) {
+              paramPriorityPair[idx + i] = key
+              break
+            }
+          }
+        } else {
+          paramPriorityPair[idx] = key
+        }
+      }
+    })
+    const sortedPriority = Object.keys(paramPriorityPair).sort((a, b) => a - b)
+    const paramPriorityList = []
+    sortedPriority.forEach(idx => paramPriorityList.push(paramPriorityPair[idx]))
+    return paramPriorityList
+  }
+
   async function getStartParamValues(paramRange, strategyData) {
     const currenPropVal = getCurrentPropValues(strategyData)
     const startValues = {'default': {}, 'current': currenPropVal}
 
     Object.keys(paramRange).forEach(key => {
-      if(paramRange[key].length !== 4)
+      if(paramRange[key].length !== 5)
         console.error('Errors in param length', key, paramRange[key])
       else
         startValues.default[key] = paramRange[key][3]
@@ -887,11 +935,11 @@
 
   function strategyGetRange(strategyData) {
     const paramRange = {}
-    Object.keys(strategyData.properties).forEach(key => {
+    Object.keys(strategyData.properties).forEach((key, idx) => {
       if(typeof strategyData.properties[key] === 'boolean') {
-        paramRange[key] = [true, false, 0, strategyData.properties[key]]
+        paramRange[key] = [true, false, 0, strategyData.properties[key], idx + 1]
       } else if (typeof strategyData.properties[key] === 'string' && strategyData.properties[key].includes(';')) {
-        paramRange[key] = [strategyData.properties[key], '', 0, strategyData.properties[key].split(';')[0]]
+        paramRange[key] = [strategyData.properties[key], '', 0, strategyData.properties[key].split(';')[0], idx + 1]
       } else {
         const isInteger = strategyData.properties[key] === Math.round(strategyData.properties[key]) // TODO or convert to string and check the point?
         if(strategyData.properties[key]) { // Not 0 or Nan
@@ -901,18 +949,19 @@
           step = isInteger && step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1 // TODO or set paramRange[key][1]?
           paramRange[key].push(step)
           paramRange[key].push(strategyData.properties[key])
+          paramRange[key].push(idx + 1)
         } else {
-          paramRange[key] = [strategyData.properties[key], '', 0, strategyData.properties[key]]
+          paramRange[key] = [strategyData.properties[key], '', 0, strategyData.properties[key], idx + 1]
         }
       }
     })
     return paramRange
   }
   function strategyRangeToTemplate(paramRange) {
-    let csv = 'Parameter,From,To,Step,Default\n'
+    let csv = 'Parameter,From,To,Step,Default,Priority\n'
     Object.keys(paramRange).forEach(key => {
       csv += `${JSON.stringify(key)},${typeof paramRange[key][0] === 'string' ? JSON.stringify(paramRange[key][0]) : paramRange[key][0]},`+
-        `${paramRange[key][1]},${paramRange[key][2]},${typeof paramRange[key][3] === 'string' ? JSON.stringify(paramRange[key][3]) : paramRange[key][3]}\n`
+        `${paramRange[key][1]},${paramRange[key][2]},${typeof paramRange[key][3] === 'string' ? JSON.stringify(paramRange[key][3]) : paramRange[key][3]},${paramRange[key][4]}\n`
     })
     return csv
   }
@@ -1187,13 +1236,13 @@
     const paramRange = {}
     const csvData = await parseCSVFile(fileData)
     const headers = Object.keys(csvData[0])
-    const missColumns = ['parameter','from','to','step','default'].filter(columnName => !headers.includes(columnName.toLowerCase()))
+    const missColumns = ['parameter','from','to','step','default','priority'].filter(columnName => !headers.includes(columnName.toLowerCase()))
     if(missColumns && missColumns.length)
-      return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV. Please add all necessary columns to CSV like showed in the template. Uploading canceled.\n`
-    csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step'], row['default']])
+      return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nUploading canceled.\n`
+    csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step'], row['default'], row['priority']])
     await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
     console.log(paramRange)
-    return `The data was saved in the storage. To use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
+    return `The data was saved in the storage. \nTo use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
   }
 
   async function storageSetKeys(storageKey, value) {
