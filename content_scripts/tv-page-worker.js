@@ -469,18 +469,29 @@
         if(bestValue === null || typeof bestValue === 'undefined') {
           res.bestValue = res.data[testResults.optParamName]
           res.bestPropVal = propVale
-          console.log(`Best value undef: ${bestValue} => ${res.bestValue}`)
+          console.log(`Best value (first): ${bestValue} => ${res.bestValue}`)
         } else if(!isFiltered && testResults.isMaximizing) {
           res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
           res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
-          if(bestValue < res.data[testResults.optParamName])
+          if(bestValue < res.data[testResults.optParamName]) {
+            res.isBestChanged = true
             console.log(`Best value max: ${bestValue} => ${res.bestValue}`)
+          } else {
+            res.isBestChanged = false
+          }
+
         } else {
           res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
           res.bestPropVal  = bestValue > res.data[testResults.optParamName] ? propVale : bestPropVal
-          if(bestValue > res.data[testResults.optParamName])
+          if(bestValue > res.data[testResults.optParamName]) {
+            res.isBestChanged = true
             console.log(`Best value min: ${bestValue} => ${res.bestValue}`)
+          } else {
+            res.isBestChanged = false
+          }
         }
+      } else {
+        res.isFiltered = true
       }
     } else {
       res.bestValue = bestValue
