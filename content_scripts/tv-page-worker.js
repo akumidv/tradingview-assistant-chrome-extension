@@ -584,6 +584,7 @@
         if(res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
           console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
           res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
+          resData = res.data
           setBestVal(res.data[testResults.optParamName], defPropVal, res.data)
         }
       } else {
@@ -602,6 +603,7 @@
         if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
           console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
           res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
+          resData = res.data
           setBestVal(res.data[testResults.optParamName], bestPropVal, res.data)
         }
 
