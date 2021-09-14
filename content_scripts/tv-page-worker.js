@@ -465,20 +465,22 @@
       await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
 
       res.currentValue = res.data[testResults.optParamName]
-      if(bestValue === null || typeof bestValue === 'undefined') {
-        res.bestValue = res.data[testResults.optParamName]
-        res.bestPropVal = propVale
-        console.log(`Best value undef: ${bestValue} => ${res.bestValue}`)
-      } else if(!isFiltered && testResults.isMaximizing) {
-        res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
-        res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
-        if(bestValue < res.data[testResults.optParamName])
-          console.log(`Best value max: ${bestValue} => ${res.bestValue}`)
-      } else if (!isFiltered) {
-        res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
-        res.bestPropVal  = bestValue > res.data[testResults.optParamName] ? propVale : bestPropVal
-        if(bestValue > res.data[testResults.optParamName])
-          console.log(`Best value min: ${bestValue} => ${res.bestValue}`)
+      if(!isFiltered) {
+        if(bestValue === null || typeof bestValue === 'undefined') {
+          res.bestValue = res.data[testResults.optParamName]
+          res.bestPropVal = propVale
+          console.log(`Best value undef: ${bestValue} => ${res.bestValue}`)
+        } else if(!isFiltered && testResults.isMaximizing) {
+          res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
+          res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
+          if(bestValue < res.data[testResults.optParamName])
+            console.log(`Best value max: ${bestValue} => ${res.bestValue}`)
+        } else {
+          res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
+          res.bestPropVal  = bestValue > res.data[testResults.optParamName] ? propVale : bestPropVal
+          if(bestValue > res.data[testResults.optParamName])
+            console.log(`Best value min: ${bestValue} => ${res.bestValue}`)
+        }
       }
     } else {
       res.bestValue = bestValue
@@ -613,34 +615,55 @@
   }
 
   // Annealing optimization
-  async function optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState) {
+  async function optAnnealingIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
     const initTemp = 1// TODO to param? Find teh best match?
     const isMaximizing = testResults.hasOwnProperty('isMaximizing') ? testResults.isMaximizing : true
     if (!optimizationState.isInit) {
       optimizationState.currentTemp = initTemp
 
-      const propVal = optAnnealingNewState(allRangeParams) // Random value
-      optimizationState.lastState = propVal
+      if(!bestPropVal || bestValue === 'undefined') {
+        let propVal = optAnnealingNewState(allRangeParams) // Random value
+        if(bestPropVal)
+          propVal = expandPropVal(propVal, bestPropVal)
+        optimizationState.lastState = propVal
+        const res = await getTestIterationResult(testResults, optimizationState.lastState)
+        if(!res || !res.data)
+          return res
 
-      const res = await getTestIterationResult(testResults, optimizationState.lastState)
-      // const res = await optAnnealingGetEnergy(testResults, optimizationState.lastState)
-      if(!res || !res.data)
-        return res
-      // console.log('Init', res.data[testResults.optParamName], propVal)
+        optimizationState.lastEnergy = res.data[testResults.optParamName]
+        optimizationState.bestState = optimizationState.lastState;
+        optimizationState.bestEnergy = optimizationState.lastEnergy;
+      } else {
+        optimizationState.lastState = bestPropVal
+        optimizationState.bestState = bestPropVal;
+        optimizationState.lastEnergy = bestValue
+        optimizationState.bestEnergy = bestValue
+      }
 
-      optimizationState.lastEnergy = res.data[testResults.optParamName]
-      optimizationState.bestState = optimizationState.lastState;
-      optimizationState.bestEnergy = optimizationState.lastEnergy;
       optimizationState.isInit = true
     }
     const iteration = testResults.perfomanceSummary.length
 
-    const propVal = optAnnealingNewState(allRangeParams, optimizationState.currentTemp, optimizationState.lastState)
+
+    // let propVal = optAnnealingNewState(allRangeParams, optimizationState.currentTemp, optimizationState.lastState)
+    let propData = optAnnealingNewState(allRangeParams, optimizationState.currentTemp, optimizationState.lastState)
+    let propVal = propData.data
+    if(bestPropVal)
+      propVal = expandPropVal(propVal, bestPropVal)
     const currentState = propVal
-    const res = await getTestIterationResult(testResults, currentState)
-    // const res = await optAnnealingGetEnergy(testResults, currentState)
-    if(!res || !res.data)
+    let res = await getTestIterationResult(testResults, currentState)
+
+    if(!res || !res.data || res.error !== null)
       return res
+    res.data['comment'] = res.data['comment'] ? res.data['comment'] + propData.message : propData.message
+    if (!res.message)
+      res.message = propData.message
+    else
+      res.message += propData.message
+    // return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+    res = await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+    res.bestValue = bestValue
+    res.bestPropVal = bestPropVal
 
     if(res.data.hasOwnProperty(testResults.optParamName)) {
       console.log('ITER', testResults.perfomanceSummary.length, 'CUR RES', res.data[testResults.optParamName], 'BEST', optimizationState.bestEnergy, 'TEMP', optimizationState.currentTemp)
@@ -705,11 +728,32 @@
 
 
   function optAnnealingNewState(allRangeParams, temperature, curState) {
-    const res = {}
+    const propVal = {} // TODO prepare as
+    let msg = ''
+    // const allParamNames = Object.keys(allRangeParams)
+    // if(curPropVal) {
+    //   allParamNames.forEach(paramName => {
+    //     propVal[paramName] = curPropVal[paramName]
+    //   })
+    //   const indexToChange = randomInteger(0, allParamNames.length - 1)
+    //   const paramName = allParamNames[indexToChange]
+    //   const curVal = propVal[paramName]
+    //   const diffParams = allRangeParams[paramName].filter(paramVal => paramVal !== curVal)
+    //   propVal[paramName] = diffParams.length === 0 ? curVal : diffParams.length === 1 ? diffParams[0] : diffParams[randomInteger(0, diffParams.length - 1)]
+    //   msg = `Changed "${paramName}": ${curVal} => ${propVal[paramName]}.`
+    // } else {
+    //   allParamNames.forEach(paramName => {
+    //     propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
+    //   })
+    //   msg = `Changed all parameters.`
+    // }
+
+
     if(!curState || randomInteger(0,1)) { // || randomInteger(0,1) // for more variable search
       Object.keys(allRangeParams).forEach(paramName => {
-        res[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
+        propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
       })
+      msg = `Changed all parameters randomly without temperature.`
     } else {
       Object.keys(allRangeParams).forEach(paramName => {
         const curIndex = allRangeParams[paramName].indexOf(curState[paramName])
@@ -718,15 +762,16 @@
         // const offset = sign * Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
         // const newIndex = curIndex + offset > allRangeParams[paramName].length - 1 ? allRangeParams[paramName].length - 1 : // TODO +/-
         //   curIndex + offset < 0 ? 0 : curIndex + offset
-        // res[paramName] = allRangeParams[paramName][newIndex]
+        // propVal[paramName] = allRangeParams[paramName][newIndex]
         // Second variant
         const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
         const offsetIndex = (curIndex + sign*baseOffset) % (allRangeParams[paramName].length)
         const newIndex2 = offsetIndex >= 0 ?offsetIndex : allRangeParams[paramName].length + offsetIndex
-        res[paramName] = allRangeParams[paramName][newIndex2]
+        propVal[paramName] = allRangeParams[paramName][newIndex2]
+        msg = `Changed all parameters randomly by temperature.`
       })
     }
-    return res
+    return {message: msg, data: propVal}
   }
 
   async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del test function annealing
@@ -814,7 +859,7 @@
       let optRes = {}
       switch(testResults.method) {
         case 'annealing':
-          optRes = await optAnnealingIteration(allRangeParams, testResults, bestValue, optimizationState)
+          optRes = await optAnnealingIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
           break
         case 'sequential':
           optRes = await optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
