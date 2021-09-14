@@ -656,7 +656,6 @@
     const iteration = testResults.perfomanceSummary.length
 
 
-    // let propVal = optAnnealingNewState(allRangeParams, optimizationState.currentTemp, optimizationState.lastState)
     let propData = optAnnealingNewState(allRangeParams, optimizationState.currentTemp, optimizationState.lastState)
     let propVal = propData.data
     if(bestPropVal)
@@ -673,41 +672,57 @@
       res.message += propData.message
     // return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
     res = await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
-    res.bestValue = bestValue
-    res.bestPropVal = bestPropVal
+    // res.bestValue = bestValue
+    // res.bestPropVal = bestPropVal
+    if(!res.data.hasOwnProperty(testResults.optParamName))
+      return res
+    const currentEnergy = res.data[testResults.optParamName]
 
-    if(res.data.hasOwnProperty(testResults.optParamName)) {
-      console.log('ITER', testResults.perfomanceSummary.length, 'CUR RES', res.data[testResults.optParamName], 'BEST', optimizationState.bestEnergy, 'TEMP', optimizationState.currentTemp)
-      const currentEnergy = res.data[testResults.optParamName]
-      res.currentValue = currentEnergy
-      if (isMaximizing !== true ? currentEnergy < optimizationState.lastEnergy : currentEnergy > optimizationState.lastEnergy) {
+    if(res.hasOwnProperty('isBestChanged') && res.isBestChanged) {
+      optimizationState.lastState = currentState;
+      optimizationState.lastEnergy = currentEnergy;
+    } else {
+      const randVal = Math.random()
+      const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
+      if (randVal <= expVal) {
         optimizationState.lastState = currentState;
         optimizationState.lastEnergy = currentEnergy;
-      } else {
-        const randVal = Math.random()
-        const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
-        if (randVal <= expVal) {
-          optimizationState.lastState = currentState;
-          optimizationState.lastEnergy = currentEnergy;
-        }
       }
-
-      if (isMaximizing !== true ? optimizationState.lastEnergy < optimizationState.bestEnergy : optimizationState.lastEnergy > optimizationState.bestEnergy ) {
-        // console.log('!!!Found best better then last', optimizationState.lastEnergy, optimizationState.bestEnergy)
-        optimizationState.bestState = optimizationState.lastState;
-        optimizationState.bestEnergy = optimizationState.lastEnergy;
-      }
-      // optimizationState.currentTemp = optAnnealingGetTemp(optimizationState.currentTemp, testResults.cycles);
-      optimizationState.currentTemp = optAnnealingGetBoltzmannTemp(initTemp, iteration, Object.keys(allRangeParams).length);
-      // optimizationState.currentTemp = optAnnealingGetExpTemp(initTemp, iteration, Object.keys(allRangeParams).length);
-
-      res.bestValue = optimizationState.bestEnergy
-    } else {
-      console.error(`Absent ${testResults.optParamName}`)
-      res.bestValue = bestValue
-      res.currentValue = 'error'
     }
     return res
+
+    // if(res.data.hasOwnProperty(testResults.optParamName)) {
+    //   console.log('ITER', testResults.perfomanceSummary.length, 'CUR RES', res.data[testResults.optParamName], 'BEST', optimizationState.bestEnergy, 'TEMP', optimizationState.currentTemp)
+    //   const currentEnergy = res.data[testResults.optParamName]
+    //   res.currentValue = currentEnergy
+    //   if (isMaximizing !== true ? currentEnergy < optimizationState.lastEnergy : currentEnergy > optimizationState.lastEnergy) {
+    //     optimizationState.lastState = currentState;
+    //     optimizationState.lastEnergy = currentEnergy;
+    //   } else {
+    //     const randVal = Math.random()
+    //     const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
+    //     if (randVal <= expVal) {
+    //       optimizationState.lastState = currentState;
+    //       optimizationState.lastEnergy = currentEnergy;
+    //     }
+    //   }
+    //
+    //   if (isMaximizing !== true ? optimizationState.lastEnergy < optimizationState.bestEnergy : optimizationState.lastEnergy > optimizationState.bestEnergy ) {
+    //     // console.log('!!!Found best better then last', optimizationState.lastEnergy, optimizationState.bestEnergy)
+    //     optimizationState.bestState = optimizationState.lastState;
+    //     optimizationState.bestEnergy = optimizationState.lastEnergy;
+    //   }
+    //   // optimizationState.currentTemp = optAnnealingGetTemp(optimizationState.currentTemp, testResults.cycles);
+    //   optimizationState.currentTemp = optAnnealingGetBoltzmannTemp(initTemp, iteration, Object.keys(allRangeParams).length);
+    //   // optimizationState.currentTemp = optAnnealingGetExpTemp(initTemp, iteration, Object.keys(allRangeParams).length);
+    //
+    //   res.bestValue = optimizationState.bestEnergy
+    // } else {
+    //   console.error(`Absent ${testResults.optParamName}`)
+    //   res.bestValue = bestValue
+    //   res.currentValue = 'error'
+    // }
+    // return res
   }
 
   function optAnnealingGetTemp(prevTemperature, cylces) {
@@ -741,46 +756,42 @@
   function optAnnealingNewState(allRangeParams, temperature, curState) {
     const propVal = {} // TODO prepare as
     let msg = ''
-    // const allParamNames = Object.keys(allRangeParams)
-    // if(curPropVal) {
-    //   allParamNames.forEach(paramName => {
-    //     propVal[paramName] = curPropVal[paramName]
-    //   })
-    //   const indexToChange = randomInteger(0, allParamNames.length - 1)
-    //   const paramName = allParamNames[indexToChange]
-    //   const curVal = propVal[paramName]
-    //   const diffParams = allRangeParams[paramName].filter(paramVal => paramVal !== curVal)
-    //   propVal[paramName] = diffParams.length === 0 ? curVal : diffParams.length === 1 ? diffParams[0] : diffParams[randomInteger(0, diffParams.length - 1)]
-    //   msg = `Changed "${paramName}": ${curVal} => ${propVal[paramName]}.`
-    // } else {
-    //   allParamNames.forEach(paramName => {
-    //     propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
-    //   })
-    //   msg = `Changed all parameters.`
-    // }
+    const allParamNames = Object.keys(allRangeParams)
+    if(curState) {
+        allParamNames.forEach(paramName => {
+          propVal[paramName] = curPropVal[paramName]
+        })
+        const indexToChange = randomInteger(0, allParamNames.length - 1)
+        const paramName = allParamNames[indexToChange]
+        const curVal = propVal[paramName]
+        const diffParams = allRangeParams[paramName].filter(paramVal => paramVal !== curVal)
 
+        if(diffParams.length === 0) {
+          propVal[paramName] = curVal
+        } else if(diffParams.length === 1) {
+          propVal[paramName] = diffParams[0]
+        } else {
+          propVal[paramName] = diffParams[randomInteger(0, diffParams.length - 1)]
 
-    if(!curState || randomInteger(0,1)) { // || randomInteger(0,1) // for more variable search
-      Object.keys(allRangeParams).forEach(paramName => {
+          // Is not proportional chances for edges of array
+          // const offset = sign * Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+          // const newIndex = curIndex + offset > allRangeParams[paramName].length - 1 ? allRangeParams[paramName].length - 1 : // TODO +/-
+          //   curIndex + offset < 0 ? 0 : curIndex + offset
+          // propVal[paramName] = allRangeParams[paramName][newIndex]
+          // Second variant
+          const curIndex = allRangeParams[paramName].indexOf(curState[paramName])
+          const sign = randomInteger(0,1) === 0 ? -1 : 1
+          const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+          const offsetIndex = (curIndex + sign * baseOffset) % (allRangeParams[paramName].length)
+          const newIndex2 = offsetIndex >= 0 ? offsetIndex : allRangeParams[paramName].length + offsetIndex
+          propVal[paramName] = allRangeParams[paramName][newIndex2]
+        }
+        msg = `Changed "${paramName}": ${curVal} => ${propVal[paramName]}.`
+    } else {
+      allParamNames.forEach(paramName => {
         propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
       })
       msg = `Changed all parameters randomly without temperature.`
-    } else {
-      Object.keys(allRangeParams).forEach(paramName => {
-        const curIndex = allRangeParams[paramName].indexOf(curState[paramName])
-        const sign = randomInteger(0,1) === 0 ? -1 : 1
-        // Is not proportional chances for edges of array
-        // const offset = sign * Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
-        // const newIndex = curIndex + offset > allRangeParams[paramName].length - 1 ? allRangeParams[paramName].length - 1 : // TODO +/-
-        //   curIndex + offset < 0 ? 0 : curIndex + offset
-        // propVal[paramName] = allRangeParams[paramName][newIndex]
-        // Second variant
-        const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
-        const offsetIndex = (curIndex + sign*baseOffset) % (allRangeParams[paramName].length)
-        const newIndex2 = offsetIndex >= 0 ?offsetIndex : allRangeParams[paramName].length + offsetIndex
-        propVal[paramName] = allRangeParams[paramName][newIndex2]
-        msg = `Changed all parameters randomly by temperature.`
-      })
     }
     return {message: msg, data: propVal}
   }
