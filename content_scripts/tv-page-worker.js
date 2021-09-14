@@ -456,20 +456,22 @@
       await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
 
       res.currentValue = res.data[testResults.optParamName]
-      if(bestValue === null || typeof bestValue === 'undefined') {
-        res.bestValue = res.data[testResults.optParamName]
-        res.bestPropVal = propVale
-        console.log(`Best value undef: ${bestValue} => ${res.bestValue}`)
-      } else if(!isFiltered && testResults.isMaximizing) {
-        res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
-        res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
-        if(bestValue < res.data[testResults.optParamName])
-          console.log(`Best value max: ${bestValue} => ${res.bestValue}`)
-      } else if (!isFiltered) {
-        res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
-        res.bestPropVal  = bestValue > res.data[testResults.optParamName] ? propVale : bestPropVal
-        if(bestValue > res.data[testResults.optParamName])
-          console.log(`Best value min: ${bestValue} => ${res.bestValue}`)
+      if(!isFiltered) {
+        if(bestValue === null || typeof bestValue === 'undefined') {
+          res.bestValue = res.data[testResults.optParamName]
+          res.bestPropVal = propVale
+          console.log(`Best value (first): ${bestValue} => ${res.bestValue}`)
+        } else if(!isFiltered && testResults.isMaximizing) {
+          res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
+          res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
+          if(bestValue < res.data[testResults.optParamName])
+            console.log(`Best value max: ${bestValue} => ${res.bestValue}`)
+        } else {
+          res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
+          res.bestPropVal  = bestValue > res.data[testResults.optParamName] ? propVale : bestPropVal
+          if(bestValue > res.data[testResults.optParamName])
+            console.log(`Best value min: ${bestValue} => ${res.bestValue}`)
+        }
       }
     } else {
       res.bestValue = bestValue
