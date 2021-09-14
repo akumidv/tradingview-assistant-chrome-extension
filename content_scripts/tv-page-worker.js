@@ -593,6 +593,7 @@
         if(res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
           console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
           res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
+          resData = res.data
           setBestVal(res.data[testResults.optParamName], defPropVal, res.data)
         }
       } else {
@@ -611,6 +612,7 @@
         if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
           console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
           res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
+          resData = res.data
           setBestVal(res.data[testResults.optParamName], bestPropVal, res.data)
         }
 
@@ -672,8 +674,6 @@
       res.message += propData.message
     // return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
     res = await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
-    // res.bestValue = bestValue
-    // res.bestPropVal = bestPropVal
     if(!res.data.hasOwnProperty(testResults.optParamName))
       return res
     const currentEnergy = res.data[testResults.optParamName]
@@ -684,11 +684,21 @@
     } else {
       const randVal = Math.random()
       const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
-      if (randVal <= expVal) {
+      console.log('#', optimizationState.currentTemp, randVal, expVal, currentEnergy, optimizationState.lastEnergy, currentEnergy - optimizationState.lastEnergy)
+      if (randVal <= expVal) { // TODO need to changed alway changed to current also in end of cycles.
         optimizationState.lastState = currentState;
         optimizationState.lastEnergy = currentEnergy;
+        res.message += ' Randomly changed state to current.'
+      } else { // To revert to best condition
+        optimizationState.lastState = res.bestPropVal;
+        optimizationState.lastEnergy = res.bestValue;
+        res.message += ' Returned to best state.'
+        console.log(' Returned to best state.')
       }
     }
+    optimizationState.currentTemp = optAnnealingGetTemp(optimizationState.currentTemp, testResults.cycles);
+      // optimizationState.currentTemp = optAnnealingGetBoltzmannTemp(initTemp, iteration, Object.keys(allRangeParams).length);
+      // optimizationState.currentTemp = optAnnealingGetExpTemp(initTemp, iteration, Object.keys(allRangeParams).length);
     return res
 
     // if(res.data.hasOwnProperty(testResults.optParamName)) {
@@ -726,7 +736,7 @@
   }
 
   function optAnnealingGetTemp(prevTemperature, cylces) {
-    return prevTemperature * 1-1/cylces;
+    return prevTemperature * (1-1/cylces);
   }
 
   function optAnnealingGetBoltzmannTemp(initTemperature, iter, cylces, dimensionSize) {
@@ -759,7 +769,7 @@
     const allParamNames = Object.keys(allRangeParams)
     if(curState) {
         allParamNames.forEach(paramName => {
-          propVal[paramName] = curPropVal[paramName]
+          propVal[paramName] = curState[paramName]
         })
         const indexToChange = randomInteger(0, allParamNames.length - 1)
         const paramName = allParamNames[indexToChange]
@@ -869,6 +879,8 @@
       testResults.perfomanceSummary.push(initRes.data)
       try {
         statusMessage(`<p>From default and previus test. Best "${testResults.optParamName}": ${bestValue}</p>`)
+        console.log('Saved best value', bestValue)
+        console.log(testResults.perfomanceSummary)
       } catch {}
     }
     console.log('bestValue', bestValue)
