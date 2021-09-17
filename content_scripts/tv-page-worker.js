@@ -1044,6 +1044,7 @@
       return null
     }
     testResults.timeFrame = timeFrameEl.innerText
+    testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
     const strategyCaptionEl = document.querySelector(SEL.strategyCaption)
     if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
       alert('There is not stratagy name element on page. Open correct page please')
@@ -1612,9 +1613,16 @@
       return
     if(indicatorTitle === 'iondvSignals' && workerStatus === null) {
       let tickerText = document.querySelector(SEL.ticker).innerText
-      let timeFrameText = document.querySelector(SEL.timeFrame).innerText
+      let timeFrameEl = document.querySelector(SEL.timeFrameActive)
+      if(!timeFrameEl)
+        timeFrameEl = document.querySelector(SEL.timeFrame)
+
+
+      let timeFrameText = timeFrameEl.innerText
       if(!tickerText || !timeFrameText)
+        // alert('There is not timeframe element on page. Open correct page please')
         return
+
       timeFrameText = timeFrameText.toLowerCase() === 'd' ? '1D' : timeFrameText
       if (isMsgShown && tickerText === tickerTextPrev && timeFrameText === timeFrameTextPrev)
         return
