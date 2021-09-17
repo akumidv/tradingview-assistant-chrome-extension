@@ -67,7 +67,6 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
               </div>
               <div>
                 <select id="optParamName" name="optParamName">
-<!--                  class="js-example-basic-single"-->
                   <option value="Net Profit: All" selected="selected">Net Profit: All</option>
                   <option value="Net Profit: All %">Net Profit: All %</option>
                   <option value="Net Profit: Long">Net Profit: Long</option>
@@ -162,14 +161,21 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                   <option value="Margin Calls: All">Margin Calls: All</option>
                   <option value="Margin Calls: Long">Margin Calls: Long</option>
                   <option value="Margin Calls: Short">Margin Calls: Short</option>
+
+                  <option value=".Percent Decimal">Percent Decimal</option>
+                  <option value=".Reward">Reward</option>
+                  <option value=".Margin">Margin</option>
+                  <option value=".Breakeven">Breakeven</option>
+                  <option value=".maxProfitFromTrades">Net profit if trades > 50</option>
                 </select>
               </div>
               <div>by</div>
               <div>
 <!--                <select class="js-example-basic-single" name="state">-->
                 <select id="optMethod" name="method">
-                  <option value="random" selected="selected">Random</option>
-                  <option value="sequential">Sequential</option>
+                  <option value="annealing">Annealing</option>
+                  <option value="random">Random</option>
+                  <option value="sequential" selected="selected">Sequential</option>
                 </select>
               </div>
               <div>method</div>
@@ -191,12 +197,8 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                       <div id="filterParam">
                           <span>than</span>
                           <input id="optFilterValue" type="number" name="method" style="width: 5em" value="50">
-                          <!--                   </div>-->
-
-                          <!--                  <div>-->
                           <span>for</span>
                           <select id="optFilterParamName" name="optFilterParamName">
-                              <!--                  class="js-example-basic-single"-->
                               <option value="Net Profit: All">Net Profit: All</option>
                               <option value="Net Profit: All %">Net Profit: All %</option>
                               <option value="Net Profit: Long">Net Profit: Long</option>
@@ -291,6 +293,12 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                               <option value="Margin Calls: All">Margin Calls: All</option>
                               <option value="Margin Calls: Long">Margin Calls: Long</option>
                               <option value="Margin Calls: Short">Margin Calls: Short</option>
+
+                              <option value=".Percent Decimal">Percent Decimal</option>
+                              <option value=".Reward">Reward</option>
+                              <option value=".Margin">Margin</option>
+                              <option value=".Breakeven">Breakeven</option>
+                              <option value=".maxProfitFromTrades">Net profit if trades > 50</option>
                           </select>
                       </div>
                   </div>
