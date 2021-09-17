@@ -157,10 +157,10 @@
 
 
             let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
-            extraHeader += (paramSpaceNumber/testParams.cycles > 10) ? '<br />This is too large. It is recommended to use up to 3-4 parameters, remove the rest from the template file.' : ''
+            extraHeader += (paramSpaceNumber/testParams.cycles) > 10 ? `<br />This is too large for ${testParams.cycles} cycles. It is recommended to use up to 3-4 essential parameters, remove the rest from the strategy parameters file.` : ''
 
             statusMessage('Started.', extraHeader)
-            const testResults = await testStrategy(testParams, strategyData, allRangeParams)
+             const testResults = await testStrategy(testParams, strategyData, allRangeParams)
             console.log('testResults', testResults)
             if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
               alert('There is no data for conversion. Try to do test again')
@@ -263,7 +263,7 @@
       msgEl.setAttribute("style","background-color: #fffcd7;" +
         "color: black;" +
         "width: 800px;" +
-        "height: 150px;" +
+        "height: 175px;" +
         "position: fixed;" +
         "top: 1%;" +
         "right: 0;" +
@@ -276,7 +276,7 @@
         "justify-content: left; " +
         "text-align: left;");
     }
-    if(isStatusPresent && msgEl && document.getElementById('iondvMsg')) {
+    if(isStatusPresent && msgEl && document.getElementById('iondvMsg') && !extraHeader) {
       document.getElementById('iondvMsg').innerHTML = msgText
     } else {
       extraHeader = extraHeader !== null ? `<div style="font-size: 12px;margin-left: 5px;margin-right: 5px;text-align: left;">${extraHeader}</div>` : '' //;margin-bottom: 10px
@@ -563,11 +563,11 @@
         resVal = newVal
         resPropVal = newPropVal
         resData = newResData
-      } else if(testResults.isMaximizing) {
-        resVal = newVal > resVal ? newVal : resVal
-        resPropVal = newVal > resVal ? newPropVal : resPropVal
-        resData = newVal > resVal ?  newResData : resData
-      } else {
+      } else if(testResults.isMaximizing && newVal > resVal) {
+        resVal = newVal
+        resPropVal = newPropVal
+        resData = newResData
+      } else if(!testResults.isMaximizing && newVal < resVal) {
         resVal = newVal < resVal ? newVal : resVal
         resPropVal =  newVal < resVal ? newPropVal : resPropVal
         resData = newVal < resVal ?  newResData : resData
