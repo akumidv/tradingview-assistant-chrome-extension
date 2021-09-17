@@ -1,7 +1,8 @@
 {
     "manifest_version": 3,
     "author": "Andrei Kuminov (akumidv)",
-    "description": "An assistant for backtesting trading strategies and checking (showing) external signals in Tradingview implemented as a browser extension.",
+    "description": "An assistant for backtesting trading strategies and showing external signals in Tradingview",
+    "keywords": ["tradingview", "backtesting", "ticker", "signals"],
     "name": "Tradingview assistant",
     "version": "1.0",    
     "icons": {

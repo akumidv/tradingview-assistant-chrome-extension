@@ -48,7 +48,8 @@ The signals are stored in the browser, to activate them, open the properties of 
 * Configuring the optimisation model:
     * Choosing the type of optimisation: searching for the maximum or minimum values
     * Selecting an optimised value from the entire list of strategy results in Tradingview (Net Profit, Ratio Avg Win / Avg Loss, Sharpe Ratio, Sortino Ratio, etc.)
-    * Choosing a search strategy in the parameter space(random, sequential)
+    * Choosing a search strategy in the parameter space(random, sequential, annealing method)
+* Filtering of unsuitable results. For example, the number of tradings is less than necessary
 * Setting the number of cycles to search for parameters.
 * Performing automatic selection of parameters with storing all the results in the browser storage and the ability to save them as CSV files after testing, including in case of an error or page reloading
 
