@@ -12,7 +12,7 @@ Watch the youtube video
 
 Loading external buy or sell signals by timestamps from a CSV file*
 
-![](docs/screenshot2.png)
+![](docs/Screenshot2.png)
 
 To display the signals, you need to create a pine script named 'iondvSignals' from the script bellow add it to the chart:
 ```
@@ -39,7 +39,7 @@ The signals are stored in the browser, to activate them, open the properties of 
 
 ### Backtesting trading strategies, optimisation of the strategy's parameters:
 
-![](docs/screenshot1.png)
+![](docs/Screenshot1.png)
 
 * automatic getting a list of parameters and their types (numeric, lists and checkboxes are supported)
 * generation of the testing range according to the rule: the beginning value is 2 times less than the current one, the end is 2 times more than the current one.
