@@ -395,11 +395,7 @@
     if(!report.hasOwnProperty('Percent Profitable: All') || !typeof report['Percent Profitable: All']  === 'number' ||
       !report.hasOwnProperty('Ratio Avg Win / Avg Loss: All') || !typeof report['Ratio Avg Win / Avg Loss: All']  === 'number')
       return report
-    report['.Percent Decimal'] = report['Percent Profitable: All'] / 100
-    report['.Reward'] = report['Ratio Avg Win / Avg Loss: All'] * 100
-    report['.Breakeven'] = (100 /(100+report['.Reward'])) + 0.2
-    report['.Margin'] = report['.Percent Decimal'] - report['.Breakeven']
-    report['.maxProfitFromTrades'] = report['Total Closed Trades: All'] &&  report['Total Closed Trades: All'] > 50 ? report['Net Profit: All'] :  report['Net Profit: All'] * 0.1
+    // report['.Reward'] = report['Ratio Avg Win / Avg Loss: All'] * 100
 
     // TODO
     return report
@@ -584,7 +580,9 @@
       console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
       resVal = resData[testResults.optParamName]
       resData['comment'] = resData['comment'] ? `Current parameters. ${resData['comment']}` : 'Current parameters.'
+      Object.keys(resPropVal).forEach(key => resData[`__${key}`] = resPropVal[key])
     }
+
 
     if(testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
       const defPropVal = expandPropVal(testResults.startParams.default, resPropVal)
@@ -593,7 +591,7 @@
         if(res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
           console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
           res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
-          resData = res.data
+          Object.keys(defPropVal).forEach(key => res.data[`__${key}`] = defPropVal[key])
           setBestVal(res.data[testResults.optParamName], defPropVal, res.data)
         }
       } else {
@@ -612,7 +610,7 @@
         if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
           console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
           res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
-          resData = res.data
+          Object.keys(bestPropVal).forEach(key => res.data[`__${key}`] = bestPropVal[key])
           setBestVal(res.data[testResults.optParamName], bestPropVal, res.data)
         }
 
@@ -686,7 +684,7 @@
       const randVal = Math.random()
       const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
       // console.log('#', optimizationState.currentTemp, randVal, expVal, currentEnergy, optimizationState.lastEnergy, currentEnergy - optimizationState.lastEnergy)
-      if (randVal <= expVal) { // TODO need to changed alway changed to current also in end of cycles.
+      if (randVal <= expVal) { // TODO need to optimize
         optimizationState.lastState = currentState;
         optimizationState.lastEnergy = currentEnergy;
         // res.message += ' Randomly changed state to current.'
@@ -767,7 +765,8 @@
     const propVal = {} // TODO prepare as
     let msg = ''
     const allParamNames = Object.keys(allRangeParams)
-    if(curState) {
+    const isAll = (randomInteger(0, 10) * temperature) >= 5
+    if(!isAll && curState) {
         allParamNames.forEach(paramName => {
           propVal[paramName] = curState[paramName]
         })
@@ -797,7 +796,17 @@
           propVal[paramName] = allRangeParams[paramName][newIndex2]
         }
         msg = `Changed "${paramName}": ${curVal} => ${propVal[paramName]}.`
-    } else {
+    }  else if (isAll) {
+      allParamNames.forEach(paramName => {
+        const curIndex = allRangeParams[paramName].indexOf(curState[paramName])
+        const sign = randomInteger(0,1) === 0 ? -1 : 1
+        const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
+        const offsetIndex = (curIndex + sign * baseOffset) % (allRangeParams[paramName].length)
+        const newIndex2 = offsetIndex >= 0 ? offsetIndex : allRangeParams[paramName].length + offsetIndex
+        propVal[paramName] = allRangeParams[paramName][newIndex2]
+      })
+      msg = `Changed all parameters randomly.`
+    }  else {
       allParamNames.forEach(paramName => {
         propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
       })
