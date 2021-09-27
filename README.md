@@ -1,9 +1,10 @@
 # About
 An assistant for backtesting trading strategies and checking (showing) external signals in Tradingview implemented as a Chrome browser extension.
 
-Watch the youtube video
+Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg)
 
-[![Watch the youtube video](https://i9.ytimg.com/vi/xhnlSCIlEkw/mq2.jpg?sqp=COTkkIoG&rs=AOn4CLCX0imNIsQm29rRLkBcbnHiFNm6qw)](https://youtu.be/xhnlSCIlEkw)
+[Watch the youtube video](https://youtu.be/xhnlSCIlEkw)
+
 
 
 ## Functionality
@@ -57,6 +58,11 @@ It is planned to implement the genetic method to optimise the parameters.
 
 
 ## Setup
+
+Install from (Chrome webstroe)[https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg]
+
+Or manually add the latest version to chrome based browser from this repository by following the instruction below.
+
 Click on the browser's address bar, insert `chrome://extensions` and follow this link. Click on the "Developer mode" switch.
 
 The "Load unpacked" button should appear. Click on it, and in the window that opens, select the folder with the saved
