@@ -43,13 +43,11 @@
       try {
         switch (request.action) {
           case 'saveParameters': {
-            console.log('saveParameters')
             const strategyData = await getStrategy(null, true)
             if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
               alert('Please open the indicator (strategy) parameters window before saving them to a file.')
               break
             }
-            console.dir(strategyData)
             let strategyParamsCSV = `Name,Value\n"__indicatorName",${JSON.stringify(strategyData.name)}\n`
             Object.keys(strategyData.properties).forEach(key => {
               strategyParamsCSV += `${JSON.stringify(key)},${typeof strategyData.properties[key][0] === 'string' ? JSON.stringify(strategyData.properties[key]) : strategyData.properties[key]}\n`
@@ -58,7 +56,28 @@
             break;
           }
           case 'loadParameters': {
-            console.log('loadParameters')
+            await uploadFiles(async (fileData) => {
+              const propVal = {}
+              let strategyName = null
+              const csvData = await parseCSVFile(fileData)
+              const headers = Object.keys(csvData[0])
+              const missColumns = ['Name','Value'].filter(columnName => !headers.includes(columnName.toLowerCase()))
+              if(missColumns && missColumns.length)
+                return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nSet parameters canceled.\n`
+              csvData.forEach(row => {
+                if(row['name'] === '__indicatorName')
+                  strategyName = row['value']
+                else
+                  propVal[row['name']] = row['value']
+              })
+              if(!strategyName)
+                return 'The name for indicator in row with name ""__indicatorName"" is missed in CSV file'
+              const res = await setStrategyParams(strategyName, propVal, true)
+              if(res) {
+                return `Parameters are set`
+              }
+              return `The name "${strategyName}" of the indicator from the file does not match the name in the open window`
+            }, '', false)
             break;
           }
           case 'uploadSignals': {
@@ -901,10 +920,17 @@
     return testResults
   }
 
-  async function setStrategyParams (name, propVal) {
-    const indicatorTitle = await checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
-    if(!indicatorTitle)
-      return null
+  async function setStrategyParams (name, propVal, isCheckOpenedWindow = false) {
+    if(isCheckOpenedWindow) {
+      let indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
+      if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
+        return null
+      }
+    } else {
+      const indicatorTitle = await checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+      if(!indicatorTitle)
+        return null
+    }
     const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
     const propKeys = Object.keys(propVal)
     let setResultNumber = 0
@@ -928,7 +954,7 @@
         } else if (propClassName.includes('fill-')) {
           const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
           if(checkboxEl) {
-            const isChecked = checkboxEl.getAttribute('checked') !== null
+            const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
             if(propVal[propText] !== isChecked) {
               page.mouseClick(checkboxEl)
             }
@@ -939,7 +965,7 @@
       }
     }
     // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
-    if(document.querySelector(SEL.okBtn))
+    if(!isCheckOpenedWindow && document.querySelector(SEL.okBtn))
       document.querySelector(SEL.okBtn).click()
     return true
   }
@@ -1021,9 +1047,9 @@
       return null
     }
     stratSummaryEl.click()
-    await waitForSelector(SEL.strategySummaryActive, 1000)
+    await page.waitForSelector(SEL.strategySummaryActive, 1000)
 
-    await waitForSelector(SEL.strategyReport, 0)
+    await page.waitForSelector(SEL.strategyReport, 0)
     if(!reportNode) {
       reportNode = await page.waitForSelector(SEL.strategyReport, 0)
       if(reportNode) {
