@@ -11,7 +11,6 @@
   // page  "content_scripts/page.js"
   // tv  "content_scripts/tv.js"
 
-
   const DEF_MAX_PARAM_NAME = 'Net Profit All'
 
   let reportNode = null
@@ -272,15 +271,25 @@
 
   function statusMessage(msgText, extraHeader = null) {
     const isStatusPresent = document.getElementById('iondvStatus')
-    const msgEl = isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
+    const mObj = isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
+    let msgEl
     if(!isStatusPresent) {
-      msgEl.setAttribute("id","iondvStatus");
-      msgEl.setAttribute("style","background-color: #fffcd7;" +
+       mObj.id = "iondvStatus";
+       mObj.setAttribute("style","background-color:rgba(0, 0, 0, 0.2);" +
+        "position:absolute;" +
+        "width:100%;" +
+        "height:100%;" +
+        "top:0px;" +
+        "left:0px;" +
+        "z-index:10000;");
+      mObj.style.height = document.documentElement.scrollHeight + "px";
+      msgEl = mObj.appendChild(document.createElement("div"));
+      msgEl.setAttribute("style","background-color: #fffde0;" +
         "color: black;" +
         "width: 800px;" +
         "height: 175px;" +
         "position: fixed;" +
-        "top: 1%;" +
+        "top: 50px;" +
         "right: 0;" +
         "left: 0;" +
         "margin: auto;" +
@@ -290,23 +299,33 @@
         "align-items: center; " +
         "justify-content: left; " +
         "text-align: left;");
+    } else {
+      msgEl = mObj.querySelector('div')
     }
     if(isStatusPresent && msgEl && document.getElementById('iondvMsg') && !extraHeader) {
       document.getElementById('iondvMsg').innerHTML = msgText
     } else {
       extraHeader = extraHeader !== null ? `<div style="font-size: 12px;margin-left: 5px;margin-right: 5px;text-align: left;">${extraHeader}</div>` : '' //;margin-bottom: 10px
-      msgEl.innerHTML = '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
+      msgEl.innerHTML = '<a id="iondvBoxClose" style="float:right;margin-top:-10px;margin-right:-10px;cursor:pointer;color: #fff;border: 1px solid #AEAEAE;border-radius: 24px;background: #605F61;font-size: 25px;display: inline-block;line-height: 0px;padding: 11px 3px;">x</a>' +
+        '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
         '<div style="font-size: 18px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
         extraHeader +
         '<div id="iondvMsg" style="margin: 5px 10px">' +
         msgText + '</div>';
-      if(!isStatusPresent) {
+    }
+    if(!isStatusPresent) {
         const tvDialog = document.getElementById('overlap-manager-root')
         if(tvDialog)
-          document.body.insertBefore(msgEl, tvDialog) // For avoid problem if msg overlap tv dialog window
+          document.body.insertBefore(mObj, tvDialog) // For avoid problem if msg overlap tv dialog window
         else
-          document.body.appendChild(msgEl);
-      }
+          document.body.appendChild(mObj);
+    }
+    const btnClose = document.getElementById('iondvBoxClose')
+        if(btnClose) {
+          btnClose.onclick = () => {
+            console.log('Stop clicked')
+            workerStatus = null
+          }
     }
   }
 
@@ -881,6 +900,11 @@
     const optimizationState = {}
     let isEnd = false
     for(let i = 0; i < testResults.cycles; i++) {
+      if (workerStatus === null) {
+        console.log('Stop command detected')
+        break
+      }
+      console.log('##workerStatus', workerStatus)
       let optRes = {}
       switch(testResults.method) {
         case 'annealing':
@@ -1241,7 +1265,7 @@
   async function getStrategy(strategyName, isIndicatorSave = false) {
     let strategyData = {}
     let indicatorName = null
-    if(strategyName) {
+    if(strategyName !== null) {
       const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
       if(!indicatorLegendsEl)
         return null
@@ -1249,7 +1273,7 @@
         const indicatorTitleEl = indicatorItemEl.querySelector(SEL.tvLegendIndicatorItemTitle)
         if (!indicatorTitleEl)
           continue
-        if (strategyName !== indicatorTitleEl.innerText)
+        if (strategyName && strategyName !== indicatorTitleEl.innerText)
           continue
 
         page.mouseClick(indicatorTitleEl)
