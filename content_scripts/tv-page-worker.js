@@ -6,6 +6,11 @@
 'use strict';
 
 (async function() {
+  // GLOBALS
+  // SEL  "content_scripts/selectors.js"
+  // page  "content_scripts/page.js"
+  // tv  "content_scripts/tv.js"
+
 
   const DEF_MAX_PARAM_NAME = 'Net Profit All'
 
@@ -22,34 +27,6 @@
   const STORAGE_STRATEGY_KEY_RESULTS = 'strategy_result'
   const STORAGE_SIGNALS_KEY_PREFIX = 'signals'
 
-  const SEL = {
-    tvLegendIndicatorItem: 'div[data-name="legend"] div[class^="sourcesWrapper"] div[class^="sources"] div[data-name="legend-source-item"]',
-    tvLegendIndicatorItemTitle: 'div[data-name="legend-source-title"]',
-    tvDialogRoot: '#overlap-manager-root',
-    indicatorTitle: '#overlap-manager-root div[data-name="indicator-properties-dialog"] div[class^="title"]',
-    tabInput: 'div[data-name="indicator-properties-dialog"] div[data-value="inputs"]',
-    tabInputActive: 'div[data-name="indicator-properties-dialog"] div[class*="active"][data-value="inputs"]',
-    tabProperties: 'div[data-name="indicator-properties-dialog"] div[data-value="properties"]',
-    ticker: '#header-toolbar-symbol-search > div[class*="text-"]',
-    timeFrame: '#header-toolbar-intervals div[data-role^="button"]',
-    timeFrameActive: '#header-toolbar-intervals div[data-role^="button"][class*="isActive"]',
-    indicatorScroll: 'div[data-name="indicator-properties-dialog"] div[class^="scrollable-"]',
-    indicatorProperty: 'div[data-name="indicator-properties-dialog"] div[class^="content-"] div[class^="cell-"]',
-    okBtn: 'div[data-name="indicator-properties-dialog"] div[class^="footer-"] button[name="submit"]',
-    strategyTesterTab: '#footer-chart-panel div[data-name="backtesting"]',
-    strategyTesterTabActive: '#footer-chart-panel div[data-name="backtesting"][data-active="true"]',
-    strategyCaption: '#bottom-area div.backtesting-head-wrapper .strategy-select .caption',
-    strategyDialogParam: '#bottom-area div.backtesting-head-wrapper .js-backtesting-open-format-dialog',
-    strategySummary: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li:nth-child(2)',
-    strategySummaryActive: '#bottom-area div.backtesting-head-wrapper .backtesting-select-wrapper > ul >li.active:nth-child(2)',
-    strategyReport: '#bottom-area div.backtesting-content-wrapper > div.reports-content',
-    strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > div.reports-content.fade',
-    strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
-    strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
-    strategyReportHeader: '#bottom-area div.backtesting-content-wrapper .report-data thead > tr > td',
-    strategyReportRow: '#bottom-area div.backtesting-content-wrapper .report-data tbody > tr',
-    strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] div[class^="label-"]'
-  }
 
   chrome.runtime.onMessage.addListener(
     async function(request, sender, reply) {
@@ -65,6 +42,25 @@
       workerStatus = request.action
       try {
         switch (request.action) {
+          case 'saveParameters': {
+            console.log('saveParameters')
+            const strategyData = await getStrategy(null, true)
+            if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+              alert('Please open the indicator (strategy) parameters window before saving them to a file.')
+              break
+            }
+            console.dir(strategyData)
+            let strategyParamsCSV = `Name,Value\n"__indicatorName",${JSON.stringify(strategyData.name)}\n`
+            Object.keys(strategyData.properties).forEach(key => {
+              strategyParamsCSV += `${JSON.stringify(key)},${typeof strategyData.properties[key][0] === 'string' ? JSON.stringify(strategyData.properties[key]) : strategyData.properties[key]}\n`
+            })
+            saveFileAs(strategyParamsCSV, `${strategyData.name}.csv`)
+            break;
+          }
+          case 'loadParameters': {
+            console.log('loadParameters')
+            break;
+          }
           case 'uploadSignals': {
             await uploadFiles(parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)
             break;
@@ -408,16 +404,16 @@
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
 
-    let isProcessStart = await waitForSelector(SEL.strategyReportInProcess, 1500)
+    let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 1500)
     let isProcessEnd = isReportChanged
 
     if (isProcessStart)
-      isProcessEnd = await waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
+      isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
     else if (isProcessEnd)
       isProcessStart = true
 
     let isProcessError = document.querySelector(SEL.strategyReportError)
-    await waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+    await page.waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
     reportData = parseReportTable()
     if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
       const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
@@ -698,39 +694,6 @@
       // optimizationState.currentTemp = optAnnealingGetBoltzmannTemp(initTemp, iteration, Object.keys(allRangeParams).length);
       // optimizationState.currentTemp = optAnnealingGetExpTemp(initTemp, iteration, Object.keys(allRangeParams).length);
     return res
-
-    // if(res.data.hasOwnProperty(testResults.optParamName)) {
-    //   console.log('ITER', testResults.perfomanceSummary.length, 'CUR RES', res.data[testResults.optParamName], 'BEST', optimizationState.bestEnergy, 'TEMP', optimizationState.currentTemp)
-    //   const currentEnergy = res.data[testResults.optParamName]
-    //   res.currentValue = currentEnergy
-    //   if (isMaximizing !== true ? currentEnergy < optimizationState.lastEnergy : currentEnergy > optimizationState.lastEnergy) {
-    //     optimizationState.lastState = currentState;
-    //     optimizationState.lastEnergy = currentEnergy;
-    //   } else {
-    //     const randVal = Math.random()
-    //     const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
-    //     if (randVal <= expVal) {
-    //       optimizationState.lastState = currentState;
-    //       optimizationState.lastEnergy = currentEnergy;
-    //     }
-    //   }
-    //
-    //   if (isMaximizing !== true ? optimizationState.lastEnergy < optimizationState.bestEnergy : optimizationState.lastEnergy > optimizationState.bestEnergy ) {
-    //     // console.log('!!!Found best better then last', optimizationState.lastEnergy, optimizationState.bestEnergy)
-    //     optimizationState.bestState = optimizationState.lastState;
-    //     optimizationState.bestEnergy = optimizationState.lastEnergy;
-    //   }
-    //   // optimizationState.currentTemp = optAnnealingGetTemp(optimizationState.currentTemp, testResults.cycles);
-    //   optimizationState.currentTemp = optAnnealingGetBoltzmannTemp(initTemp, iteration, Object.keys(allRangeParams).length);
-    //   // optimizationState.currentTemp = optAnnealingGetExpTemp(initTemp, iteration, Object.keys(allRangeParams).length);
-    //
-    //   res.bestValue = optimizationState.bestEnergy
-    // } else {
-    //   console.error(`Absent ${testResults.optParamName}`)
-    //   res.bestValue = bestValue
-    //   res.currentValue = 'error'
-    // }
-    // return res
   }
 
   function optAnnealingGetTemp(prevTemperature, cylces) {
@@ -953,13 +916,13 @@
         if (propClassName.includes('first-')) {
           i++
           if(indicProperties[i].querySelector('input')) {
-            setInputElementValue(indicProperties[i].querySelector('input'), propVal[propText])
+            page.setInputElementValue(indicProperties[i].querySelector('input'), propVal[propText])
           } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
             const buttonEl = indicProperties[i].querySelector('span[role="button"]')
             if(!buttonEl || !buttonEl.innerText)
               continue
             buttonEl.scrollIntoView()
-            mouseClick(buttonEl)
+            page.mouseClick(buttonEl)
             setSelByText(SEL.strategyListOptions, propVal[propText])
           }
         } else if (propClassName.includes('fill-')) {
@@ -967,7 +930,7 @@
           if(checkboxEl) {
             const isChecked = checkboxEl.getAttribute('checked') !== null
             if(propVal[propText] !== isChecked) {
-              mouseClick(checkboxEl)
+              page.mouseClick(checkboxEl)
             }
           }
         }
@@ -993,7 +956,7 @@
         return null
       }
       stratParamEl.click()
-      const stratIndicatorEl = await waitForSelector(SEL.indicatorTitle, 2000)
+      const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 2000)
       if(!stratIndicatorEl) {
         alert('There is not strategy parameters. Test stopped. Open correct page please')
         return null
@@ -1004,7 +967,7 @@
         return null
       }
       tabInputEl.click()
-      const tabInputActiveEl = await waitForSelector(SEL.tabInputActive)
+      const tabInputActiveEl = await page.waitForSelector(SEL.tabInputActive)
       if(!tabInputActiveEl) {
         alert('There is not strategy parameters active input tab. Test stopped. Open correct page please')
         return null
@@ -1052,7 +1015,7 @@
     }
     testResults.name = strategyCaptionEl.innerText
 
-    const stratSummaryEl = await waitForSelector(SEL.strategySummary, 1000)
+    const stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
     if(!stratSummaryEl) {
       alert('There is not strategy performance summary tab on the page. Open correct page please')
       return null
@@ -1062,7 +1025,7 @@
 
     await waitForSelector(SEL.strategyReport, 0)
     if(!reportNode) {
-      reportNode = await waitForSelector(SEL.strategyReport, 0)
+      reportNode = await page.waitForSelector(SEL.strategyReport, 0)
       if(reportNode) {
         const reportObserver = new MutationObserver(()=> {
           isReportChanged = true
@@ -1234,14 +1197,14 @@
     return csv
   }
 
- function setSelByText(selector, textValue) {
+  function setSelByText(selector, textValue) {
     let isSet = false
     const selectorAllVal = document.querySelectorAll(selector)
     if (!selectorAllVal || !selectorAllVal.length)
       return isSet
     for (let options of selectorAllVal) {
       if(options && options.innerText.startsWith(textValue)) {
-        mouseClick(options)
+        page.mouseClick(options)
         isSet = true
         break
       }
@@ -1249,89 +1212,180 @@
     return isSet
   }
 
-  async function getStrategy(strategyName) {
+  async function getStrategy(strategyName, isIndicatorSave = false) {
     let strategyData = {}
-    const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
-    if(!indicatorLegendsEl)
-      return null
-    for(let indicatorItemEl of indicatorLegendsEl) {
-      const indicatorTitleEl = indicatorItemEl.querySelector(SEL.tvLegendIndicatorItemTitle)
-      if(!indicatorTitleEl)
-        continue
-      if(strategyName) {
-        if(strategyName !== indicatorTitleEl.innerText)
+    let indicatorName = null
+    if(strategyName) {
+      const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
+      if(!indicatorLegendsEl)
+        return null
+      for(let indicatorItemEl of indicatorLegendsEl) {
+        const indicatorTitleEl = indicatorItemEl.querySelector(SEL.tvLegendIndicatorItemTitle)
+        if (!indicatorTitleEl)
           continue
+        if (strategyName !== indicatorTitleEl.innerText)
+          continue
+
+        page.mouseClick(indicatorTitleEl)
+        page.mouseClick(indicatorTitleEl)
+        const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
+        if (!dialogTitle || !dialogTitle.innerText) {
+          if (document.querySelector(SEL.cancelBtn))
+            document.querySelector(SEL.cancelBtn).click()
+          continue
+        }
+        let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
+        if (isIndicatorSave || isStrategyPropertiesTab) {
+          indicatorName = dialogTitle.innerText
+          break
+        }
       }
-      mouseClick(indicatorTitleEl)
-      mouseClick(indicatorTitleEl)
-      const dialogTitle = await waitForSelector(SEL.indicatorTitle, 2500)
-      if(!dialogTitle || !dialogTitle.innerText)
-        continue
-      let isPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-      if(isPropertiesTab) {
-        strategyData = {name: dialogTitle.innerText, properties: {}}
-        if(await tvDialogChangeTabToInput()) {
-          const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
-          for(let i = 0; i < indicProperties.length; i++) {
-            if(!indicProperties[i])
+    } else {
+      const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
+      if (!dialogTitle || !dialogTitle.innerText) {
+        if (document.querySelector(SEL.cancelBtn))
+          document.querySelector(SEL.cancelBtn).click()
+      } else {
+        let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
+        if (isIndicatorSave || isStrategyPropertiesTab) {
+          indicatorName = dialogTitle.innerText
+        }
+      }
+    }
+    if(indicatorName === null)
+      return strategyData
+    strategyData = {name: indicatorName, properties: {}}
+    if(await tvDialogChangeTabToInput()) {
+      const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+      for (let i = 0; i < indicProperties.length; i++) {
+        const propClassName = indicProperties[i].getAttribute('class')
+        const propText = indicProperties[i].innerText
+        if(!propClassName || !propText) // Undefined type of element
+          continue
+        if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
+          i++ // Skip get the next cell because it content values
+          continue // Doesn't realise to manage this kind of properties (two rows)
+        } else if (propClassName.includes('first-') && indicProperties[i].innerText) {
+          i++
+          if (indicProperties[i] && indicProperties[i].querySelector('input')) {
+            let propValue = indicProperties[i].querySelector('input').value
+            if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric' ||
+              (parseFloat(propValue) == propValue || parseInt(propValue) == propValue)) { // not only inputmode==numbers input have digits
+              const digPropValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just search point in string
+              if(!isNaN(propValue))
+                strategyData.properties[propText] = digPropValue
+              else
+                strategyData.properties[propText] = propValue
+            } else {
+              strategyData.properties[propText] = propValue
+            }
+          } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
+            const buttonEl = indicProperties[i].querySelector('span[role="button"]')
+            if(!buttonEl)
               continue
-            const propClassName = indicProperties[i].getAttribute('class')
-            const propText = indicProperties[i].innerText
-            if(!propClassName || !propText)
-              continue
-            if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
-              i++ // Skip get the next cell because it content values
-              continue // Doesn't realise to manage this kind of properties (two rows)
-            } else if (propClassName.includes('first-')) {
-              i++
-              if(indicProperties[i].querySelector('input')) {
-                let propValue = indicProperties[i].querySelector('input').value
-                if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') {
-                  propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just  search point in string
-                  if(!isNaN(propValue))
-                    strategyData.properties[propText] = propValue
-                } else {
-                  strategyData.properties[propText] = propValue  // TODO not only inputmode==numbers input have digits
-                }
-              } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
-                const buttonEl = indicProperties[i].querySelector('span[role="button"]')
-                if(!buttonEl)
-                  continue
-                const propValue = buttonEl.innerText
-                if(propValue) {
-                  buttonEl.scrollIntoView()
-                  await waitForTimeout(100)
-                  mouseClick(buttonEl)
-                  const isOptions = await waitForSelector(SEL.strategyListOptions, 1000)
-                  if(isOptions) {
-                    const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
-                    let allOptionsList = propValue
-                    for(let optionEl of allOptionsEl) {
-                      if(optionEl && optionEl.innerText && optionEl.innerText !== propValue) {
-                        allOptionsList += optionEl.innerText + ';'
-                      }
-                    }
-                    if(allOptionsList)
-                      strategyData.properties[propText] = allOptionsList
-                    mouseClick(buttonEl)
-                  } else {
-                    strategyData.properties[propText] = propValue
+            const propValue = buttonEl.innerText
+            if(propValue) {
+              if(isIndicatorSave) {
+                strategyData.properties[propText] = propValue
+                continue
+              }
+              buttonEl.scrollIntoView()
+              await page.waitForTimeout(100)
+              page.mouseClick(buttonEl)
+              const isOptions = await page.waitForSelector(SEL.strategyListOptions, 1000)
+              if(isOptions) {
+                const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
+                let allOptionsList = propValue
+                for(let optionEl of allOptionsEl) {
+                  if(optionEl && optionEl.innerText && optionEl.innerText !== propValue) {
+                    allOptionsList += optionEl.innerText + ';'
                   }
                 }
+                if(allOptionsList)
+                  strategyData.properties[propText] = allOptionsList
+                page.mouseClick(buttonEl)
+              } else {
+                strategyData.properties[propText] = propValue
               }
-            } else if (propClassName.includes('fill-')) {
-              if(indicProperties[i].querySelector('input[type="checkbox"]'))
-                strategyData.properties[propText] = indicProperties[i].querySelector('input[type="checkbox"]').getAttribute('checked') !== null
             }
+          } else { // Undefined
+            continue
           }
-        } else {
-          console.error(`Can't set parameters tab to input`)
+        } else if (propClassName.includes('fill-')) {
+          const element = indicProperties[i].querySelector('input[type="checkbox"]')
+          if(element)
+            strategyData.properties[propText] = element.getAttribute('checked') !== null ? element.checked : false
+          else { // Undefined type of element
+            continue
+          }
+        } else if (propClassName.includes('titleWrap-')) { // Titles bwtwen parameters
+          continue
+        } else { // Undefined type of element
+          continue
         }
-        document.querySelector(SEL.okBtn).click()
-        break
       }
-      document.querySelector(SEL.okBtn).click()
+
+      // const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+      // for(let i = 0; i < indicProperties.length; i++) {
+      //   if(!indicProperties[i])
+      //     continue
+      //   const propClassName = indicProperties[i].getAttribute('class')
+      //   const propText = indicProperties[i].innerText
+      //   if(!propClassName || !propText)
+      //     continue
+      //   if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
+      //     i++ // Skip get the next cell because it content values
+      //     continue // Doesn't realise to manage this kind of properties (two rows)
+      //   } else if (propClassName.includes('first-')) {
+      //     i++
+      //     if(indicProperties[i].querySelector('input')) {
+      //       let propValue = indicProperties[i].querySelector('input').value
+      //       if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') {
+      //         propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just search point in string
+      //         if(!isNaN(propValue))
+      //           strategyData.properties[propText] = propValue
+      //       } else {
+      //         strategyData.properties[propText] = propValue  // TODO not only inputmode==numbers input have digits
+      //       }
+      //     } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
+      //       const buttonEl = indicProperties[i].querySelector('span[role="button"]')
+      //       if(!buttonEl)
+      //         continue
+      //       const propValue = buttonEl.innerText
+      //       if(propValue) {
+      //         buttonEl.scrollIntoView()
+      //         await page.waitForTimeout(100)
+      //         page.mouseClick(buttonEl)
+      //         const isOptions = await page.waitForSelector(SEL.strategyListOptions, 1000)
+      //         if(isOptions) {
+      //           const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
+      //           let allOptionsList = propValue
+      //           for(let optionEl of allOptionsEl) {
+      //             if(optionEl && optionEl.innerText && optionEl.innerText !== propValue) {
+      //               allOptionsList += optionEl.innerText + ';'
+      //             }
+      //           }
+      //           if(allOptionsList)
+      //             strategyData.properties[propText] = allOptionsList
+      //           page.mouseClick(buttonEl)
+      //         } else {
+      //           strategyData.properties[propText] = propValue
+      //         }
+      //       }
+      //     }
+      //   } else if (propClassName.includes('fill-')) {
+      //     if(indicProperties[i].querySelector('input[type="checkbox"]'))
+      //       strategyData.properties[propText] = indicProperties[i].querySelector('input[type="checkbox"]').getAttribute('checked') !== null
+      //   }
+      // }
+    } else {
+      console.error(`Can't set parameters tab to input`)
     }
+    if (document.querySelector(SEL.cancelBtn)) {
+      document.querySelector(SEL.cancelBtn).click()
+      await page.waitForSelector(SEL.cancelBtn, 1000, true)
+    }
+
     return strategyData
   }
 
@@ -1552,63 +1606,18 @@
     await storageRemoveKey(Object.keys(allStorageKey))
     return Object.keys(allStorageKey)
   }
-  function mouseTrigger (el, eventType) {
-    var clickEvent = document.createEvent ('MouseEvents');
-    clickEvent.initEvent (eventType, true, true);
-    el.dispatchEvent(clickEvent);
-  }
-  function mouseClick (el) {
-    mouseTrigger (el, "mouseover");
-    mouseTrigger (el, "mousedown");
-    mouseTrigger (el, "mouseup");
-    mouseTrigger (el, "click");
-  }
-  const waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(resolve, timeout))
 
-  async function waitForSelector(selector, timeout = 5000, isHide = false, parentEl) {
-    parentEl = parentEl ? parentEl : document
-    return new Promise(async (resolve) => {
-      let iter = 0
-      let elem
-      const tikTime = timeout === 0 ? 1000 : 50
-      do {
-        await waitForTimeout(tikTime)
-        elem = parentEl.querySelector(selector)
-        iter += 1
-      } while ((timeout === 0 ? true : (tikTime * iter) < timeout) && (isHide ? !!elem : !elem))
-      // if(isHide ? elem : !elem ) {
-      //   console.error(isHide ? `waitingForSelector: still present ${selector}` : `waitingForSelector: still absent ${selector}`)
-      // }
-      resolve(elem)
-    });
-  }
-
-  function getTextForSel(selector, elParent) {
-    elParent = elParent ? elParent : document
-    const element = elParent.querySelector(selector)
-    return element ? element.innerText : null
-  }
-
-  const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-  const inputEvent = new Event('input', { bubbles: true});
-  const changeEvent = new Event('change', { bubbles: true});
-
-  function setInputElementValue (element, value, isChange = false) {
-    reactValueSetter.call(element, value)
-    element.dispatchEvent(inputEvent);
-    if(isChange) element.dispatchEvent(changeEvent);
-  }
 
   async function tvDialogChangeTabToInput() {
     let isInputTabActive = document.querySelector(SEL.tabInputActive)
     if(isInputTabActive) return true
     document.querySelector(SEL.tabInput).click()
-    isInputTabActive = await waitForSelector(SEL.tabInputActive, 2000)
+    isInputTabActive = await page.waitForSelector(SEL.tabInputActive, 2000)
     return isInputTabActive ? true : false
   }
 
   async function tvDialogHandler () {
-    const indicatorTitle = getTextForSel(SEL.indicatorTitle)
+    const indicatorTitle = page.getTextForSel(SEL.indicatorTitle)
     if(!document.querySelector(SEL.okBtn) || !document.querySelector(SEL.tabInput))
       return
     if(indicatorTitle === 'iondvSignals' && workerStatus === null) {
@@ -1659,7 +1668,7 @@
         const propText = indicProperties[i].innerText
         if(propKeys.includes(propText)) {
           setResult.push(propText)
-          setInputElementValue(indicProperties[i + 1].querySelector('input'), propVal[propText])
+          page.setInputElementValue(indicProperties[i + 1].querySelector('input'), propVal[propText])
           if(propKeys.length === setResult.length)
             break
         }
@@ -1677,7 +1686,7 @@
     }
   }
 
-  const dialogWindowNode = await waitForSelector(SEL.tvDialogRoot, 0)
+  const dialogWindowNode = await page.waitForSelector(SEL.tvDialogRoot, 0)
   if(dialogWindowNode) {
     const tvObserver = new MutationObserver(tvDialogHandler);
     tvObserver.observe(dialogWindowNode, {
@@ -1688,6 +1697,5 @@
     });
     await tvDialogHandler() // First run
   }
-
 
 })();

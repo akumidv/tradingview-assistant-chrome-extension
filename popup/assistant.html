@@ -23,7 +23,7 @@
       <div class="row">
         <div class="column left">
           To display the signals, you need to create a pine script named 'iondvSignals' from the
-          <a href="data:text/csv;charset=utf-8,//©akumidv
+          <a href="data:text/plain;charset=utf-8,//©akumidv
 //@version=4
 study(%22iondv Signals%22,shorttitle=%22iondvSignals%22,overlay=true)
 strTSBuy=input(%22%22,%22TSBuy%22)
@@ -348,9 +348,33 @@ EMAShort,5,15,
     </div>
     <div id="content-3">
       <div class="header">
-        <h5>Clear all stored data</h5>
+        <h5></h5>
       </div>
-      <div style="text-align: center"><button id="clearAll" class="button button-red">Clear all</button></div>
+      <div class="row">
+        <div class="column left">
+          <p>Save values of the indicator(strategy) parameters from the open parameters window to a file</p>
+        </div>
+        <div class="column right">
+          <div style="align-content: center"><button id="saveParameters" class="button button-blue">Save parameters</button></div>
+        </div>
+      </div>
+        <div class="row">
+        <div class="column left">
+          <p>Upload the values of the indicator(strategy) parameters from the file to the open parameters window</p>
+        </div>
+        <div class="column right">
+          <div style="align-content: center"><button id="loadParameters" class="button button-blue">Load parameters</button></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="column left">
+          <p>Clear all stored data</p>
+        </div>
+        <div class="column right">
+          <div style="align-content: center"><button id="clearAll" class="button button-red">Clear all</button></div>
+        </div>
+      </div>
+
     </div>
     <div class="tabs__links">
       <a href="#content-1">External signals</a>

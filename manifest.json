@@ -15,7 +15,8 @@
     "content_scripts": [
         {
             "matches": ["https://*.tradingview.com/chart/*"],
-            "js": [ "content_scripts/tv-page-worker.js"],
+            "js": [  "content_scripts/selectors.js",
+              "content_scripts/page.js",  "content_scripts/tv.js", "content_scripts/tv-page-worker.js"],
             "run_at": "document_end"
         }
     ],

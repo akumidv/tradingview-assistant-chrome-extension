@@ -108,6 +108,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('uploadStrategyTestParameters').addEventListener('click', function () {
     sendSignalToActiveTab('uploadStrategyTestParameters')
   });
+
+  document.getElementById('saveParameters').addEventListener('click', function () {
+    sendSignalToActiveTab('saveParameters')
+  });
+  document.getElementById('loadParameters').addEventListener('click', function () {
+    sendSignalToActiveTab('loadParameters')
+  });
+
   document.getElementById('clearAll').addEventListener('click', function () {
     sendSignalToActiveTab('clearAll')
   });
