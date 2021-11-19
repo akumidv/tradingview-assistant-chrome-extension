@@ -17,9 +17,7 @@
 
   <div class="tabs">
     <div id="content-1">
-      <div class="header">
-        <h4>Displaying trading signals by timestamps</h4>
-      </div>
+        <div class="header"></div>
       <div class="row">
         <div class="column left">
           To display the signals, you need to create a pine script named 'iondvSignals' from the
@@ -48,9 +46,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
     </div>
 
     <div id="content-2">
-      <div class="header">
-        <h4>Testing a trading strategy</h4>
-      </div>
+        <div class="header"></div>
       <div class="row">
         <div class="details">
           <details open>
@@ -329,7 +325,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
           <p>Getting a template for setting the testing parameters of the current strategy.</p>
         </div>
         <div class="column right">
-          <div style="align-content: center"><button id="getStrategyTemplate" class="button button-blue">Get parameters</button></div>
+          <div style="align-content: center"><button id="getStrategyTemplate" class="button button-blue">Get template</button></div>
         </div>
       </div>
       <div class="row">
@@ -347,9 +343,7 @@ EMAShort,5,15,
       </div>
     </div>
     <div id="content-3">
-      <div class="header">
-        <h5></h5>
-      </div>
+      <div class="header"></div>
       <!--div class="row">
         <div class="column left">
           <p>Save values of the indicator(strategy) parameters from the open parameters window to a file</p>

@@ -99,3 +99,33 @@ function parseCSVLine(text) {
     return text;
   } );
 }
+
+file.convertResultsToCSV = (testResults) => {
+  if(!testResults || !testResults.perfomanceSummary || !testResults.perfomanceSummary.length)
+    return 'There is no data for conversion'
+  let headers = Object.keys(testResults.perfomanceSummary[0]) // The first test table can be with error and can't have rows with previous values when parsedReport
+  if(testResults.hasOwnProperty('paramsNames') && headers.length <= (Object.keys(testResults.paramsNames).length + 1)) { // Find the another header if only params names and 'comment' in headers
+    const headersAll = testResults.perfomanceSummary.find(report => Object.keys(report).length > headers.length)
+    if(headersAll)
+      headers = Object.keys(headersAll)
+  }
+
+  let csv = headers.map(header => JSON.stringify(header)).join(',')
+  csv += '\n'
+  // testResults.paramsNames.forEach(paramName => csv.replace(`__${paramName}`, paramName)) // TODO isFirst? or leave it as it is
+  testResults.perfomanceSummary.forEach(row => {
+    const rowData = headers.map(key => typeof row[key] !== 'undefined' ? JSON.stringify(row[key]) : '')
+    csv += rowData.join(',').replaceAll('\\"', '""')
+    csv += '\n'
+  })
+  if(testResults.filteredSummary && testResults.filteredSummary.length) {
+    csv += headers.map(key => key !== 'comment' ? '' : 'Bellow filtered results of tests') // Empty line
+    csv += '\n'
+    testResults.filteredSummary.forEach(row => {
+      const rowData = headers.map(key => typeof row[key] !== 'undefined' ? JSON.stringify(row[key]) : '')
+      csv += rowData.join(',').replaceAll('\\"', '""')
+      csv += '\n'
+    })
+  }
+  return csv
+}

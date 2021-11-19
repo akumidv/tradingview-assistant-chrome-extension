@@ -15,8 +15,153 @@ action.saveParameters = async () => {
   file.saveAs(strategyParamsCSV, `${strategyData.name}.csv`)
 }
 
-
 action.loadParameters = async () => {
   await file.upload(file.uploadHandler, '', false)
 }
 
+action.uploadSignals = async () => {
+  await file.upload(signal.parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)
+}
+
+action.uploadStrategyTestParameters = async () => {
+  await file.upload(model.parseStrategyParamsAndGetMsg, '', false)
+}
+
+action.getStrategyTemplate = async () => {
+  const strategyData = await tv.getStrategy()
+  if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+    ui.alertMessage('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+  } else {
+    const paramRange = model.getStrategyRange(strategyData)
+    console.log(paramRange)
+    // await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
+    const strategyRangeParamsCSV = model.convertStrategyRangeToTemplate(paramRange)
+    ui.alertMessage('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
+    file.saveAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
+  }
+}
+
+action.clearAll = async () => {
+  const clearRes = await storage.clearAll()
+  ui.alertMessage(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
+}
+
+action.downloadStrategyTestResults = async () => {
+  const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
+  if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
+    ui.alertMessage('There is no data for conversion. Try to do test again')
+    return
+  }
+  testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
+  console.log('testResults', testResults)
+  const CSVResults = file.convertResultsToCSV(testResults)
+  const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
+  const propVal = {}
+  testResults.paramsNames.forEach(paramName => {
+    if(bestResult.hasOwnProperty(`__${paramName}`))
+      propVal[paramName] = bestResult[`__${paramName}`]
+  })
+  await tv.setStrategyParams(testResults.shortName, propVal)
+  if(bestResult && bestResult.hasOwnProperty(testResults.optParamName))
+    ui.alertMessage(`The best found parameters are set for the strategy\n\nThe best ${testResults.isMaximizing ? '(max) ':'(min)'} ${testResults.optParamName}: ` + bestResult[testResults.optParamName])
+  file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
+}
+
+action.testStrategy = async (request) => {
+  console.log('request', request)
+  ui.statusMessage('Get the initial parameters.')
+  const strategyData = await tv.getStrategy()
+  if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+    ui.alertMessage('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+    return
+  }
+  const paramRange = await model.getStrategyParameters(strategyData)
+  console.log('paramRange', paramRange)
+  if(!paramRange)
+    return
+  const allRangeParams = model.createParamsFromRange(paramRange)
+  console.log('allRangeParams', allRangeParams)
+  if(!allRangeParams) {
+    return
+  }
+
+  const testMethod = request.options && request.options.optMethod ? request.options.optMethod.toLowerCase() : 'random'
+  let paramSpaceNumber = 0
+  let isSequential = false
+  if(['sequential'].includes(testMethod)) {
+    paramSpaceNumber = Object.keys(allRangeParams).reduce((sum, param) => sum += allRangeParams[param].length, 0)
+    isSequential = true
+  } else {
+    paramSpaceNumber = Object.keys(allRangeParams).reduce((mult, param) => mult *= allRangeParams[param].length, 1)
+  }
+  console.log('paramSpaceNumber', paramSpaceNumber)
+
+  let testParams = await tv.switchToStrategyTab()
+  if(!testParams)
+    return
+
+  let paramPriority = model.getParamPriorityList(paramRange) // Filter by allRangeParams
+  paramPriority = paramPriority.filter(key => allRangeParams.hasOwnProperty(key))
+  console.log('paramPriority list', paramPriority)
+  testParams.paramPriority = paramPriority
+
+  testParams.startParams = await model.getStartParamValues(paramRange, strategyData)
+  console.log('testParams.startParams', testParams.startParams)
+  if(!testParams.hasOwnProperty('startParams') || !testParams.startParams.hasOwnProperty('current') || !testParams.startParams.current) {
+    ui.alertMessage('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
+    return
+  }
+
+  if(isSequential) {
+    ui.alertMessage(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+    testParams.cycles = paramSpaceNumber
+  } else {
+    const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+    if(!cyclesStr)
+      return
+    let cycles = parseInt(cyclesStr)
+    if(!cycles || cycles < 1)
+      return
+    testParams.cycles = cycles
+  }
+
+
+  if(request.options) {
+    testParams.isMaximizing = request.options.hasOwnProperty('isMaximizing') ? request.options.isMaximizing : true
+    testParams.optParamName =  request.options.optParamName ? request.options.optParamName : backtest.DEF_MAX_PARAM_NAME
+    testParams.method = testMethod
+    testParams.filterAscending = request.options.hasOwnProperty('optFilterAscending') ? request.options.optFilterAscending : null
+    testParams.filterValue = request.options.hasOwnProperty('optFilterValue') ? request.options.optFilterValue : 50
+    testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total Closed Trades: All'
+  }
+
+
+  let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
+  extraHeader += (paramSpaceNumber/testParams.cycles) > 10 ? `<br />This is too large for ${testParams.cycles} cycles. It is recommended to use up to 3-4 essential parameters, remove the rest from the strategy parameters file.` : ''
+
+  ui.statusMessage('Started.', extraHeader)
+  const testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
+  console.log('testResults', testResults)
+  if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
+    ui.alertMessage('There is no data for conversion. Try to do test again')
+    return
+  }
+
+  const CSVResults = file.convertResultsToCSV(testResults)
+  const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
+  const initBestValue = testResults.hasOwnProperty('initBestValue') ? testResults.initBestValue : null
+  const propVal = {}
+  testResults.paramsNames.forEach(paramName => {
+    if(bestResult.hasOwnProperty(`__${paramName}`))
+      propVal[paramName] = bestResult[`__${paramName}`]
+  })
+  await tv.setStrategyParams(testResults.shortName, propVal)
+  let text = `All done.\n\n`
+  text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''
+  text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${initBestValue}` : ''
+  ui.statusMessage(text)
+  ui.alertMessage(text)
+  console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
+  file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
+  ui.statusMessageRemove()
+}

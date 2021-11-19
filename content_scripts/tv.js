@@ -1,6 +1,10 @@
 const tv = {
-  reportNode: null
+  reportNode: null,
+  tickerTextPrev: null,
+  timeFrameTextPrev: null,
+  isReportChanged: false
 }
+
 tv.getStrategy = async (strategyName, isIndicatorSave = false) => {
   let strategyData = {}
   let indicatorName = null
@@ -244,29 +248,29 @@ tv.checkAndOpenStrategy = async (name) => {
       return null
     const stratParamEl = document.querySelector(SEL.strategyDialogParam)
     if(!stratParamEl) {
-      alert('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
+      ui.alertMessage('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
       return null
     }
     stratParamEl.click()
     const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 2000)
     if(!stratIndicatorEl) {
-      alert('There is not strategy parameters. Test stopped. Open correct page please')
+      ui.alertMessage('There is not strategy parameters. Test stopped. Open correct page please')
       return null
     }
     const tabInputEl = document.querySelector(SEL.tabInput)
     if(!tabInputEl) {
-      alert('There is not strategy parameters input tab. Test stopped. Open correct page please')
+      ui.alertMessage('There is not strategy parameters input tab. Test stopped. Open correct page please')
       return null
     }
     tabInputEl.click()
     const tabInputActiveEl = await page.waitForSelector(SEL.tabInputActive)
     if(!tabInputActiveEl) {
-      alert('There is not strategy parameters active input tab. Test stopped. Open correct page please')
+      ui.alertMessage('There is not strategy parameters active input tab. Test stopped. Open correct page please')
       return null
     }
     indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
     if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-      alert(`The ${name} strategy parameters could not be opened. Reload the page, leave one strategy on the chart and try again.`)
+      ui.alertMessage(`The ${name} strategy parameters could not be opened. Reload the page, leave one strategy on the chart and try again.`)
       return null
     }
   }
@@ -280,14 +284,14 @@ tv.switchToStrategyTab = async () => {
     if(strategyTabEl) {
       strategyTabEl.click()
     } else {
-      alert('There is not strategy tester tab on the page. Open correct page please')
+      ui.alertMessage('There is not strategy tester tab on the page. Open correct page please')
       return null
     }
   }
   const testResults = {}
   const tickerEl = document.querySelector(SEL.ticker)
   if(!tickerEl || !tickerEl.innerText) {
-    alert('There is not symbol element on page. Open correct page please')
+    ui.alertMessage('There is not symbol element on page. Open correct page please')
     return null
   }
   testResults.ticker = tickerEl.innerText
@@ -295,21 +299,21 @@ tv.switchToStrategyTab = async () => {
   if(!timeFrameEl)
     timeFrameEl = document.querySelector(SEL.timeFrame)
   if(!timeFrameEl || !timeFrameEl.innerText) {
-    alert('There is not timeframe element on page. Open correct page please')
+    ui.alertMessage('There is not timeframe element on page. Open correct page please')
     return null
   }
   testResults.timeFrame = timeFrameEl.innerText
   testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
   const strategyCaptionEl = document.querySelector(SEL.strategyCaption)
   if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
-    alert('There is not stratagy name element on page. Open correct page please')
+    ui.alertMessage('There is not stratagy name element on page. Open correct page please')
     return null
   }
   testResults.name = strategyCaptionEl.innerText
 
   const stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
   if(!stratSummaryEl) {
-    alert('There is not strategy performance summary tab on the page. Open correct page please')
+    ui.alertMessage('There is not strategy performance summary tab on the page. Open correct page please')
     return null
   }
   stratSummaryEl.click()
@@ -331,4 +335,118 @@ tv.switchToStrategyTab = async () => {
     }
   }
   return testResults
+}
+
+tv.dialogHandler = async () => {
+  const indicatorTitle = page.getTextForSel(SEL.indicatorTitle)
+  if(!document.querySelector(SEL.okBtn) || !document.querySelector(SEL.tabInput))
+    return
+  if(indicatorTitle === 'iondvSignals' && action.workerStatus === null) {
+    let tickerText = document.querySelector(SEL.ticker).innerText
+    let timeFrameEl = document.querySelector(SEL.timeFrameActive)
+    if(!timeFrameEl)
+      timeFrameEl = document.querySelector(SEL.timeFrame)
+
+
+    let timeFrameText = timeFrameEl.innerText
+    if(!tickerText || !timeFrameText)
+      // ui.alertMessage('There is not timeframe element on page. Open correct page please')
+      return
+
+    timeFrameText = timeFrameText.toLowerCase() === 'd' ? '1D' : timeFrameText
+    if (ui.isMsgShown && tickerText === tv.tickerTextPrev && timeFrameText === tv.timeFrameTextPrev)
+      return
+    tv.tickerTextPrev = tickerText
+    tv.timeFrameTextPrev = timeFrameText
+
+    if(!await tv.changeDialogTabToInput()) {
+      console.error(`Can't set parameters tab to input`)
+      ui.isMsgShown = true
+      return
+    }
+
+    console.log("Tradingview indicator parameters window opened for ticker:", tickerText);
+    const tsData = await storage.getKey(`${storage.SIGNALS_KEY_PREFIX}_${tickerText}::${timeFrameText}`.toLowerCase())
+    if(tsData === null) {
+      ui.alertMessage(`No data was loaded for the ${tickerText} and timeframe ${timeFrameText}.\n\n` +
+        `Please change the ticker and timeframe to correct and reopen script parameter window.`)
+      ui.isMsgShown = true
+      return
+    }
+    ui.isMsgShown = false
+
+    const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+
+    const propVal = {
+      TSBuy: tsData && tsData.hasOwnProperty('buy') ? tsData.buy : '',
+      TSSell: tsData && tsData.hasOwnProperty('sell') ? tsData.sell : '',
+      Ticker: tickerText,
+      Timeframe: timeFrameText
+    }
+    const setResult = []
+    const propKeys = Object.keys(propVal)
+    for(let i = 0; i < indicProperties.length; i++) {
+      const propText = indicProperties[i].innerText
+      if(propKeys.includes(propText)) {
+        setResult.push(propText)
+        page.setInputElementValue(indicProperties[i + 1].querySelector('input'), propVal[propText])
+        if(propKeys.length === setResult.length)
+          break
+      }
+    }
+    const notFoundParam = propKeys.filter(item => !setResult.includes(item))
+    if(notFoundParam && notFoundParam.length) {
+      ui.alertMessage(`One of the parameters named ${notFoundParam} was not found in the window. Check the script.\n`)
+      ui.isMsgShown = true
+      return
+    }
+    document.querySelector(SEL.okBtn).click()
+    const allSignals = [].concat(tsData.buy.split(','),tsData.sell.split(',')).sort()
+    ui.alertMessage(`${allSignals.length} signals are set.\n  - date of the first signal: ${new Date(parseInt(allSignals[0]))}.\n  - date of the last signal: ${new Date(parseInt(allSignals[allSignals.length - 1]))}`)
+    ui.isMsgShown = true
+  }
+}
+
+
+tv.parseReportTable = () => {
+  const strategyHeaders = []
+  const allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
+  for(let headerEl of allHeadersEl) {
+    if(headerEl)
+      strategyHeaders.push(headerEl.innerText)
+  }
+
+  const report = {}
+  const allReportRowsEl = document.querySelectorAll(SEL.strategyReportRow)
+  for(let rowEl of allReportRowsEl) {
+    if(rowEl) {
+      const allTdEl = rowEl.querySelectorAll('td')
+      if(!allTdEl || allTdEl.length < 2 || !allTdEl[0]) {
+        console.log(allTdEl[0].innerText)
+        continue
+      }
+      let paramName = allTdEl[0].innerText
+      for(let i = 1; i < allTdEl.length; i++) {
+        let values = allTdEl[i].innerText
+        if(values && typeof values === 'string' && values.trim() && strategyHeaders[i]) {
+          values = values.replace(' ', ' ').trim()
+          const digitOfValues = values.match(/-?\d+\.?\d*/)
+          if(values.includes('\n') && (values.endsWith('%') || values.includes('N/A'))) {
+            const valuesPair = values.split('\n', 2)
+            if(valuesPair && valuesPair.length == 2) {
+              const digitVal0 = valuesPair[0].match(/-?\d+\.?\d*/)
+              const digitVal1 = valuesPair[1].match(/-?\d+\.?\d*/)
+              report[`${paramName}: ${strategyHeaders[i]}`] = Boolean(digitVal0) ? parseFloat(digitVal0[0]) : valuesPair[0]
+              report[`${paramName}: ${strategyHeaders[i]} %`] = Boolean(digitVal1) ? parseFloat(digitVal1[0]) : valuesPair[0]
+              continue
+            }
+          } else if(digitOfValues)
+            report[`${paramName}: ${strategyHeaders[i]}`] = parseFloat(digitOfValues)
+          else
+            report[`${paramName}: ${strategyHeaders[i]}`] = values
+        }
+      }
+    }
+  }
+  return report
 }

@@ -58,3 +58,81 @@ ui.checkInjectedElements = () => {
 ui.alertMessage = (message) => {
   alert(message)
 }
+
+ui.statusMessageRemove = () => {
+  const statusMessageEl = document.getElementById('iondvStatus')
+  if(statusMessageEl)
+    statusMessageEl.parentNode.removeChild(statusMessageEl)
+}
+
+ui.autoCloseAlert = (msg, duration = 2000) => {
+  console.log('autoCloseAlert')
+  const altEl = document.createElement("div");
+  altEl.setAttribute("style","background-color: #ffeaa7;color:black; width: 450px;height: 300px;position: absolute;top:0;bottom:0;left:0;right:0;margin:auto;border: 1px solid black;font-family:arial;font-size:25px;font-weight:bold;display: flex; align-items: center; justify-content: center; text-align: center;");
+  altEl.setAttribute("id","iondvAlert");
+  altEl.innerHTML = msg;
+  setTimeout(function() {
+    altEl.parentNode.removeChild(altEl);
+  }, duration);
+  document.body.appendChild(altEl);
+}
+
+ui.statusMessage = (msgText, extraHeader = null) => {
+  const isStatusPresent = document.getElementById('iondvStatus')
+  const mObj = isStatusPresent ? document.getElementById('iondvStatus') : document.createElement("div");
+  let msgEl
+  if(!isStatusPresent) {
+    mObj.id = "iondvStatus";
+    mObj.setAttribute("style","background-color:rgba(0, 0, 0, 0.2);" +
+      "position:absolute;" +
+      "width:100%;" +
+      "height:100%;" +
+      "top:0px;" +
+      "left:0px;" +
+      "z-index:10000;");
+    mObj.style.height = document.documentElement.scrollHeight + "px";
+    msgEl = mObj.appendChild(document.createElement("div"));
+    msgEl.setAttribute("style","background-color: #fffde0;" +
+      "color: black;" +
+      "width: 800px;" +
+      "height: 175px;" +
+      "position: fixed;" +
+      "top: 50px;" +
+      "right: 0;" +
+      "left: 0;" +
+      "margin: auto;" +
+      "border: 1px solid lightblue;" +
+      "box-shadow: 3px 3px 7px #777;" +
+      // "display: flex;" +
+      "align-items: center; " +
+      "justify-content: left; " +
+      "text-align: left;");
+  } else {
+    msgEl = mObj.querySelector('div')
+  }
+  if(isStatusPresent && msgEl && document.getElementById('iondvMsg') && !extraHeader) {
+    document.getElementById('iondvMsg').innerHTML = msgText
+  } else {
+    extraHeader = extraHeader !== null ? `<div style="font-size: 12px;margin-left: 5px;margin-right: 5px;text-align: left;">${extraHeader}</div>` : '' //;margin-bottom: 10px
+    msgEl.innerHTML = '<a id="iondvBoxClose" style="float:right;margin-top:-10px;margin-right:-10px;cursor:pointer;color: #fff;border: 1px solid #AEAEAE;border-radius: 24px;background: #605F61;font-size: 25px;display: inline-block;line-height: 0px;padding: 11px 3px;">x</a>' +
+      '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
+      '<div style="font-size: 18px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
+      extraHeader +
+      '<div id="iondvMsg" style="margin: 5px 10px">' +
+      msgText + '</div>';
+  }
+  if(!isStatusPresent) {
+    const tvDialog = document.getElementById('overlap-manager-root')
+    if(tvDialog)
+      document.body.insertBefore(mObj, tvDialog) // For avoid problem if msg overlap tv dialog window
+    else
+      document.body.appendChild(mObj);
+  }
+  const btnClose = document.getElementById('iondvBoxClose')
+  if(btnClose) {
+    btnClose.onclick = () => {
+      console.log('Stop clicked')
+      action.workerStatus = null
+    }
+  }
+}
