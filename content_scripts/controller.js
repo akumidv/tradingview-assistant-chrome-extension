@@ -42,7 +42,7 @@
             await action.getStrategyTemplate()
             break
           case 'testStrategy':
-            action.testStrategy(request)
+            await action.testStrategy(request)
             break
           case 'downloadStrategyTestResults':
             await action.downloadStrategyTestResults()
