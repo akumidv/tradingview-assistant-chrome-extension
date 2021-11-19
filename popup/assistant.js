@@ -55,13 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // chrome.storage.local.get('tabId', (getResults) => {
   chrome.storage.local.get('iondvOptions', (getResults) => {
     console.log('iondvOptions',getResults)
+    let tabId = 1
     if(getResults['iondvOptions']) {
       const iondvOptions = getResults['iondvOptions']
       console.log('iondvOptions',iondvOptions)
-      const tabId = iondvOptions['tabId'] ? iondvOptions['tabId'] : 1
-      const link = document.querySelector(`div.tabs__links > a${typeof tabId === 'number' && tabId > 0 && tabId < 3 ? ':nth-child('+tabId+')' : ''}`);
-      if (link) // Activate saved or fist tab
-        link.click();
+      tabId = iondvOptions['tabId'] ? iondvOptions['tabId'] : 1
       if(document.getElementById('optMinmax') && iondvOptions.hasOwnProperty('isMaximizing'))
         document.getElementById('optMinmax').checked = iondvOptions.isMaximizing
       if(document.getElementById('optParamName') && iondvOptions.hasOwnProperty('optParamName'))
@@ -89,9 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('optFilterValue').value = iondvOptions.optFilterValue
       if(document.getElementById('optFilterParamName') && iondvOptions.hasOwnProperty('optFilterParamName'))
         document.getElementById('optFilterParamName').value = iondvOptions.optFilterParamName
-
-
     }
+    const link = document.querySelector(`div.tabs__links > a${typeof tabId === 'number' && tabId > 0 && tabId < 3 ? ':nth-child('+tabId+')' : ''}`);
+    if (link) // Activate saved or fist tab
+      link.click();
   })
   document.getElementById('uploadSignals').addEventListener('click', () => {
     sendSignalToActiveTab('uploadSignals')

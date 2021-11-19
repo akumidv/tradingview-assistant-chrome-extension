@@ -7,25 +7,20 @@
 
 (async function() {
   // GLOBALS
-  // SEL  "content_scripts/selectors.js"
+  // SEL  "content_scripts/selector.js"
   // page  "content_scripts/page.js"
   // tv  "content_scripts/tv.js"
 
   const DEF_MAX_PARAM_NAME = 'Net Profit All'
 
-  let reportNode = null
+
   let isReportChanged = false
 
   let isMsgShown = false
-  let workerStatus = null
   let tickerTextPrev = null
   let timeFrameTextPrev = null
 
-  const STORAGE_KEY_PREFIX = 'iondv'
-  const STORAGE_STRATEGY_KEY_PARAM = 'strategy_param'
-  const STORAGE_STRATEGY_KEY_RESULTS = 'strategy_result'
-  const STORAGE_SIGNALS_KEY_PREFIX = 'signals'
-
+  setInterval(ui.checkInjectedElements, 1000);
 
   chrome.runtime.onMessage.addListener(
     async function(request, sender, reply) {
@@ -33,70 +28,40 @@
         console.log('Not for action message received:', request)
         return
       }
-      if(workerStatus !== null) {
-        console.log('Waiting for end previous work. Status:', workerStatus)
+      if(action.workerStatus !== null) {
+        console.log('Waiting for end previous work. Status:', action.workerStatus)
         return
       }
 
-      workerStatus = request.action
+      action.workerStatus = request.action
       try {
         switch (request.action) {
-          case 'saveParameters': {
-            const strategyData = await getStrategy(null, true)
-            if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-              alert('Please open the indicator (strategy) parameters window before saving them to a file.')
-              break
-            }
-            let strategyParamsCSV = `Name,Value\n"__indicatorName",${JSON.stringify(strategyData.name)}\n`
-            Object.keys(strategyData.properties).forEach(key => {
-              strategyParamsCSV += `${JSON.stringify(key)},${typeof strategyData.properties[key][0] === 'string' ? JSON.stringify(strategyData.properties[key]) : strategyData.properties[key]}\n`
-            })
-            saveFileAs(strategyParamsCSV, `${strategyData.name}.csv`)
-            break;
-          }
-          case 'loadParameters': {
-            await uploadFiles(async (fileData) => {
-              const propVal = {}
-              let strategyName = null
-              const csvData = await parseCSVFile(fileData)
-              const headers = Object.keys(csvData[0])
-              const missColumns = ['Name','Value'].filter(columnName => !headers.includes(columnName.toLowerCase()))
-              if(missColumns && missColumns.length)
-                return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nSet parameters canceled.\n`
-              csvData.forEach(row => {
-                if(row['name'] === '__indicatorName')
-                  strategyName = row['value']
-                else
-                  propVal[row['name']] = row['value']
-              })
-              if(!strategyName)
-                return 'The name for indicator in row with name ""__indicatorName"" is missed in CSV file'
-              const res = await setStrategyParams(strategyName, propVal, true)
-              if(res) {
-                return `Parameters are set`
-              }
-              return `The name "${strategyName}" of the indicator from the file does not match the name in the open window`
-            }, '', false)
-            break;
-          }
+        //   case 'saveParameters': {
+        //     await action.saveParameters()
+        //     break;
+        //   }
+        //   case 'loadParameters': {
+        //     await action.loadParameters()
+        //     break;
+        //   }
           case 'uploadSignals': {
-            await uploadFiles(parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)
+            await file.upload(parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)
             break;
           }
           case 'uploadStrategyTestParameters': {
-            await uploadFiles(parseStrategyParamsAndGetMsg, '', false)
+            await file.upload(parseStrategyParamsAndGetMsg, '', false)
             break;
           }
           case 'getStrategyTemplate': {
-            const strategyData = await getStrategy()
+            const strategyData = await tv.getStrategy()
             if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
             } else {
-              const paramRange = strategyGetRange(strategyData)
+              const paramRange = model.getStrategyRange(strategyData)
               console.log(paramRange)
-              // await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
+              // await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
               const strategyRangeParamsCSV = strategyRangeToTemplate(paramRange)
-              saveFileAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
+              file.saveAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
               alert('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
             }
             break;
@@ -104,12 +69,12 @@
           case 'testStrategy': {
             console.log('request', request)
             statusMessage('Get the initial parameters.')
-            const strategyData = await getStrategy()
+            const strategyData = await tv.getStrategy()
             if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
               alert('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
               break
             }
-            const paramRange = await getStrategyParameters(strategyData)
+            const paramRange = await model.getStrategyParameters(strategyData)
             console.log('paramRange', paramRange)
             if(!paramRange)
               break
@@ -130,7 +95,7 @@
             }
             console.log('paramSpaceNumber', paramSpaceNumber)
 
-            let testParams = await switchToStrategyTab()
+            let testParams = await tv.switchToStrategyTab()
             if(!testParams)
               break
 
@@ -189,19 +154,19 @@
               if(bestResult.hasOwnProperty(`__${paramName}`))
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
-            await setStrategyParams(testResults.shortName, propVal)
+            await tv.setStrategyParams(testResults.shortName, propVal)
             let text = `All done.\n\n`
             text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''
             text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${initBestValue}` : ''
             statusMessage(text)
             alert(text)
             console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
-            saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
+            file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
             statusMessageRemove()
             break;
           }
           case 'downloadStrategyTestResults': {
-            const testResults = await storageGetKey(STORAGE_STRATEGY_KEY_RESULTS)
+            const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
             if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
               alert('There is no data for conversion. Try to do test again')
               break
@@ -215,26 +180,25 @@
               if(bestResult.hasOwnProperty(`__${paramName}`))
                 propVal[paramName] = bestResult[`__${paramName}`]
             })
-            await setStrategyParams(testResults.shortName, propVal)
+            await tv.setStrategyParams(testResults.shortName, propVal)
             if(bestResult && bestResult.hasOwnProperty(testResults.optParamName))
               alert(`The best found parameters are set for the strategy\n\nThe best ${testResults.isMaximizing ? '(max) ':'(min)'} ${testResults.optParamName}: ` + bestResult[testResults.optParamName])
-            saveFileAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
+            file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
             break
           }
           case 'clearAll': {
-            const clearRes = await storageClearAll()
+            const clearRes = await storage.clearAll()
             alert(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
             break
           }
           default:
             console.log('None of realisation for signal:', request)
-
         }
       } catch (err) {
         console.error(err)
         alert(`An error has occurred.\n\nReload the page and try again.\nYou can describe the problem by following the link https://github.com/akumidv/tradingview-assistant-chrome-extension/.\n\nError message: ${err.message}`)
       }
-      workerStatus = null
+      action.workerStatus = null
       statusMessageRemove()
     }
   );
@@ -324,7 +288,7 @@
         if(btnClose) {
           btnClose.onclick = () => {
             console.log('Stop clicked')
-            workerStatus = null
+            action.workerStatus = null
           }
     }
   }
@@ -438,7 +402,7 @@
   async function getTestIterationResult (testResults, propVal, isIgnoreError = false) {
     let reportData = {}
     isReportChanged = false // Global value
-    const isParamsSet = await setStrategyParams(testResults.shortName, propVal)
+    const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal)
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
 
@@ -492,7 +456,7 @@
         testResults.filteredSummary.push(res.data)
       else
         testResults.perfomanceSummary.push(res.data)
-      await storageSetKeys(STORAGE_STRATEGY_KEY_RESULTS, testResults)
+      await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
 
       res.currentValue = res.data[testResults.optParamName]
       if(!isFiltered) {
@@ -900,11 +864,10 @@
     const optimizationState = {}
     let isEnd = false
     for(let i = 0; i < testResults.cycles; i++) {
-      if (workerStatus === null) {
+      if (action.workerStatus === null) {
         console.log('Stop command detected')
         break
       }
-      console.log('##workerStatus', workerStatus)
       let optRes = {}
       switch(testResults.method) {
         case 'annealing':
@@ -944,169 +907,13 @@
     return testResults
   }
 
-  async function setStrategyParams (name, propVal, isCheckOpenedWindow = false) {
-    if(isCheckOpenedWindow) {
-      let indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
-      if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-        return null
-      }
-    } else {
-      const indicatorTitle = await checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
-      if(!indicatorTitle)
-        return null
-    }
-    const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
-    const propKeys = Object.keys(propVal)
-    let setResultNumber = 0
-    for(let i = 0; i < indicProperties.length; i++) {
-      const propText = indicProperties[i].innerText
-      if(propText && propKeys.includes(propText)) {
-        setResultNumber++
-        const propClassName = indicProperties[i].getAttribute('class')
-        if (propClassName.includes('first-')) {
-          i++
-          if(indicProperties[i].querySelector('input')) {
-            page.setInputElementValue(indicProperties[i].querySelector('input'), propVal[propText])
-          } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
-            const buttonEl = indicProperties[i].querySelector('span[role="button"]')
-            if(!buttonEl || !buttonEl.innerText)
-              continue
-            buttonEl.scrollIntoView()
-            page.mouseClick(buttonEl)
-            setSelByText(SEL.strategyListOptions, propVal[propText])
-          }
-        } else if (propClassName.includes('fill-')) {
-          const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
-          if(checkboxEl) {
-            const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
-            if(propVal[propText] !== isChecked) {
-              page.mouseClick(checkboxEl)
-            }
-          }
-        }
-        if(propKeys.length === setResultNumber)
-          break
-      }
-    }
-    // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
-    if(!isCheckOpenedWindow && document.querySelector(SEL.okBtn))
-      document.querySelector(SEL.okBtn).click()
-    return true
-  }
 
-  async function checkAndOpenStrategy(name) {
-    let indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
-    if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-      const res = await switchToStrategyTab()
-      if(!res)
-        return null
-      const stratParamEl = document.querySelector(SEL.strategyDialogParam)
-      if(!stratParamEl) {
-        alert('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
-        return null
-      }
-      stratParamEl.click()
-      const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 2000)
-      if(!stratIndicatorEl) {
-        alert('There is not strategy parameters. Test stopped. Open correct page please')
-        return null
-      }
-      const tabInputEl = document.querySelector(SEL.tabInput)
-      if(!tabInputEl) {
-        alert('There is not strategy parameters input tab. Test stopped. Open correct page please')
-        return null
-      }
-      tabInputEl.click()
-      const tabInputActiveEl = await page.waitForSelector(SEL.tabInputActive)
-      if(!tabInputActiveEl) {
-        alert('There is not strategy parameters active input tab. Test stopped. Open correct page please')
-        return null
-      }
-      indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
-      if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-        alert(`The ${name} strategy parameters could not be opened. Reload the page, leave one strategy on the chart and try again.`)
-        return null
-      }
-    }
-    return indicatorTitleEl
-  }
 
-  async function switchToStrategyTab() {
-    let isStrategyActiveEl = document.querySelector(SEL.strategyTesterTabActive)
-    if(!isStrategyActiveEl) {
-      const strategyTabEl = document.querySelector(SEL.strategyTesterTab)
-      if(strategyTabEl) {
-        strategyTabEl.click()
-      } else {
-        alert('There is not strategy tester tab on the page. Open correct page please')
-        return null
-      }
-    }
-    const testResults = {}
-    const tickerEl = document.querySelector(SEL.ticker)
-    if(!tickerEl || !tickerEl.innerText) {
-      alert('There is not symbol element on page. Open correct page please')
-      return null
-    }
-    testResults.ticker = tickerEl.innerText
-    let timeFrameEl = document.querySelector(SEL.timeFrameActive)
-    if(!timeFrameEl)
-      timeFrameEl = document.querySelector(SEL.timeFrame)
-    if(!timeFrameEl || !timeFrameEl.innerText) {
-      alert('There is not timeframe element on page. Open correct page please')
-      return null
-    }
-    testResults.timeFrame = timeFrameEl.innerText
-    testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
-    const strategyCaptionEl = document.querySelector(SEL.strategyCaption)
-    if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
-      alert('There is not stratagy name element on page. Open correct page please')
-      return null
-    }
-    testResults.name = strategyCaptionEl.innerText
 
-    const stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
-    if(!stratSummaryEl) {
-      alert('There is not strategy performance summary tab on the page. Open correct page please')
-      return null
-    }
-    stratSummaryEl.click()
-    await page.waitForSelector(SEL.strategySummaryActive, 1000)
 
-    await page.waitForSelector(SEL.strategyReport, 0)
-    if(!reportNode) {
-      reportNode = await page.waitForSelector(SEL.strategyReport, 0)
-      if(reportNode) {
-        const reportObserver = new MutationObserver(()=> {
-          isReportChanged = true
-        });
-        reportObserver.observe(reportNode, {
-          childList: true,
-          subtree: true,
-          attributes: false,
-          characterData: false
-        });
-      }
-    }
-    return testResults
-  }
 
-  async function getStrategyParameters(strategyData) {
-    let paramRange = await storageGetKey(STORAGE_STRATEGY_KEY_PARAM)
-    if(paramRange) {
-      const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
-      if(mismatched && mismatched.length) {
-        const isDef = confirm(`The data loaded from the storage has parameters that are not present in the current strategy: ${mismatched.join(',')}.\n\nYou need to load the correct strategy in the Tradingview chart or load new parameters for the current one. \nAlternatively, you can use the default strategy optimization parameters.\n\nShould it use the default settings?`)
-        if (!isDef)
-          return null
-        paramRange = strategyGetRange(strategyData)
-      }
-    } else {
-      paramRange = strategyGetRange(strategyData)
-    }
-    await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
-    return paramRange
-  }
+
+
 
   function createParamsFormRange(paramRange) {
     const allRangeParams = {}
@@ -1177,7 +984,7 @@
         startValues.default[key] = paramRange[key][3]
     })
 
-    const testResults = await storageGetKey(STORAGE_STRATEGY_KEY_RESULTS)
+    const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
     if(testResults && testResults.perfomanceSummary && testResults.perfomanceSummary.length) {
       const bestResult = testResults.perfomanceSummary ? getBestResult(testResults) : {}
       const allParamsName = Object.keys(startValues.default)
@@ -1194,14 +1001,7 @@
     return startValues
   }
 
-  function saveFileAs(text, filename) {
-    let aData = document.createElement('a');
-    aData.setAttribute('href', 'data:text/plain;charset=urf-8,' + encodeURIComponent(text));
-    aData.setAttribute('download', filename);
-    aData.click();
-    if (aData.parentNode)
-      aData.parentNode.removeChild(aData);
-  }
+
 
   function getCurrentPropValues(strategyData) {
     const propVal = {}
@@ -1214,30 +1014,7 @@
     return propVal
   }
 
-  function strategyGetRange(strategyData) {
-    const paramRange = {}
-    Object.keys(strategyData.properties).forEach((key, idx) => {
-      if(typeof strategyData.properties[key] === 'boolean') {
-        paramRange[key] = [true, false, 0, strategyData.properties[key], idx + 1]
-      } else if (typeof strategyData.properties[key] === 'string' && strategyData.properties[key].includes(';')) {
-        paramRange[key] = [strategyData.properties[key], '', 0, strategyData.properties[key].split(';')[0], idx + 1]
-      } else {
-        const isInteger = strategyData.properties[key] === Math.round(strategyData.properties[key]) // TODO or convert to string and check the point?
-        if(strategyData.properties[key]) { // Not 0 or Nan
-          paramRange[key] = [isInteger ? Math.floor(strategyData.properties[key] / 2) : strategyData.properties[key] / 2,
-            strategyData.properties[key] * 2]
-          let step = isInteger ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
-          step = isInteger && step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1 // TODO or set paramRange[key][1]?
-          paramRange[key].push(step)
-          paramRange[key].push(strategyData.properties[key])
-          paramRange[key].push(idx + 1)
-        } else {
-          paramRange[key] = [strategyData.properties[key], '', 0, strategyData.properties[key], idx + 1]
-        }
-      }
-    })
-    return paramRange
-  }
+
   function strategyRangeToTemplate(paramRange) {
     let csv = 'Parameter,From,To,Step,Default,Priority\n'
     Object.keys(paramRange).forEach(key => {
@@ -1245,263 +1022,6 @@
         `${paramRange[key][1]},${paramRange[key][2]},${typeof paramRange[key][3] === 'string' ? JSON.stringify(paramRange[key][3]) : paramRange[key][3]},${paramRange[key][4]}\n`
     })
     return csv
-  }
-
-  function setSelByText(selector, textValue) {
-    let isSet = false
-    const selectorAllVal = document.querySelectorAll(selector)
-    if (!selectorAllVal || !selectorAllVal.length)
-      return isSet
-    for (let options of selectorAllVal) {
-      if(options && options.innerText.startsWith(textValue)) {
-        page.mouseClick(options)
-        isSet = true
-        break
-      }
-    }
-    return isSet
-  }
-
-  async function getStrategy(strategyName, isIndicatorSave = false) {
-    let strategyData = {}
-    let indicatorName = null
-    if(strategyName !== null) {
-      const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
-      if(!indicatorLegendsEl)
-        return null
-      for(let indicatorItemEl of indicatorLegendsEl) {
-        const indicatorTitleEl = indicatorItemEl.querySelector(SEL.tvLegendIndicatorItemTitle)
-        if (!indicatorTitleEl)
-          continue
-        if (strategyName && strategyName !== indicatorTitleEl.innerText)
-          continue
-
-        page.mouseClick(indicatorTitleEl)
-        page.mouseClick(indicatorTitleEl)
-        const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
-        if (!dialogTitle || !dialogTitle.innerText) {
-          if (document.querySelector(SEL.cancelBtn))
-            document.querySelector(SEL.cancelBtn).click()
-          continue
-        }
-        let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-        if (isIndicatorSave || isStrategyPropertiesTab) {
-          indicatorName = dialogTitle.innerText
-          break
-        }
-      }
-    } else {
-      const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
-      if (!dialogTitle || !dialogTitle.innerText) {
-        if (document.querySelector(SEL.cancelBtn))
-          document.querySelector(SEL.cancelBtn).click()
-      } else {
-        let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-        if (isIndicatorSave || isStrategyPropertiesTab) {
-          indicatorName = dialogTitle.innerText
-        }
-      }
-    }
-    if(indicatorName === null)
-      return strategyData
-    strategyData = {name: indicatorName, properties: {}}
-    if(await tvDialogChangeTabToInput()) {
-      const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
-      for (let i = 0; i < indicProperties.length; i++) {
-        const propClassName = indicProperties[i].getAttribute('class')
-        const propText = indicProperties[i].innerText
-        if(!propClassName || !propText) // Undefined type of element
-          continue
-        if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
-          i++ // Skip get the next cell because it content values
-          continue // Doesn't realise to manage this kind of properties (two rows)
-        } else if (propClassName.includes('first-') && indicProperties[i].innerText) {
-          i++
-          if (indicProperties[i] && indicProperties[i].querySelector('input')) {
-            let propValue = indicProperties[i].querySelector('input').value
-            if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric' ||
-              (parseFloat(propValue) == propValue || parseInt(propValue) == propValue)) { // not only inputmode==numbers input have digits
-              const digPropValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just search point in string
-              if(!isNaN(propValue))
-                strategyData.properties[propText] = digPropValue
-              else
-                strategyData.properties[propText] = propValue
-            } else {
-              strategyData.properties[propText] = propValue
-            }
-          } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
-            const buttonEl = indicProperties[i].querySelector('span[role="button"]')
-            if(!buttonEl)
-              continue
-            const propValue = buttonEl.innerText
-            if(propValue) {
-              if(isIndicatorSave) {
-                strategyData.properties[propText] = propValue
-                continue
-              }
-              buttonEl.scrollIntoView()
-              await page.waitForTimeout(100)
-              page.mouseClick(buttonEl)
-              const isOptions = await page.waitForSelector(SEL.strategyListOptions, 1000)
-              if(isOptions) {
-                const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
-                let allOptionsList = propValue
-                for(let optionEl of allOptionsEl) {
-                  if(optionEl && optionEl.innerText && optionEl.innerText !== propValue) {
-                    allOptionsList += optionEl.innerText + ';'
-                  }
-                }
-                if(allOptionsList)
-                  strategyData.properties[propText] = allOptionsList
-                page.mouseClick(buttonEl)
-              } else {
-                strategyData.properties[propText] = propValue
-              }
-            }
-          } else { // Undefined
-            continue
-          }
-        } else if (propClassName.includes('fill-')) {
-          const element = indicProperties[i].querySelector('input[type="checkbox"]')
-          if(element)
-            strategyData.properties[propText] = element.getAttribute('checked') !== null ? element.checked : false
-          else { // Undefined type of element
-            continue
-          }
-        } else if (propClassName.includes('titleWrap-')) { // Titles bwtwen parameters
-          continue
-        } else { // Undefined type of element
-          continue
-        }
-      }
-
-      // const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
-      // for(let i = 0; i < indicProperties.length; i++) {
-      //   if(!indicProperties[i])
-      //     continue
-      //   const propClassName = indicProperties[i].getAttribute('class')
-      //   const propText = indicProperties[i].innerText
-      //   if(!propClassName || !propText)
-      //     continue
-      //   if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
-      //     i++ // Skip get the next cell because it content values
-      //     continue // Doesn't realise to manage this kind of properties (two rows)
-      //   } else if (propClassName.includes('first-')) {
-      //     i++
-      //     if(indicProperties[i].querySelector('input')) {
-      //       let propValue = indicProperties[i].querySelector('input').value
-      //       if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') {
-      //         propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just search point in string
-      //         if(!isNaN(propValue))
-      //           strategyData.properties[propText] = propValue
-      //       } else {
-      //         strategyData.properties[propText] = propValue  // TODO not only inputmode==numbers input have digits
-      //       }
-      //     } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
-      //       const buttonEl = indicProperties[i].querySelector('span[role="button"]')
-      //       if(!buttonEl)
-      //         continue
-      //       const propValue = buttonEl.innerText
-      //       if(propValue) {
-      //         buttonEl.scrollIntoView()
-      //         await page.waitForTimeout(100)
-      //         page.mouseClick(buttonEl)
-      //         const isOptions = await page.waitForSelector(SEL.strategyListOptions, 1000)
-      //         if(isOptions) {
-      //           const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
-      //           let allOptionsList = propValue
-      //           for(let optionEl of allOptionsEl) {
-      //             if(optionEl && optionEl.innerText && optionEl.innerText !== propValue) {
-      //               allOptionsList += optionEl.innerText + ';'
-      //             }
-      //           }
-      //           if(allOptionsList)
-      //             strategyData.properties[propText] = allOptionsList
-      //           page.mouseClick(buttonEl)
-      //         } else {
-      //           strategyData.properties[propText] = propValue
-      //         }
-      //       }
-      //     }
-      //   } else if (propClassName.includes('fill-')) {
-      //     if(indicProperties[i].querySelector('input[type="checkbox"]'))
-      //       strategyData.properties[propText] = indicProperties[i].querySelector('input[type="checkbox"]').getAttribute('checked') !== null
-      //   }
-      // }
-    } else {
-      console.error(`Can't set parameters tab to input`)
-    }
-    if (document.querySelector(SEL.cancelBtn)) {
-      document.querySelector(SEL.cancelBtn).click()
-      await page.waitForSelector(SEL.cancelBtn, 1000, true)
-    }
-
-    return strategyData
-  }
-
-  function parseCSVLine(text) {
-    return text.match( /\s*(\".*?\"|'.*?'|[^,]+|)\s*(,|$)/g ).map(function (text) {
-      let m;
-      if (m = text.match(/^\s*\"(.*?)\"\s*,?$/)) return m[1]; // Double Quoted Text
-      if (m = text.match(/^\s*'(.*?)'\s*,?$/)) return m[1]; // Single Quoted Text
-      if (m = text.match(/^\s*(true|false)\s*,?$/)) return m[1] === "true"; // Boolean
-      if (m = text.match(/^\s*((?:\+|\-)?\d+)\s*,?$/)) return parseInt(m[1]); // Integer Number
-      if (m = text.match(/^\s*((?:\+|\-)?\d*\.\d*)\s*,?$/)) return parseFloat(m[1]); // Floating Number
-      if (m = text.match(/^\s*(.*?)\s*,?$/)) return m[1]; // Unquoted Text
-      return text;
-    } );
-  }
-
-  function parseCSV2JSON(s, sep=',') {
-    const csv = s.split(/\r\n|\r|\n/g).filter(item => item).map(line => parseCSVLine(line))
-    if(!csv || csv.length <= 1) return []
-    const headers = csv[0].map(item => item.toLowerCase())
-    const JSONData = csv.slice(1).map((line) => {
-      const lineObj = {}
-      line.forEach((value, line_index) => lineObj[headers[line_index]] = value)
-      return lineObj
-    })
-    return JSONData;
-  }
-
-  async function uploadFiles (handler, endOfMsg, isMultiple = false) {
-    let fileUploadEl = document.createElement('input');
-    fileUploadEl.type = 'file';
-    if(isMultiple)
-      fileUploadEl.multiple = 'multiple';
-    fileUploadEl.addEventListener('change', async () => {
-      let message = isMultiple ? 'File upload results:\n' : 'File upload result:\n'
-      for(let file of fileUploadEl.files) {
-        message += await handler(file)
-      }
-      message += endOfMsg ? '\n' + endOfMsg : ''
-      alert(message)
-      isMsgShown = false
-    });
-    fileUploadEl.click();
-  }
-
-  async function parseCSVFile (fileData) {
-    return new Promise((resolve, reject) => {
-      const CSV_FILENAME = fileData.name
-      const isCSV = CSV_FILENAME.toLowerCase().endsWith('.csv')
-      if(!isCSV) return reject(`please upload correct file.`)
-      const reader = new FileReader();
-      reader.addEventListener('load', async (event) => {
-        if(!event.target.result) return reject(`there error when loading content from the file ${CSV_FILENAME}`)
-        const CSV_VALUE = event.target.result
-        try {
-          const csvData = parseCSV2JSON(CSV_VALUE)
-          if (csvData && csvData.length)
-            return resolve(csvData)
-        } catch (err) {
-          console.error(err)
-          return reject(`CSV parsing error: ${err.message}`)
-        }
-        return reject(`there is no data in the file`)
-      })
-      return reader.readAsText(fileData);
-    });
   }
 
   function shiftToTimeframe(data, tfValues, tfType) {
@@ -1547,7 +1067,7 @@
 
   async function parseTSSignalsAndGetMsg (fileData) {
     try {
-      const csvData = await parseCSVFile(fileData)
+      const csvData = await file.parseCSV(fileData)
       const headers = Object.keys(csvData[0])
       const missColumns = ['timestamp', 'ticker', 'timeframe', 'signal'].filter(columnName => !headers.includes(columnName))
       if(missColumns && missColumns.length)
@@ -1586,7 +1106,7 @@
           const buyConv = buyArr.map(dt => dt.getTime())
           const sellArr = shiftToTimeframe(tickersAndTFSignals[tktfName].tsSell,  tfVal, tfType)
           const sellConv = sellArr.map(dt => dt.getTime())
-          await storageSetKeys(`${STORAGE_SIGNALS_KEY_PREFIX}_${tktfName}`,  {buy: buyConv.filter((item, idx) => buyConv.indexOf(item) === idx).join(','),
+          await storage.setKeys(`${storage.SIGNALS_KEY_PREFIX}_${tktfName}`,  {buy: buyConv.filter((item, idx) => buyConv.indexOf(item) === idx).join(','),
             sell: sellConv.filter((item, idx) => sellConv.indexOf(item) === idx).join(','),
             loadData: (new Date()).toISOString()})
           console.log(`For ${tktfName} loaded ${buyConv.length + sellConv.length} timestamps`)
@@ -1606,71 +1126,28 @@
   async function parseStrategyParamsAndGetMsg (fileData) {
     console.log('parsStrategyParamsAndGetMsg filename', fileData)
     const paramRange = {}
-    const csvData = await parseCSVFile(fileData)
+    const csvData = await file.parseCSV(fileData)
     const headers = Object.keys(csvData[0])
     const missColumns = ['parameter','from','to','step','default','priority'].filter(columnName => !headers.includes(columnName.toLowerCase()))
     if(missColumns && missColumns.length)
       return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nUploading canceled.\n`
     csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step'], row['default'], row['priority']])
-    await storageSetKeys(STORAGE_STRATEGY_KEY_PARAM, paramRange)
+    await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
     console.log(paramRange)
     return `The data was saved in the storage. \nTo use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.`
   }
 
-  async function storageSetKeys(storageKey, value) {
-    const storageData = {}
-    storageData[`${STORAGE_KEY_PREFIX}_${storageKey}`] = value
-    return new Promise (resolve => {
-      chrome.storage.local.set(storageData, () => {
-        resolve()
-      })
-    })
-  }
-
-  async function storageGetKey(storageKey) {
-    const getParam = storageKey === null ? null : Array.isArray(storageKey) ? storageKey.map(item => `${STORAGE_KEY_PREFIX}_${item}`) : `${STORAGE_KEY_PREFIX}_${storageKey}`
-    return new Promise (resolve => {
-      chrome.storage.local.get(getParam, (getResults) => {
-        if(storageKey === null) {
-          const storageData = {}
-          Object.keys(getResults).filter(key => key.startsWith(STORAGE_KEY_PREFIX)).forEach(key => storageData[key] = getResults[key])
-          return resolve(storageData)
-        } else if(!getResults.hasOwnProperty(`${STORAGE_KEY_PREFIX}_${storageKey}`)) {
-          return resolve(null)
-        }
-        return resolve(getResults[`${STORAGE_KEY_PREFIX}_${storageKey}`])
-      })
-    })
-  }
-
-  async function storageRemoveKey(storageKey) {
-    return new Promise (resolve => {
-      chrome.storage.local.remove(storageKey, () => {
-        resolve()
-      })
-    })
-  }
-
-  async function storageClearAll() {
-    const allStorageKey = await storageGetKey(null)
-    await storageRemoveKey(Object.keys(allStorageKey))
-    return Object.keys(allStorageKey)
-  }
 
 
-  async function tvDialogChangeTabToInput() {
-    let isInputTabActive = document.querySelector(SEL.tabInputActive)
-    if(isInputTabActive) return true
-    document.querySelector(SEL.tabInput).click()
-    isInputTabActive = await page.waitForSelector(SEL.tabInputActive, 2000)
-    return isInputTabActive ? true : false
-  }
+
+
+
 
   async function tvDialogHandler () {
     const indicatorTitle = page.getTextForSel(SEL.indicatorTitle)
     if(!document.querySelector(SEL.okBtn) || !document.querySelector(SEL.tabInput))
       return
-    if(indicatorTitle === 'iondvSignals' && workerStatus === null) {
+    if(indicatorTitle === 'iondvSignals' && action.workerStatus === null) {
       let tickerText = document.querySelector(SEL.ticker).innerText
       let timeFrameEl = document.querySelector(SEL.timeFrameActive)
       if(!timeFrameEl)
@@ -1688,14 +1165,14 @@
       tickerTextPrev = tickerText
       timeFrameTextPrev = timeFrameText
 
-      if(!await tvDialogChangeTabToInput()) {
+      if(!await tv.changeDialogTabToInput()) {
         console.error(`Can't set parameters tab to input`)
         isMsgShown = true
         return
       }
 
       console.log("Tradingview indicator parameters window opened for ticker:", tickerText);
-      const tsData = await storageGetKey(`${STORAGE_SIGNALS_KEY_PREFIX}_${tickerText}::${timeFrameText}`.toLowerCase())
+      const tsData = await storage.getKey(`${storage.SIGNALS_KEY_PREFIX}_${tickerText}::${timeFrameText}`.toLowerCase())
       if(tsData === null) {
         alert(`No data was loaded for the ${tickerText} and timeframe ${timeFrameText}.\n\n` +
           `Please change the ticker and timeframe to correct and reopen script parameter window.`)

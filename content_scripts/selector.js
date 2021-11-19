@@ -26,5 +26,7 @@ const SEL = {
     strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
     strategyReportHeader: '#bottom-area div.backtesting-content-wrapper .report-data thead > tr > td',
     strategyReportRow: '#bottom-area div.backtesting-content-wrapper .report-data tbody > tr',
-    strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] div[class^="label-"]'
+    strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] div[class^="label-"]',
+    strategyDefaultElement: '#study-defaults-manager',
+    strategyImportExport: '#iondvImportExport'
 }

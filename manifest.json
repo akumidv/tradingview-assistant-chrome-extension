@@ -15,8 +15,10 @@
     "content_scripts": [
         {
             "matches": ["https://*.tradingview.com/chart/*"],
-            "js": [  "content_scripts/selectors.js",
-              "content_scripts/page.js",  "content_scripts/tv.js", "content_scripts/tv-page-worker.js"],
+            "js": [  "content_scripts/selector.js",
+              "content_scripts/page.js", "content_scripts/ui.js", "content_scripts/tv.js", "content_scripts/file.js",
+              "content_scripts/storage.js", "content_scripts/model.js","content_scripts/backtest.js",
+              "content_scripts/action.js", "content_scripts/controller.js"],
             "run_at": "document_end"
         }
     ],
@@ -32,5 +34,8 @@
           "default_title": "TV",
           "default_popup": "popup/assistant.html"
     },
-    "options_page": "options/set.html"
+    "web_accessible_resources": [{
+      "resources": ["page-context.js", "fonts/fa-solid-900.woff2"],
+      "matches": ["<all_urls>"]
+    }]
 }

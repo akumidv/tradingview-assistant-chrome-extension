@@ -47,4 +47,18 @@ page.mouseClick = function (el) {
   mouseTrigger (el, "click");
 }
 
+page.setSelByText = (selector, textValue) => {
+  let isSet = false
+  const selectorAllVal = document.querySelectorAll(selector)
+  if (!selectorAllVal || !selectorAllVal.length)
+    return isSet
+  for (let options of selectorAllVal) {
+    if(options && options.innerText.startsWith(textValue)) {
+      page.mouseClick(options)
+      isSet = true
+      break
+    }
+  }
+  return isSet
+}
 
