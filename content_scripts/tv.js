@@ -117,60 +117,6 @@ tv.getStrategy = async (strategyName, isIndicatorSave = false) => {
         continue
       }
     }
-
-    // const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
-    // for(let i = 0; i < indicProperties.length; i++) {
-    //   if(!indicProperties[i])
-    //     continue
-    //   const propClassName = indicProperties[i].getAttribute('class')
-    //   const propText = indicProperties[i].innerText
-    //   if(!propClassName || !propText)
-    //     continue
-    //   if(propClassName.includes('topCenter-')) {  // Two rows, also have first in class name
-    //     i++ // Skip get the next cell because it content values
-    //     continue // Doesn't realise to manage this kind of properties (two rows)
-    //   } else if (propClassName.includes('first-')) {
-    //     i++
-    //     if(indicProperties[i].querySelector('input')) {
-    //       let propValue = indicProperties[i].querySelector('input').value
-    //       if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') {
-    //         propValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just search point in string
-    //         if(!isNaN(propValue))
-    //           strategyData.properties[propText] = propValue
-    //       } else {
-    //         strategyData.properties[propText] = propValue  // TODO not only inputmode==numbers input have digits
-    //       }
-    //     } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
-    //       const buttonEl = indicProperties[i].querySelector('span[role="button"]')
-    //       if(!buttonEl)
-    //         continue
-    //       const propValue = buttonEl.innerText
-    //       if(propValue) {
-    //         buttonEl.scrollIntoView()
-    //         await page.waitForTimeout(100)
-    //         page.mouseClick(buttonEl)
-    //         const isOptions = await page.waitForSelector(SEL.strategyListOptions, 1000)
-    //         if(isOptions) {
-    //           const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
-    //           let allOptionsList = propValue
-    //           for(let optionEl of allOptionsEl) {
-    //             if(optionEl && optionEl.innerText && optionEl.innerText !== propValue) {
-    //               allOptionsList += optionEl.innerText + ';'
-    //             }
-    //           }
-    //           if(allOptionsList)
-    //             strategyData.properties[propText] = allOptionsList
-    //           page.mouseClick(buttonEl)
-    //         } else {
-    //           strategyData.properties[propText] = propValue
-    //         }
-    //       }
-    //     }
-    //   } else if (propClassName.includes('fill-')) {
-    //     if(indicProperties[i].querySelector('input[type="checkbox"]'))
-    //       strategyData.properties[propText] = indicProperties[i].querySelector('input[type="checkbox"]').getAttribute('checked') !== null
-    //   }
-    // }
   } else {
     console.error(`Can't set parameters tab to input`)
   }
