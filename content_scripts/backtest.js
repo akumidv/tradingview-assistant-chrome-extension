@@ -101,7 +101,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
     }
   }
 
-  resData = tvUi.parseReportTable()
+  resData = tv.getPerfomance//tv.parseReportTable()
   resData = calculateAdditionValuesToReport(resData)
   if (resData && resData.hasOwnProperty(testResults.optParamName)) {
     console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
@@ -155,15 +155,15 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
 
 backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = false, isIgnoreSetParam = false) => {
   let reportData = {}
-  tvUi.isReportChanged = false // Global value
+  tv.isReportChanged = false // Global value
   if (!isIgnoreSetParam) {
-    const isParamsSet = await tvUi.setStrategyParams(testResults.shortName, propVal)
+    const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal)
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
   }
 
   let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 1500)
-  let isProcessEnd = tvUi.isReportChanged
+  let isProcessEnd = tv.isReportChanged
 
   if (isProcessStart)
     isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
@@ -172,7 +172,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 
   let isProcessError = document.querySelector(SEL.strategyReportError)
   await page.waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
-  reportData = tvUi.parseReportTable()
+  reportData = tv.getPerfomance //tv.parseReportTable()
   if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&

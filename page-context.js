@@ -7,7 +7,7 @@ window.addEventListener('message', function (event) {
     !event.data.hasOwnProperty('action'))
     return
   switch (event.data.action) {
-    case 'getPerfomance': {
+    case 'getPerformance': {
       let tvData = null
       try {
         tvData = window.TradingView.bottomWidgetBar._widgets.backtesting._reportWidgetsSet.reportWidget._data.performance

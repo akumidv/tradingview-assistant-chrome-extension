@@ -423,67 +423,72 @@ tv.parseReportTable = () => {
   return report
 }
 
-tvUi.getPerfomance = async () => {
-  const performanceData = await tvUi.getPageData('getPerfomance')
-	const dict = {
-	  'maxStrategyDrawDown': 'Max Strategy Drawdown',
-	  'openPL': 'Open PL',
-	  'buyHoldReturn': 'Buy and Hold Return',
-	  'sharpeRatio': 'Sharpe Ratio',
-	  'sortinoRatio': 'Sortino Ratio',
-	  'maxStrategyDrawDownPercent': 'Max Strategy DrawDown %',
-	  'buyHoldReturnPercent': 'Buy and Hold Return %',
-	  'openPLPercent': 'Open PL %',
-	  'avgBarsInLossTrade': 'Avg Bars In Losing Trades',
-	  'avgBarsInTrade': 'Avg Bars In Trades',
-	  'avgBarsInWinTrade': 'Avg Bars In Winning Trades',
-	  'avgLosTrade': 'Avg Losing Trades',
-	  'avgLosTradePercent': 'Avg Losing Trades %',
-	  'avgTrade': 'Avg Trades',
-	  'avgTradePercent': 'Avg Trades %',
-	  'avgWinTrade': 'Avg Winning Trades',
-	  'avgWinTradePercent': 'Avg Winning Trades %',
-	  'commissionPaid': 'Commission Paid',
-	  'grossLoss': 'Gross Loss',
-	  'grossLossPercent': 'Gross Loss %',
-	  'grossProfit': 'Gross Profit',
-	  'grossProfitPercent': 'Gross Profit %',
-	  'largestLosTrade': 'Largest Losing Trade',
-	  'largestLosTradePercent': 'Largest Losing Trade %',
-	  'largestWinTrade': 'Largest Winning Trade',
-	  'largestWinTradePercent': 'Largest Winning Trade %',
-	  'marginCalls': 'Margin Calls',
-	  'maxContractsHeld': 'Max Contracts Held',
-	  'netProfit': 'Net profit',
-	  'netProfitPercent': 'Net profit %',
-	  'numberOfLosingTrades': 'Number Of Losing Trades',
-	  'numberOfWiningTrades': 'Number Of Winning Trades',
-	  'percentProfitable': 'Percent Profitable',
-	  'profitFactor': 'Profit Factor',
-	  'ratioAvgWinAvgLoss': 'Ratio Avg Win / Avg Loss',
-	  'totalOpenTrades': 'Total Open Trades',
-	  'totalTrades': 'Total Trades'
-	}
+tv.getPerfomance = async () => {
+  const performanceData = await tv.getPageData('getPerformance')
+  const perfDict = {
+    'maxStrategyDrawDown': 'Max Drawdown',
+    'openPL': 'Open PL',
+    'buyHoldReturn': 'Buy & Hold Return',
+    'sharpeRatio': 'Sharpe Ratio',
+    'sortinoRatio': 'Sortino Ratio',
+    'maxStrategyDrawDownPercent': 'Max DrawDown %',
+    'buyHoldReturnPercent': 'Buy & Hold Return %',
+    'openPLPercent': 'Open PL %',
+    'avgBarsInLossTrade': 'Avg # Bars In Losing Trades',
+    'avgBarsInTrade': 'Avg # Bars In Trades',
+    'avgBarsInWinTrade': 'Avg # Bars In Winning Trades',
+    'avgLosTrade': 'Avg # Losing Trades',
+    'avgLosTradePercent': 'Avg Losing Trades %',
+    'avgTrade': 'Avg Trades',
+    'avgTradePercent': 'Avg Trades %',
+    'avgWinTrade': 'Avg Winning Trades',
+    'avgWinTradePercent': 'Avg Winning Trades %',
+    'commissionPaid': 'Commission Paid',
+    'grossLoss': 'Gross Loss',
+    'grossLossPercent': 'Gross Loss %',
+    'grossProfit': 'Gross Profit',
+    'grossProfitPercent': 'Gross Profit %',
+    'largestLosTrade': 'Largest Losing Trade',
+    'largestLosTradePercent': 'Largest Losing Trade %',
+    'largestWinTrade': 'Largest Winning Trade',
+    'largestWinTradePercent': 'Largest Winning Trade %',
+    'marginCalls': 'Margin Calls',
+    'maxContractsHeld': 'Max Contracts Held',
+    'netProfit': 'Net profit',
+    'netProfitPercent': 'Net profit %',
+    'numberOfLosingTrades': 'Number Of Losing Trades',
+    'numberOfWiningTrades': 'Number Of Winning Trades',
+    'percentProfitable': 'Percent Profitable',
+    'profitFactor': 'Profit Factor',
+    'ratioAvgWinAvgLoss': 'Ratio Avg Win / Avg Loss',
+    'totalOpenTrades': 'Total Open Trades',
+    'totalTrades': 'Total Trades'
+  }
 
+  let data = {}
 
-	let data = 'Name\tAll\tLong\tShort\n'
-	for(let key of Object.keys(performanceData)) {
-	  if (!['all', 'long', 'short'].includes(key)) {
-		const keyName = dict[key] ? JSON.stringify(dict[key]) : JSON.stringify(key)
-		data += `${keyName}\t${performanceData[key]}\t \t \n`
-	  }
-	}
-	if(performanceData['all']) {
-	  for(let key of Object.keys(performanceData['all'])) {
-		const keyName = dict[key] ? JSON.stringify(dict[key]) : JSON.stringify(key)
-		data += `${keyName}\t${performanceData['all'][key]}\t${performanceData['long'][key]}\t${performanceData['short'][key]}\n`
-	  }
-	}
+  if(performanceData.hasOwnProperty('all') && performanceData.hasOwnProperty('long') && performanceData.hasOwnProperty('short')) {
+    for (let key of Object.keys(performanceData['all'])) {
+      const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
+      data[`${keyName}: all`] = performanceData['all'][key]
+      if(performanceData['long'].hasOwnProperty(key))
+        data[`${keyName}: long`] = performanceData['long'][key]
+      if(performanceData['short'].hasOwnProperty(key))
+        data[`${keyName}: short`] = performanceData['short'][key]
+    }
+  }
 
+  for(let key of Object.keys(performanceData)) {
+    if (!['all', 'long', 'short'].includes(key)) {
+      const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
+      data[keyName] = performanceData[key]
+    }
+  }
   console.log(data)
+  return data
 }
 
-tvUi.getPageData = async (actionName, timeout = 1000) => {
+tv.getPageData = async (actionName, timeout = 1000) => {
   delete tvPageMessageData[actionName]
   const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
   window.postMessage({name: 'iondvScript', action: actionName}, url) // TODO wait for data
