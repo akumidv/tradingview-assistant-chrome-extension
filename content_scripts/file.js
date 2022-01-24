@@ -88,17 +88,29 @@ function parseCSV2JSON(s, sep= ',') {
 
 
 function parseCSVLine(text) {
-  return text.match( /\s*(\".*?\"|'.*?'|[^,]+|)\s*(,|$)/g ).map(function (text) {
+  function replaceEscapedSymbols(textVal) {
+    return textVal.replaceAll('\\"', '"')
+  }
+
+  return text.match( /\s*(".*?"|'.*?'|[^,]+|)\s*(,(?!\s*\\")|$)/g ).map(function (subText) { // \s*(\".*?\"|'.*?'|[^,]+|)\s*(,|$)
     let m;
-    if (m = text.match(/^\s*\"(.*?)\"\s*,?$/)) return m[1]; // Double Quoted Text
-    if (m = text.match(/^\s*'(.*?)'\s*,?$/)) return m[1]; // Single Quoted Text
-    if (m = text.match(/^\s*(true|false)\s*,?$/)) return m[1] === "true"; // Boolean
-    if (m = text.match(/^\s*((?:\+|\-)?\d+)\s*,?$/)) return parseInt(m[1]); // Integer Number
-    if (m = text.match(/^\s*((?:\+|\-)?\d*\.\d*)\s*,?$/)) return parseFloat(m[1]); // Floating Number
-    if (m = text.match(/^\s*(.*?)\s*,?$/)) return m[1]; // Unquoted Text
-    return text;
+    if (m = subText.match(/^\s*\"(.*?)\"\s*,?(?!\s*\\")$/))
+      return replaceEscapedSymbols(m[1])//m[1] // Double Quoted Text // /^\s*\"(.*?)\"\s*,?$/
+    if (m = subText.match(/^\s*'(.*?)'\s*,?$/))
+      return replaceEscapedSymbols(m[1]); // Single Quoted Text
+    if (m = subText.match(/^\s*(true|false)\s*,?$/i))
+      return m[1].toLowerCase() === 'true'; // Boolean
+    if (m = subText.match(/^\s*((?:\+|\-)?\d+)\s*,?$/))
+      return parseInt(m[1]); // Integer Number
+    if (m = subText.match(/^\s*((?:\+|\-)?\d*\.\d*)\s*,?$/))
+      return parseFloat(m[1]); // Floating Number
+    if (m = subText.match(/^\s*(.*?)\s*,?$/))
+      return replaceEscapedSymbols(m[1]); // Unquoted Text
+    return subText;
   } );
 }
+
+
 
 file.convertResultsToCSV = (testResults) => {
   if(!testResults || !testResults.perfomanceSummary || !testResults.perfomanceSummary.length)

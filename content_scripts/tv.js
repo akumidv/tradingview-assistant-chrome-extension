@@ -5,6 +5,25 @@ const tv = {
   isReportChanged: false
 }
 
+
+// Inject script to get access to TradingView data on page
+const script = document.createElement('script');
+script.src = chrome.runtime.getURL('page-context.js');
+document.documentElement.appendChild(script);
+
+const tvPageMessageData = {}
+
+window.addEventListener('message', messageHandler)
+
+async function messageHandler(event) {
+  const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+  if (!event.origin.startsWith(url) || !event.data ||
+    !event.data.hasOwnProperty('name') || event.data.name !== 'iondvPage' ||
+    !event.data.hasOwnProperty('action'))
+    return
+  tvPageMessageData[event.data.action] = event.data.data
+}
+
 tv.getStrategy = async (strategyName, isIndicatorSave = false) => {
   let strategyData = {}
   let indicatorName = null
@@ -83,7 +102,7 @@ tv.getStrategy = async (strategyName, isIndicatorSave = false) => {
               continue
             }
             buttonEl.scrollIntoView()
-            await page.waitForTimeout(100)
+            await page.waitForTimeout(10)
             page.mouseClick(buttonEl)
             const isOptions = await page.waitForSelector(SEL.strategyListOptions, 1000)
             if(isOptions) {
@@ -156,16 +175,19 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
           if(!buttonEl || !buttonEl.innerText)
             continue
           buttonEl.scrollIntoView()
+		  await page.waitForTimeout(10)
           page.mouseClick(buttonEl)
           page.setSelByText(SEL.strategyListOptions, propVal[propText])
         }
       } else if (propClassName.includes('fill-')) {
         const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
-        if(checkboxEl) {
-          const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
-          if(propVal[propText] !== isChecked) {
-            page.mouseClick(checkboxEl)
-          }
+        if(checkboxEl) {          
+			// const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
+			const isChecked = Boolean(checkboxEl.checked)
+			if(Boolean(propVal[propText]) !== isChecked) {
+				page.mouseClickEl(checkboxEl)
+				checkboxEl.checked = Boolean(propVal[propText])
+			}
         }
       }
       if(propKeys.length === setResultNumber)
@@ -181,7 +203,11 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
 tv.changeDialogTabToInput = async () => {
   let isInputTabActive = document.querySelector(SEL.tabInputActive)
   if(isInputTabActive) return true
-  document.querySelector(SEL.tabInput).click()
+  const inputTabEl = document.querySelector(SEL.tabInput)
+  if (!inputTabEl) {
+    throw new Error('There are no parameters in this strategy that can be optimized (There is no "Inputs" tab with parameters)')
+  }
+  inputTabEl.click()
   isInputTabActive = await page.waitForSelector(SEL.tabInputActive, 2000)
   return isInputTabActive ? true : false
 }
@@ -270,7 +296,7 @@ tv.switchToStrategyTab = async () => {
     tv.reportNode = await page.waitForSelector(SEL.strategyReport, 0)
     if(tv.reportNode) {
       const reportObserver = new MutationObserver(()=> {
-        isReportChanged = true
+        tv.isReportChanged = true
       });
       reportObserver.observe(tv.reportNode, {
         childList: true,
@@ -395,4 +421,79 @@ tv.parseReportTable = () => {
     }
   }
   return report
+}
+
+tvUi.getPerfomance = async () => {
+  const performanceData = await tvUi.getPageData('getPerfomance')
+	const dict = {
+	  'maxStrategyDrawDown': 'Max Strategy Drawdown',
+	  'openPL': 'Open PL',
+	  'buyHoldReturn': 'Buy and Hold Return',
+	  'sharpeRatio': 'Sharpe Ratio',
+	  'sortinoRatio': 'Sortino Ratio',
+	  'maxStrategyDrawDownPercent': 'Max Strategy DrawDown %',
+	  'buyHoldReturnPercent': 'Buy and Hold Return %',
+	  'openPLPercent': 'Open PL %',
+	  'avgBarsInLossTrade': 'Avg Bars In Losing Trades',
+	  'avgBarsInTrade': 'Avg Bars In Trades',
+	  'avgBarsInWinTrade': 'Avg Bars In Winning Trades',
+	  'avgLosTrade': 'Avg Losing Trades',
+	  'avgLosTradePercent': 'Avg Losing Trades %',
+	  'avgTrade': 'Avg Trades',
+	  'avgTradePercent': 'Avg Trades %',
+	  'avgWinTrade': 'Avg Winning Trades',
+	  'avgWinTradePercent': 'Avg Winning Trades %',
+	  'commissionPaid': 'Commission Paid',
+	  'grossLoss': 'Gross Loss',
+	  'grossLossPercent': 'Gross Loss %',
+	  'grossProfit': 'Gross Profit',
+	  'grossProfitPercent': 'Gross Profit %',
+	  'largestLosTrade': 'Largest Losing Trade',
+	  'largestLosTradePercent': 'Largest Losing Trade %',
+	  'largestWinTrade': 'Largest Winning Trade',
+	  'largestWinTradePercent': 'Largest Winning Trade %',
+	  'marginCalls': 'Margin Calls',
+	  'maxContractsHeld': 'Max Contracts Held',
+	  'netProfit': 'Net profit',
+	  'netProfitPercent': 'Net profit %',
+	  'numberOfLosingTrades': 'Number Of Losing Trades',
+	  'numberOfWiningTrades': 'Number Of Winning Trades',
+	  'percentProfitable': 'Percent Profitable',
+	  'profitFactor': 'Profit Factor',
+	  'ratioAvgWinAvgLoss': 'Ratio Avg Win / Avg Loss',
+	  'totalOpenTrades': 'Total Open Trades',
+	  'totalTrades': 'Total Trades'
+	}
+
+
+	let data = 'Name\tAll\tLong\tShort\n'
+	for(let key of Object.keys(performanceData)) {
+	  if (!['all', 'long', 'short'].includes(key)) {
+		const keyName = dict[key] ? JSON.stringify(dict[key]) : JSON.stringify(key)
+		data += `${keyName}\t${performanceData[key]}\t \t \n`
+	  }
+	}
+	if(performanceData['all']) {
+	  for(let key of Object.keys(performanceData['all'])) {
+		const keyName = dict[key] ? JSON.stringify(dict[key]) : JSON.stringify(key)
+		data += `${keyName}\t${performanceData['all'][key]}\t${performanceData['long'][key]}\t${performanceData['short'][key]}\n`
+	  }
+	}
+
+  console.log(data)
+}
+
+tvUi.getPageData = async (actionName, timeout = 1000) => {
+  delete tvPageMessageData[actionName]
+  const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+  window.postMessage({name: 'iondvScript', action: actionName}, url) // TODO wait for data
+  let iter = 0
+  const tikTime = 50
+  do {
+    await page.waitForTimeout(tikTime)
+    iter += 1
+    if(tikTime * iter >= timeout)
+      break
+  } while (!tvPageMessageData.hasOwnProperty(actionName))
+  return tvPageMessageData[actionName]
 }

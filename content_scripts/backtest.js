@@ -14,23 +14,21 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
   testResults.paramsNames = Object.keys(allRangeParams)
 
   // Get best init value and properties values
-  let bestValue = null
-  let bestPropVal = null
   ui.statusMessage('Get the best initial values.')
   const initRes = await getInitBestValues(testResults, allRangeParams)
   if(initRes && initRes.hasOwnProperty('bestValue') && initRes.bestValue !== null && initRes.hasOwnProperty('bestPropVal') && initRes.hasOwnProperty('data')) {
     testResults.initBestValue = initRes.bestValue
-    bestValue = initRes.bestValue
-    bestPropVal = initRes.bestPropVal
+    testResults.bestValue = initRes.bestValue
+    testResults.bestPropVal = initRes.bestPropVal
     testResults.perfomanceSummary.push(initRes.data)
     try {
-      ui.statusMessage(`<p>From default and previus test. Best "${testResults.optParamName}": ${bestValue}</p>`)
-      console.log('Saved best value', bestValue)
-      console.log(testResults.perfomanceSummary)
+      ui.statusMessage(`<p>From default and previus test. Best "${testResults.optParamName}": ${testResults.bestValue}</p>`)
+      console.log('Init best value', testResults.bestValue)
+      // console.log(testResults.perfomanceSummary)
     } catch {}
   }
-  console.log('bestValue', bestValue)
-  console.log('bestPropVal', bestPropVal)
+  // console.log('bestValue', testResults.bestValue)
+  // console.log('bestPropVal', testResults.bestPropVal)
 
   // Test strategy
   const optimizationState = {}
@@ -43,33 +41,33 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     let optRes = {}
     switch(testResults.method) {
       case 'annealing':
-        optRes = await optAnnealingIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
+        optRes = await optAnnealingIteration(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
         break
       case 'sequential':
-        optRes = await optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
+        optRes = await optSequentialIteration(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
         if(optRes === null)
           isEnd = true
         break
       case 'random':
       default:
-        optRes = await optRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState)
+        optRes = await optRandomIteration(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
         if(optRes === null)
           isEnd = true
     }
     if(isEnd)
       break
     if(optRes.hasOwnProperty('data') && optRes.hasOwnProperty('bestValue') && optRes.bestValue !== null && optRes.hasOwnProperty('bestPropVal')) {
-      bestValue = optRes.bestValue
-      bestPropVal = optRes.bestPropVal
+      testResults.bestValue = optRes.bestValue
+      testResults.bestPropVal = optRes.bestPropVal
       try {
-        let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${bestValue}</p>`
+        let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${testResults.bestValue}</p>`
         text += optRes.hasOwnProperty('currentValue') ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : ''
         text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
       } catch {}
     } else {
       try {
-        let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${bestValue}</p>`
+        let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${testResults.bestValue}</p>`
         text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : `<p>Current "${testResults.optParamName}": error</p>`
         text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
@@ -103,7 +101,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
     }
   }
 
-  resData = tv.parseReportTable()
+  resData = tvUi.parseReportTable()
   resData = calculateAdditionValuesToReport(resData)
   if (resData && resData.hasOwnProperty(testResults.optParamName)) {
     console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
@@ -116,7 +114,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
   if(testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
     const defPropVal = expandPropVal(testResults.startParams.default, resPropVal)
     if(resPropVal === null || Object.keys(resPropVal).some(key => resPropVal[key] !== defPropVal[key])) {
-      const res = await getTestIterationResult(testResults, defPropVal, true) // Ignore error because propValues can be the same
+      const res = await backtest.getTestIterationResult(testResults, defPropVal, true) // Ignore error because propValues can be the same
       if(res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
         console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
@@ -127,7 +125,8 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
       console.log(`Default "${testResults.optParamName}" equal current:`, resData[testResults.optParamName])
     }
   }
-  if(testResults.startParams.hasOwnProperty('best') && testResults.startParams.best) {
+
+  if(!testResults.isSkipInitBestResult && testResults.startParams.hasOwnProperty('best') && testResults.startParams.best) {
     if(resPropVal === null ||
       (
         (testResults.startParams.current && Object.keys(testResults.startParams.current).some(key => testResults.startParams.current[key] !== testResults.startParams.best[key])) &&
@@ -135,14 +134,13 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
       )
     ) {
       const bestPropVal = expandPropVal(testResults.startParams.best, resPropVal)
-      const res = await getTestIterationResult(testResults, bestPropVal, true)  // Ignore error because propValues can be the same
+      const res = await backtest.getTestIterationResult(testResults, bestPropVal, true)  // Ignore error because propValues can be the same
       if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
         console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
         Object.keys(bestPropVal).forEach(key => res.data[`__${key}`] = bestPropVal[key])
         setBestVal(res.data[testResults.optParamName], bestPropVal, res.data)
       }
-
     } else {
       console.log(`Best "${testResults.optParamName}" equal previous (current or default):`, resData[testResults.optParamName])
     }
@@ -155,15 +153,17 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
 }
 
 
-async function getTestIterationResult (testResults, propVal, isIgnoreError = false) {
+backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = false, isIgnoreSetParam = false) => {
   let reportData = {}
-  tv.isReportChanged = false // Global value
-  const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal)
-  if(!isParamsSet)
-    return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
+  tvUi.isReportChanged = false // Global value
+  if (!isIgnoreSetParam) {
+    const isParamsSet = await tvUi.setStrategyParams(testResults.shortName, propVal)
+    if(!isParamsSet)
+      return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
+  }
 
   let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 1500)
-  let isProcessEnd = tv.isReportChanged
+  let isProcessEnd = tvUi.isReportChanged
 
   if (isProcessStart)
     isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
@@ -172,7 +172,7 @@ async function getTestIterationResult (testResults, propVal, isIgnoreError = fal
 
   let isProcessError = document.querySelector(SEL.strategyReportError)
   await page.waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
-  reportData = tv.parseReportTable()
+  reportData = tvUi.parseReportTable()
   if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
@@ -252,8 +252,8 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
 }
 
 function calculateAdditionValuesToReport(report) {
-  if(!report.hasOwnProperty('Percent Profitable: All') || !typeof report['Percent Profitable: All']  === 'number' ||
-    !report.hasOwnProperty('Ratio Avg Win / Avg Loss: All') || !typeof report['Ratio Avg Win / Avg Loss: All']  === 'number')
+  if(!report.hasOwnProperty('Percent Profitable: All') || typeof report['Percent Profitable: All']  !== 'number' ||
+    !report.hasOwnProperty('Ratio Avg Win / Avg Loss: All') || typeof report['Ratio Avg Win / Avg Loss: All']  !== 'number')
     return report
   // report['.Reward'] = report['Ratio Avg Win / Avg Loss: All'] * 100
 
@@ -292,7 +292,7 @@ async function optRandomIteration(allRangeParams, testResults, bestValue, bestPr
   if(bestPropVal)
     propVal = expandPropVal(propVal, bestPropVal)
 
-  const res = await getTestIterationResult(testResults, propVal)
+  const res = await backtest.getTestIterationResult(testResults, propVal)
   if(!res || !res.data || res.error !== null)
     return res
   res.data['comment'] = res.data['comment'] ? res.data['comment'] + propData.message : propData.message
@@ -354,7 +354,7 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
       if(bestPropVal)
         propVal = expandPropVal(propVal, bestPropVal)
       optimizationState.lastState = propVal
-      const res = await getTestIterationResult(testResults, optimizationState.lastState)
+      const res = await backtest.getTestIterationResult(testResults, optimizationState.lastState)
       if(!res || !res.data)
         return res
 
@@ -378,7 +378,7 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
   if(bestPropVal)
     propVal = expandPropVal(propVal, bestPropVal)
   const currentState = propVal
-  let res = await getTestIterationResult(testResults, currentState)
+  let res = await backtest.getTestIterationResult(testResults, currentState)
 
   if(!res || !res.data || res.error !== null)
     return res
@@ -522,7 +522,7 @@ async function optSequentialIteration(allRangeParams, testResults, bestValue, be
     return {error: null, currentValue: bestValue, message: `The same value of the "${paramName}" parameter equal to ${propVal[paramName]} is skipped`}
   const msg = `Changed "${paramName}": ${bestPropVal[paramName]} => ${propVal[paramName]}.`
 
-  const res = await getTestIterationResult(testResults, propVal)
+  const res = await backtest.getTestIterationResult(testResults, propVal)
   if(!res || !res.data || res.error !== null)
     return res
   res.data['comment'] = res.data['comment'] ? res.data['comment'] + msg : msg

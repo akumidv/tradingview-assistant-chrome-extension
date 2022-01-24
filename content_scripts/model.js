@@ -104,9 +104,9 @@ model.createParamsFromRange = (paramRange) => {
     } else if (typeof  paramRange[key][0] === 'number' && typeof paramRange[key][1] === 'number' && typeof paramRange[key][2] === 'number') {
       allRangeParams[key] = []
       for(let i = paramRange[key][0]; i < paramRange[key][1]; i = i + paramRange[key][2])
-        allRangeParams[key].push(i)
+        allRangeParams[key].push(isFloat ? Number(i.toFixed(4)) : i) // Reformat values like result 0.7 + 0.1 = 0.799999999999
       if(allRangeParams[key][allRangeParams[key].length - 1] < paramRange[key][1])
-        allRangeParams[key].push(paramRange[key][1])
+        allRangeParams[key].push(isFloat ? Number(paramRange[key][1].toFixed(4)) : paramRange[key][1])
     } else {
       console.error('Unsupported param values combination', key, paramRange[key])
     }
