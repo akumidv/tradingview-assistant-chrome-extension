@@ -91,6 +91,35 @@ ui.statusMessage = (msgText, extraHeader = null) => {
       "left:0px;" +
       "z-index:10000;");
     mObj.style.height = document.documentElement.scrollHeight + "px";
+    const msgStyleEl = mObj.appendChild(document.createElement("style"));
+    msgStyleEl.innerHTML = ".button {\n" +
+      "                background-color: white;\n" +
+      "                border: none;\n" +
+      "                color: white;\n" +
+      "                padding: 10px 2px;\n" +
+      "                text-align: center;\n" +
+      "                text-decoration: none;\n" +
+      "                font-size: 14px;\n" +
+      "                margin-top:-10px;\n" +
+      "                margin-right:-0px;\n" +
+      "                -webkit-transition-duration: 0.4s; /* Safari */\n" +
+      "                transition-duration: 0.4s;\n" +
+      "                cursor: pointer;\n" +
+      "                width: 50px;\n" +
+      "                float:right;\n" +
+      "                border-radius: 3px;\n" +
+      "                display: inline-block;\n" +
+      "                line-height: 0;\n" +
+      "            }\n" +
+      "            .button-close:hover {\n" +
+      "                background-color: gray;\n" +
+      "                color: white;\n" +
+      "            }\n" +
+      "            .button-close {\n" +
+      "                background-color: white;\n" +
+      "                color: black;\n" +
+      "                border: 2px solid gray;\n" +
+      "            }"
     msgEl = mObj.appendChild(document.createElement("div"));
     msgEl.setAttribute("style","background-color: #fffde0;" +
       "color: black;" +
@@ -114,7 +143,7 @@ ui.statusMessage = (msgText, extraHeader = null) => {
     document.getElementById('iondvMsg').innerHTML = msgText
   } else {
     extraHeader = extraHeader !== null ? `<div style="font-size: 12px;margin-left: 5px;margin-right: 5px;text-align: left;">${extraHeader}</div>` : '' //;margin-bottom: 10px
-    msgEl.innerHTML = '<a id="iondvBoxClose" style="float:right;margin-top:-10px;margin-right:-10px;cursor:pointer;color: #fff;border: 1px solid #AEAEAE;border-radius: 24px;background: #605F61;font-size: 25px;display: inline-block;line-height: 0px;padding: 11px 3px;">x</a>' +
+    msgEl.innerHTML = '<button class="button button-close" id="iondvBoxClose">stop</button>' +
       '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
       '<div style="font-size: 18px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
       extraHeader +

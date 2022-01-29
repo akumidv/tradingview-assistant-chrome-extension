@@ -22,7 +22,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     testResults.bestPropVal = initRes.bestPropVal
     testResults.perfomanceSummary.push(initRes.data)
     try {
-      ui.statusMessage(`<p>From default and previus test. Best "${testResults.optParamName}": ${testResults.bestValue}</p>`)
+      ui.statusMessage(`<p>From default and previus test. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`)
       console.log('Init best value', testResults.bestValue)
       // console.log(testResults.perfomanceSummary)
     } catch {}
@@ -60,15 +60,15 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
       testResults.bestValue = optRes.bestValue
       testResults.bestPropVal = optRes.bestPropVal
       try {
-        let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${testResults.bestValue}</p>`
-        text += optRes.hasOwnProperty('currentValue') ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : ''
+        let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`
+        text += optRes.hasOwnProperty('currentValue') ? `<p>Current "${testResults.optParamName}": ${backtest.convertValue(optRes.currentValue)}</p>` : ''
         text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
       } catch {}
     } else {
       try {
-        let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${testResults.bestValue}</p>`
-        text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${optRes.currentValue}</p>` : `<p>Current "${testResults.optParamName}": error</p>`
+        let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`
+        text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${backtest.convertValue(optRes.currentValue)}</p>` : `<p>Current "${testResults.optParamName}": error</p>`
         text += optRes.error !== null  ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
       } catch {}
@@ -76,6 +76,13 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
   }
   return testResults
 }
+
+backtest.convertValue = (value) => {
+  if (!value)
+    return 0
+  return (Math.round(value * 100)/100).toFixed(2)
+}
+
 
 async function getInitBestValues(testResults) { // TODO Add get current values(!) to startParams
   if(!testResults.hasOwnProperty('startParams') || !testResults.startParams.hasOwnProperty('current') || !testResults.startParams.current)
@@ -101,7 +108,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
     }
   }
 
-  resData = tv.getPerfomance//tv.parseReportTable()
+  resData = await tv.getPerfomance()//tv.parseReportTable()
   resData = calculateAdditionValuesToReport(resData)
   if (resData && resData.hasOwnProperty(testResults.optParamName)) {
     console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
@@ -172,7 +179,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 
   let isProcessError = document.querySelector(SEL.strategyReportError)
   await page.waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
-  reportData = tv.getPerfomance //tv.parseReportTable()
+  reportData = await tv.getPerfomance() //tv.parseReportTable()
   if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
@@ -252,11 +259,6 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
 }
 
 function calculateAdditionValuesToReport(report) {
-  if(!report.hasOwnProperty('Percent Profitable: All') || typeof report['Percent Profitable: All']  !== 'number' ||
-    !report.hasOwnProperty('Ratio Avg Win / Avg Loss: All') || typeof report['Ratio Avg Win / Avg Loss: All']  !== 'number')
-    return report
-  // report['.Reward'] = report['Ratio Avg Win / Avg Loss: All'] * 100
-
   // TODO
   return report
 }

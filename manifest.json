@@ -2,7 +2,6 @@
     "manifest_version": 3,
     "author": "Andrei Kuminov (akumidv)",
     "description": "An assistant for backtesting trading strategies and showing external signals in Tradingview",
-    "keywords": ["tradingview", "backtesting", "ticker", "signals"],
     "name": "Tradingview assistant",
     "version": "1.0",    
     "icons": {
@@ -17,7 +16,7 @@
             "matches": ["https://*.tradingview.com/chart/*"],
             "js": [  "content_scripts/selector.js",
               "content_scripts/page.js", "content_scripts/ui.js", "content_scripts/tv.js", "content_scripts/file.js",
-              "content_scripts/storage.js", "content_scripts/model.js","content_scripts/backtest.js",
+              "content_scripts/storage.js", "content_scripts/signal.js", "content_scripts/model.js","content_scripts/backtest.js",
               "content_scripts/action.js", "content_scripts/controller.js"],
             "run_at": "document_end"
         }

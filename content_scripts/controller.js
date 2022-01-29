@@ -24,14 +24,14 @@
       try {
         sendResponse()
         switch (request.action) {
-        //   case 'saveParameters': {
-        //     await action.saveParameters()
-        //     break;
-        //   }
-        //   case 'loadParameters': {
-        //     await action.loadParameters()
-        //     break;
-        //   }
+          case 'saveParameters': {
+            await action.saveParameters()
+            break;
+          }
+          case 'loadParameters': {
+            await action.loadParameters()
+            break;
+          }
           case 'uploadSignals':
             await action.uploadSignals()
             break

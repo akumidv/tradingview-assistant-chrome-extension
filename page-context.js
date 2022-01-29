@@ -6,9 +6,10 @@ window.addEventListener('message', function (event) {
     !event.data.hasOwnProperty('name') || event.data.name !== 'iondvScript' ||
     !event.data.hasOwnProperty('action'))
     return
+  console.log('### PAGE CONTEXT', event)
   switch (event.data.action) {
     case 'getPerformance': {
-      let tvData = null
+      let tvData = {}
       try {
         tvData = window.TradingView.bottomWidgetBar._widgets.backtesting._reportWidgetsSet.reportWidget._data.performance
       } catch (err) {

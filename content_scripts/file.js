@@ -113,6 +113,14 @@ function parseCSVLine(text) {
 
 
 file.convertResultsToCSV = (testResults) => {
+  function prepareValToCSV(value) {
+    if (!value)
+      return 0
+    if (typeof value !== 'number')
+      return JSON.stringify(value)
+    return (Math.round(value * 100)/100).toFixed(2)
+  }
+
   if(!testResults || !testResults.perfomanceSummary || !testResults.perfomanceSummary.length)
     return 'There is no data for conversion'
   let headers = Object.keys(testResults.perfomanceSummary[0]) // The first test table can be with error and can't have rows with previous values when parsedReport
@@ -124,9 +132,8 @@ file.convertResultsToCSV = (testResults) => {
 
   let csv = headers.map(header => JSON.stringify(header)).join(',')
   csv += '\n'
-  // testResults.paramsNames.forEach(paramName => csv.replace(`__${paramName}`, paramName)) // TODO isFirst? or leave it as it is
   testResults.perfomanceSummary.forEach(row => {
-    const rowData = headers.map(key => typeof row[key] !== 'undefined' ? JSON.stringify(row[key]) : '')
+    const rowData = headers.map(key => typeof row[key] === 'undefined' ? '' : prepareValToCSV(row[key]))
     csv += rowData.join(',').replaceAll('\\"', '""')
     csv += '\n'
   })
@@ -134,7 +141,7 @@ file.convertResultsToCSV = (testResults) => {
     csv += headers.map(key => key !== 'comment' ? '' : 'Bellow filtered results of tests') // Empty line
     csv += '\n'
     testResults.filteredSummary.forEach(row => {
-      const rowData = headers.map(key => typeof row[key] !== 'undefined' ? JSON.stringify(row[key]) : '')
+      const rowData = headers.map(key => typeof row[key] === 'undefined' ? '' : prepareValToCSV(row[key]))
       csv += rowData.join(',').replaceAll('\\"', '""')
       csv += '\n'
     })

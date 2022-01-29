@@ -2,6 +2,105 @@
 /*    box-sizing: border-box;*/
 /*}*/
 
+:root {
+    --warningVisible: none;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+html{
+    height: 100%;
+    overflow: hidden;
+}
+
+/*body {*/
+/*    font-family: Arial, Helvetica, sans-serif;*/
+/*    font-size: 90%;*/
+/*    color: #2A2E43;*/
+/*    margin: 0;*/
+/*    padding: 0;*/
+/*    min-width: 600px;*/
+/*}*/
+
+body {
+    height: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 90%;
+    margin: 0;
+    padding: 0;
+    color: #2A2E43; /*#2B2F45;*/
+    min-width: 600px;
+    min-height: 550px;
+    overflow-y: hidden;
+    /*display: flex;*/
+    /*flex-direction: column;*/
+}
+
+.wrapper {
+    /*position: relative;*/
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+.content {
+    flex: 1 0 auto;
+}
+.popup_header {
+    min-width: 450px;
+    min-height: 85px;
+    padding-top: 5px;
+    padding-bottom: 10px;
+    padding-left: 15px;
+    padding-right: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+    border-bottom-color: #AAA;
+}
+
+.footer {
+    flex: 0 0 auto;
+    height: 40px;
+    width: 100%;
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: #AAA;
+    left: 0;
+}
+
+.footer-text {
+    font-size: 95%;
+    color: #555;
+    text-align: right;
+    padding: 5px 5px;
+}
+
+.header {
+    padding: 5px 0px;
+    text-align: center;
+    font-size: 125%;
+
+}
+
+.subheader {
+    /*display: none;*/
+    display: var(--warningVisible);
+    text-align: center;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    background-color: #fffcd7;
+}
+
+.p {
+    text-align: left;
+    font-size: 110%;
+}
+
 
 .details {
 
@@ -38,29 +137,11 @@
 }
 
 
-body {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 90%;
-    color: #2A2E43;
-    margin: 0;
-    padding: 0;
-    min-width: 600px;
-}
-.header {
-    padding: 5px 0px;
-    text-align: center;
-    font-size: 125%;
-
-}
-
-.p {
-    text-align: left;
-    font-size: 110%;
-}
 
 .row {
-    margin:0;
-    padding: 5px;
+    /*margin:0;*/
+    padding: 5px 10px;
+    margin-top: 5px;
     clear: both;
     width: 100%;
 }
@@ -91,17 +172,6 @@ body {
     padding: 0px;
 }
 
-.footer {
-    padding: 5px;
-    text-align: center;
-}
-
-.footer-text {
-    font-size: 95%;
-    color: #555;
-    text-align: right;
-    padding: 5px 5px;
-}
 
 .button {
     width: 150px;
@@ -258,17 +328,17 @@ body {
     /*width: 125px;*/
 }
 .switch-toggle > input {
-    /*position: absolute;*/
+    /*position: fixed;*/
     opacity: 0;
 }
 .switch-toggle > input + label {
     padding: 5px 0px;
     margin: 5px ;
-    float:left;
+    float: left;
     border: 1px solid #ccc;
     color: #3e3e3e;
     cursor: pointer;
-    height: 10px;
+    height: 20px;
     font-size: 90%;
 }
 .switch-toggle > input:not([id="optFilterOff"]):checked + label {

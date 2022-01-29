@@ -16,11 +16,14 @@ const tvPageMessageData = {}
 window.addEventListener('message', messageHandler)
 
 async function messageHandler(event) {
-  const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+  const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
   if (!event.origin.startsWith(url) || !event.data ||
     !event.data.hasOwnProperty('name') || event.data.name !== 'iondvPage' ||
-    !event.data.hasOwnProperty('action'))
+    !event.data.hasOwnProperty('action')) {
+    console.log('### unknow signals', event)
     return
+  }
+
   tvPageMessageData[event.data.action] = event.data.data
 }
 
@@ -424,73 +427,81 @@ tv.parseReportTable = () => {
 }
 
 tv.getPerfomance = async () => {
-  const performanceData = await tv.getPageData('getPerformance')
+  function convertPercent(key, value) {
+    if (!value)
+      return 0
+    return key.endsWith('Percent') || key.startsWith('percent')? value * 100 : value
+  }
+
   const perfDict = {
-    'maxStrategyDrawDown': 'Max Drawdown',
-    'openPL': 'Open PL',
-    'buyHoldReturn': 'Buy & Hold Return',
-    'sharpeRatio': 'Sharpe Ratio',
-    'sortinoRatio': 'Sortino Ratio',
-    'maxStrategyDrawDownPercent': 'Max DrawDown %',
-    'buyHoldReturnPercent': 'Buy & Hold Return %',
-    'openPLPercent': 'Open PL %',
-    'avgBarsInLossTrade': 'Avg # Bars In Losing Trades',
-    'avgBarsInTrade': 'Avg # Bars In Trades',
-    'avgBarsInWinTrade': 'Avg # Bars In Winning Trades',
-    'avgLosTrade': 'Avg # Losing Trades',
-    'avgLosTradePercent': 'Avg Losing Trades %',
-    'avgTrade': 'Avg Trades',
-    'avgTradePercent': 'Avg Trades %',
-    'avgWinTrade': 'Avg Winning Trades',
-    'avgWinTradePercent': 'Avg Winning Trades %',
-    'commissionPaid': 'Commission Paid',
-    'grossLoss': 'Gross Loss',
-    'grossLossPercent': 'Gross Loss %',
+    'netProfit': 'Net Profit',
+    'netProfitPercent': 'Net Profit %',
     'grossProfit': 'Gross Profit',
     'grossProfitPercent': 'Gross Profit %',
-    'largestLosTrade': 'Largest Losing Trade',
-    'largestLosTradePercent': 'Largest Losing Trade %',
+    'grossLoss': 'Gross Loss',
+    'grossLossPercent': 'Gross Loss %',
+    'maxStrategyDrawDown': 'Max Drawdown',
+    'maxStrategyDrawDownPercent': 'Max Drawdown %',
+    'buyHoldReturn': 'Buy & Hold Return',
+    'buyHoldReturnPercent': 'Buy & Hold Return %',
+    'sharpeRatio': 'Sharpe Ratio',
+    'sortinoRatio': 'Sortino Ratio',
+    'profitFactor': 'Profit Factor',
+    'maxContractsHeld': 'Max Contracts Held',
+    'openPL': 'Open PL',
+    'openPLPercent': 'Open PL %',
+    'commissionPaid': 'Commission Paid',
+    'totalTrades': 'Total Closed Trades',
+    'totalOpenTrades': 'Total Open Trades',
+    'numberOfLosingTrades': 'Number Losing Trades',
+    'numberOfWiningTrades': 'Number Winning Trades',
+    'percentProfitable': 'Percent Profitable',
+    'avgTrade': 'Avg Trade',
+    'avgTradePercent': 'Avg Trade %',
+    'avgWinTrade': 'Avg Winning Trade',
+    'avgWinTradePercent': 'Avg Winning Trade %',
+    'avgLosTrade': 'Avg Losing Trade',
+    'avgLosTradePercent': 'Avg Losing Trade %',
+    'ratioAvgWinAvgLoss': 'Ratio Avg Win / Avg Loss',
     'largestWinTrade': 'Largest Winning Trade',
     'largestWinTradePercent': 'Largest Winning Trade %',
+    'largestLosTrade': 'Largest Losing Trade',
+    'largestLosTradePercent': 'Largest Losing Trade %',
+    'avgBarsInTrade': 'Avg # Bars in Trades',
+    'avgBarsInLossTrade': 'Avg # Bars In Losing Trades',
+    'avgBarsInWinTrade': 'Avg # Bars In Winning Trades',
     'marginCalls': 'Margin Calls',
-    'maxContractsHeld': 'Max Contracts Held',
-    'netProfit': 'Net profit',
-    'netProfitPercent': 'Net profit %',
-    'numberOfLosingTrades': 'Number Of Losing Trades',
-    'numberOfWiningTrades': 'Number Of Winning Trades',
-    'percentProfitable': 'Percent Profitable',
-    'profitFactor': 'Profit Factor',
-    'ratioAvgWinAvgLoss': 'Ratio Avg Win / Avg Loss',
-    'totalOpenTrades': 'Total Open Trades',
-    'totalTrades': 'Total Trades'
   }
 
+  console.log('### getPerformance')
+  const performanceData = await tv.getPageData('getPerformance')
   let data = {}
-
-  if(performanceData.hasOwnProperty('all') && performanceData.hasOwnProperty('long') && performanceData.hasOwnProperty('short')) {
-    for (let key of Object.keys(performanceData['all'])) {
-      const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
-      data[`${keyName}: all`] = performanceData['all'][key]
-      if(performanceData['long'].hasOwnProperty(key))
-        data[`${keyName}: long`] = performanceData['long'][key]
-      if(performanceData['short'].hasOwnProperty(key))
-        data[`${keyName}: short`] = performanceData['short'][key]
+  if (performanceData) {
+    if(performanceData.hasOwnProperty('all') && performanceData.hasOwnProperty('long') && performanceData.hasOwnProperty('short')) {
+      for (let key of Object.keys(performanceData['all'])) {
+        const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
+        data[`${keyName}: All`] = convertPercent(key, performanceData['all'][key])
+        if(performanceData['long'].hasOwnProperty(key))
+          data[`${keyName}: Long`] = convertPercent(key, performanceData['long'][key])
+        if(performanceData['short'].hasOwnProperty(key))
+          data[`${keyName}: Short`] = convertPercent(key, performanceData['short'][key])
+      }
+    }
+    for(let key of Object.keys(performanceData)) {
+      if (!['all', 'long', 'short'].includes(key)) {
+        const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
+        data[keyName] =  convertPercent(key, performanceData[key])
+      }
     }
   }
-
-  for(let key of Object.keys(performanceData)) {
-    if (!['all', 'long', 'short'].includes(key)) {
-      const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
-      data[keyName] = performanceData[key]
-    }
-  }
-  console.log(data)
+  console.log('####', data)
   return data
 }
 
 tv.getPageData = async (actionName, timeout = 1000) => {
   delete tvPageMessageData[actionName]
-  const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+  const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+  console.log('#### tv.getPageData', url, tvPageMessageData)
   window.postMessage({name: 'iondvScript', action: actionName}, url) // TODO wait for data
   let iter = 0
   const tikTime = 50
@@ -500,5 +511,5 @@ tv.getPageData = async (actionName, timeout = 1000) => {
     if(tikTime * iter >= timeout)
       break
   } while (!tvPageMessageData.hasOwnProperty(actionName))
-  return tvPageMessageData[actionName]
+  return tvPageMessageData.hasOwnProperty(actionName) ? tvPageMessageData[actionName] : null
 }

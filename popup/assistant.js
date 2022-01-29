@@ -45,14 +45,30 @@ async function sendSignalToActiveTab (signal) {
     const message = {action: signal}
     if(iondvOptions)
       message.options = iondvOptions
-    chrome.tabs.sendMessage(tabs[0].id, message
-        //, function(response) {alert('Data deleted', response ? response.join(',') : ''); console.info(response);  window.close();}
-      );
+    chrome.tabs.sendMessage(tabs[0].id, message, function() {window.close()});
   });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   // chrome.storage.local.get('tabId', (getResults) => {
+  chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+
+
+    let message = null
+     if(!tabs[0].url.includes('tradingview.com'))
+       message = 'To work with the extension, activate it on the tab with the opened <a href="https://www.tradingview.com/chart" target="_blank">Tradingview chart</a>.'
+    if(!tabs[0].url.includes('www.tradingview.com') && !tabs[0].url.includes('en.tradingview.com'))
+      message = 'The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English version</a> of Tradingview.'
+
+    if (message) {
+      for(let elId of ['warningSignals', 'warningBacktest']) {
+        if (document.getElementById(elId))
+          document.getElementById(elId).innerHTML = message
+      }
+      const rootElement = document.querySelector(':root')
+      if (rootElement) rootElement.style.setProperty('--warningVisible', 'block')
+    }
+  });
   chrome.storage.local.get('iondvOptions', (getResults) => {
     console.log('iondvOptions',getResults)
     let tabId = 1
@@ -92,54 +108,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (link) // Activate saved or fist tab
       link.click();
   })
-  document.getElementById('uploadSignals').addEventListener('click', () => {
-    sendSignalToActiveTab('uploadSignals')
-  });
-  document.getElementById('testStrategy').addEventListener('click', function () {
-    sendSignalToActiveTab('testStrategy')
-  });
-  document.getElementById('downloadStrategyTestResults').addEventListener('click', function () {
-    sendSignalToActiveTab('downloadStrategyTestResults')
-  });
-  document.getElementById('getStrategyTemplate').addEventListener('click', function () {
-    sendSignalToActiveTab('getStrategyTemplate')
-  });
-  document.getElementById('uploadStrategyTestParameters').addEventListener('click', function () {
-    sendSignalToActiveTab('uploadStrategyTestParameters')
-  });
+  for(let elId of ['uploadSignals', 'testStrategy', 'downloadStrategyTestResults', 'getStrategyTemplate', 'uploadStrategyTestParameters', 'clearAll']) {
+    function signalListener() {
+      sendSignalToActiveTab(elId)
+    }
+    document.getElementById(elId).addEventListener('click', signalListener);
+  }
 
-  document.getElementById('clearAll').addEventListener('click', function () {
-    sendSignalToActiveTab('clearAll')
-  });
   document.getElementById('closeMsg').addEventListener('click', function () {
     document.getElementById('shim').style.display = 'none'
     document.getElementById('msgbx').style.display = 'none';
   });
-  document.getElementById('optMinmax').addEventListener('click', () => {
-    saveOptions('optMinmax')
-  });
-  document.getElementById('optParamName').addEventListener('change', () => {
-    saveOptions('optParamName')
-  });
-  document.getElementById('optMethod').addEventListener('change', () => {
-    saveOptions('optMethod')
-  });
-  document.getElementById('optFilterOff').addEventListener('change', () => {
-    saveOptions('optFilterOff')
-  });
-  document.getElementById('optFilterMore').addEventListener('change', () => {
-    saveOptions('optFilterMore')
-  });
-  document.getElementById('optFilterLess').addEventListener('change', () => {
-    saveOptions('optFilterLess')
-  });
-  document.getElementById('optFilterValue').addEventListener('change', () => {
-    saveOptions('optFilterValue')
-  });
-  document.getElementById('optFilterParamName').addEventListener('change', () => {
-    saveOptions('optFilterParamName')
-  });
-
+  for(let elId of ['optMinmax', 'optParamName', 'optMethod', 'optFilterOff', 'optFilterMore', 'optFilterLess', 'optFilterValue', 'optFilterParamName']) {
+    function saveOptListener() {
+      saveOptions(elId)
+    }
+    document.getElementById(elId).addEventListener('click', saveOptListener)
+  }
 });
 
 
