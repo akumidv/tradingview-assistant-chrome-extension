@@ -18,7 +18,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, reply) => {
     // console.log('###json',await response.json())
     return await response.json()
   } catch (err) {
-    console.error('###err', err)
     return { 'error': 1, message: err}
   }
 });

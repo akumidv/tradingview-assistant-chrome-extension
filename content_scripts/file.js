@@ -20,7 +20,7 @@ file.upload = async (handler, endOfMsg, isMultiple = false) => {
       message += await handler(file)
     }
     message += endOfMsg ? '\n' + endOfMsg : ''
-    ui.alertMessage(message)
+    await ui.showPopup(message)
     ui.isMsgShown = false
   });
   fileUploadEl.click();

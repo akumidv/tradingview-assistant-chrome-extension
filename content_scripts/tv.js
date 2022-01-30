@@ -20,14 +20,13 @@ async function messageHandler(event) {
   if (!event.origin.startsWith(url) || !event.data ||
     !event.data.hasOwnProperty('name') || event.data.name !== 'iondvPage' ||
     !event.data.hasOwnProperty('action')) {
-    console.log('### unknow signals', event)
     return
   }
 
   tvPageMessageData[event.data.action] = event.data.data
 }
 
-tv.getStrategy = async (strategyName, isIndicatorSave = false) => {
+tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
   let strategyData = {}
   let indicatorName = null
   if(strategyName !== null) {
@@ -56,15 +55,16 @@ tv.getStrategy = async (strategyName, isIndicatorSave = false) => {
       }
     }
   } else {
-    const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
-    if (!dialogTitle || !dialogTitle.innerText) {
-      if (document.querySelector(SEL.cancelBtn))
-        document.querySelector(SEL.cancelBtn).click()
-    } else {
-      let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-      if (isIndicatorSave || isStrategyPropertiesTab) {
-        indicatorName = dialogTitle.innerText
-      }
+    let dialogTitleEl = await page.waitForSelector(SEL.indicatorTitle, 1000)
+    if (!dialogTitleEl || !dialogTitleEl.innerText) {
+      await page.mouseClickSelector(SEL.cancelBtn)
+      await tv.openStrategyTab()
+      await tv.openCurrentStrategyParam()
+      dialogTitleEl = await page.$(SEL.indicatorTitle)
+    }
+    let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
+    if (isIndicatorSave || isStrategyPropertiesTab) {
+      indicatorName = dialogTitleEl.innerText
     }
   }
   if(indicatorName === null)
@@ -152,13 +152,13 @@ tv.getStrategy = async (strategyName, isIndicatorSave = false) => {
 
 tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
   if(isCheckOpenedWindow) {
-    let indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
+    const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
     if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
       return null
     }
   } else {
-    const indicatorTitle = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
-    if(!indicatorTitle)
+    const indicatorTitleEl = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+    if(!indicatorTitleEl)
       return null
   }
   const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
@@ -215,58 +215,71 @@ tv.changeDialogTabToInput = async () => {
   return isInputTabActive ? true : false
 }
 
+tv.openCurrentStrategyParam = async () => {
+
+  const stratParamEl = document.querySelector(SEL.strategyDialogParam)
+  if(!stratParamEl) {
+    await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
+    return null
+  }
+  stratParamEl.click()
+  const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 2000)
+  if(!stratIndicatorEl) {
+    await ui.showErrorPopup('There is not strategy parameters. Test stopped. Open correct page please')
+    return null
+  }
+  const tabInputEl = document.querySelector(SEL.tabInput)
+  if(!tabInputEl) {
+    await ui.showErrorPopup('There is not strategy parameters input tab. Test stopped. Open correct page please')
+    return null
+  }
+  tabInputEl.click()
+  const tabInputActiveEl = await page.waitForSelector(SEL.tabInputActive)
+  if(!tabInputActiveEl) {
+    await ui.showErrorPopup('There is not strategy parameters active input tab. Test stopped. Open correct page please')
+    return null
+  }
+  return true
+}
+
 tv.checkAndOpenStrategy = async (name) => {
   let indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
   if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-    const res = await tv.switchToStrategyTab()
-    if(!res)
+    if(!await tv.switchToStrategyTab())
       return null
-    const stratParamEl = document.querySelector(SEL.strategyDialogParam)
-    if(!stratParamEl) {
-      ui.alertMessage('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
+    if(!await tv.openCurrentStrategyParam())
       return null
-    }
-    stratParamEl.click()
-    const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 2000)
-    if(!stratIndicatorEl) {
-      ui.alertMessage('There is not strategy parameters. Test stopped. Open correct page please')
-      return null
-    }
-    const tabInputEl = document.querySelector(SEL.tabInput)
-    if(!tabInputEl) {
-      ui.alertMessage('There is not strategy parameters input tab. Test stopped. Open correct page please')
-      return null
-    }
-    tabInputEl.click()
-    const tabInputActiveEl = await page.waitForSelector(SEL.tabInputActive)
-    if(!tabInputActiveEl) {
-      ui.alertMessage('There is not strategy parameters active input tab. Test stopped. Open correct page please')
-      return null
-    }
     indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
     if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-      ui.alertMessage(`The ${name} strategy parameters could not be opened. Reload the page, leave one strategy on the chart and try again.`)
+      await ui.showErrorPopup(`The ${name} strategy parameters could not opened. ${indicatorTitleEl.innerText ? 'Opened "' + indicatorTitleEl.innerText + '".' : ''} Reload the page, leave one strategy on the chart and try again.`)
       return null
     }
   }
   return indicatorTitleEl
 }
 
-tv.switchToStrategyTab = async () => {
+tv.openStrategyTab = async () => {
   let isStrategyActiveEl = document.querySelector(SEL.strategyTesterTabActive)
   if(!isStrategyActiveEl) {
     const strategyTabEl = document.querySelector(SEL.strategyTesterTab)
     if(strategyTabEl) {
       strategyTabEl.click()
     } else {
-      ui.alertMessage('There is not strategy tester tab on the page. Open correct page please')
+      await ui.showErrorPopup('There is not strategy tester tab on the page. Open correct page please')
       return null
     }
   }
+  return true
+}
+
+
+tv.switchToStrategyTab = async () => {
+  if(!await tv.openStrategyTab())
+    return null
   const testResults = {}
   const tickerEl = document.querySelector(SEL.ticker)
   if(!tickerEl || !tickerEl.innerText) {
-    ui.alertMessage('There is not symbol element on page. Open correct page please')
+    await ui.showErrorPopup('There is not symbol element on page. Open correct page please')
     return null
   }
   testResults.ticker = tickerEl.innerText
@@ -274,21 +287,21 @@ tv.switchToStrategyTab = async () => {
   if(!timeFrameEl)
     timeFrameEl = document.querySelector(SEL.timeFrame)
   if(!timeFrameEl || !timeFrameEl.innerText) {
-    ui.alertMessage('There is not timeframe element on page. Open correct page please')
+    await ui.showErrorPopup('There is not timeframe element on page. Open correct page please')
     return null
   }
   testResults.timeFrame = timeFrameEl.innerText
   testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
   const strategyCaptionEl = document.querySelector(SEL.strategyCaption)
   if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
-    ui.alertMessage('There is not stratagy name element on page. Open correct page please')
+    await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
     return null
   }
   testResults.name = strategyCaptionEl.innerText
 
   const stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
   if(!stratSummaryEl) {
-    ui.alertMessage('There is not strategy performance summary tab on the page. Open correct page please')
+    await ui.showErrorPopup('There is not strategy performance summary tab on the page. Open correct page please')
     return null
   }
   stratSummaryEl.click()
@@ -343,7 +356,7 @@ tv.dialogHandler = async () => {
     console.log("Tradingview indicator parameters window opened for ticker:", tickerText);
     const tsData = await storage.getKey(`${storage.SIGNALS_KEY_PREFIX}_${tickerText}::${timeFrameText}`.toLowerCase())
     if(tsData === null) {
-      ui.alertMessage(`No data was loaded for the ${tickerText} and timeframe ${timeFrameText}.\n\n` +
+      await ui.showErrorPopup(`No data was loaded for the ${tickerText} and timeframe ${timeFrameText}.\n\n` +
         `Please change the ticker and timeframe to correct and reopen script parameter window.`)
       ui.isMsgShown = true
       return
@@ -371,13 +384,13 @@ tv.dialogHandler = async () => {
     }
     const notFoundParam = propKeys.filter(item => !setResult.includes(item))
     if(notFoundParam && notFoundParam.length) {
-      ui.alertMessage(`One of the parameters named ${notFoundParam} was not found in the window. Check the script.\n`)
+      await ui.showErrorPopup(`One of the parameters named ${notFoundParam} was not found in the window. Check the script.\n`)
       ui.isMsgShown = true
       return
     }
     document.querySelector(SEL.okBtn).click()
     const allSignals = [].concat(tsData.buy.split(','),tsData.sell.split(',')).sort()
-    ui.alertMessage(`${allSignals.length} signals are set.\n  - date of the first signal: ${new Date(parseInt(allSignals[0]))}.\n  - date of the last signal: ${new Date(parseInt(allSignals[allSignals.length - 1]))}`)
+    await ui.showPopup(`${allSignals.length} signals are set.\n  - date of the first signal: ${new Date(parseInt(allSignals[0]))}.\n  - date of the last signal: ${new Date(parseInt(allSignals[allSignals.length - 1]))}`)
     ui.isMsgShown = true
   }
 }
@@ -473,7 +486,6 @@ tv.getPerfomance = async () => {
     'marginCalls': 'Margin Calls',
   }
 
-  console.log('### getPerformance')
   const performanceData = await tv.getPageData('getPerformance')
   let data = {}
   if (performanceData) {
@@ -494,14 +506,12 @@ tv.getPerfomance = async () => {
       }
     }
   }
-  console.log('####', data)
   return data
 }
 
 tv.getPageData = async (actionName, timeout = 1000) => {
   delete tvPageMessageData[actionName]
   const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
-  console.log('#### tv.getPageData', url, tvPageMessageData)
   window.postMessage({name: 'iondvScript', action: actionName}, url) // TODO wait for data
   let iter = 0
   const tikTime = 50

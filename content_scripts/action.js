@@ -5,7 +5,7 @@ const action = {
 action.saveParameters = async () => {
   const strategyData = await tv.getStrategy(null, true)
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    ui.alertMessage('Please open the indicator (strategy) parameters window before saving them to a file.')
+    await ui.showWarningPopup('Please open the indicator (strategy) parameters window before saving them to a file.')
     return
   }
   let strategyParamsCSV = `Name,Value\n"__indicatorName",${JSON.stringify(strategyData.name)}\n`
@@ -30,26 +30,26 @@ action.uploadStrategyTestParameters = async () => {
 action.getStrategyTemplate = async () => {
   const strategyData = await tv.getStrategy()
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    ui.alertMessage('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+    await ui.showErrorPopup('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
   } else {
     const paramRange = model.getStrategyRange(strategyData)
     console.log(paramRange)
     // await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
     const strategyRangeParamsCSV = model.convertStrategyRangeToTemplate(paramRange)
-    ui.alertMessage('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
+    await ui.showPopup('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
     file.saveAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
   }
 }
 
 action.clearAll = async () => {
   const clearRes = await storage.clearAll()
-  ui.alertMessage(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
+  await ui.showPopup(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
 }
 
 action.downloadStrategyTestResults = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
   if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
-    ui.alertMessage('There is no data for conversion. Try to do test again')
+    await ui.showWarningPopup('There is no data for conversion. Try to do test again')
     return
   }
   testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
@@ -63,7 +63,7 @@ action.downloadStrategyTestResults = async () => {
   })
   await tv.setStrategyParams(testResults.shortName, propVal)
   if(bestResult && bestResult.hasOwnProperty(testResults.optParamName))
-    ui.alertMessage(`The best found parameters are set for the strategy\n\nThe best ${testResults.isMaximizing ? '(max) ':'(min)'} ${testResults.optParamName}: ` + bestResult[testResults.optParamName])
+    await ui.showPopup(`The best found parameters are set for the strategy\n\nThe best ${testResults.isMaximizing ? '(max) ':'(min)'} ${testResults.optParamName}: ` + bestResult[testResults.optParamName])
   file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
 }
 
@@ -72,7 +72,7 @@ action.testStrategy = async (request) => {
   ui.statusMessage('Get the initial parameters.')
   const strategyData = await tv.getStrategy()
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    ui.alertMessage('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+    await ui.showErrorPopup('Could not find any strategy with parameters among the indicators. Add it to the chart and try again.')
     return
   }
   const paramRange = await model.getStrategyParameters(strategyData)
@@ -108,12 +108,12 @@ action.testStrategy = async (request) => {
   testParams.startParams = await model.getStartParamValues(paramRange, strategyData)
   console.log('testParams.startParams', testParams.startParams)
   if(!testParams.hasOwnProperty('startParams') || !testParams.startParams.hasOwnProperty('current') || !testParams.startParams.current) {
-    ui.alertMessage('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
+    await ui.showErrorPopup('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
     return
   }
 
   if(isSequential) {
-    ui.alertMessage(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+    await ui.showPopup(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
     testParams.cycles = paramSpaceNumber
   } else {
     const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
@@ -143,7 +143,7 @@ action.testStrategy = async (request) => {
   const testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
   console.log('testResults', testResults)
   if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
-    ui.alertMessage('There is no data for conversion. Try to do test again')
+    await ui.showWarningPopup('There is no data for conversion. Try to do test again')
     return
   }
 
@@ -160,7 +160,7 @@ action.testStrategy = async (request) => {
   text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + backtest.convertValue(bestResult[testParams.optParamName]) : ''
   text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${backtest.convertValue(initBestValue)}` : ''
   ui.statusMessage(text)
-  ui.alertMessage(text)
+  await ui.showPopup(text)
   console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
   file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
   ui.statusMessageRemove()

@@ -55,8 +55,148 @@ ui.checkInjectedElements = () => {
   }
 }
 
-ui.alertMessage = (message) => {
-  alert(message)
+
+async function alertPopup(msgText, isError = null, isConfirm = false) {
+  return new Promise(resolve => {
+    function removeAlertPopup() {
+      const iondvAlertPopupEl = document.getElementById('iondvAlertPopup')
+      if (iondvAlertPopupEl)
+        iondvAlertPopupEl.parentNode.removeChild(iondvAlertPopupEl)
+      return resolve(true)
+    }
+
+    function cancelAlertPopup() {
+      const iondvAlertPopupEl = document.getElementById('iondvAlertPopup')
+      if (iondvAlertPopupEl)
+        iondvAlertPopupEl.parentNode.removeChild(iondvAlertPopupEl)
+      return resolve(false)
+    }
+
+    if(document.getElementById('iondvAlertPopup'))
+      return resolve()
+
+    const mObj = document.getElementsByTagName('body')[0].appendChild(document.createElement("div"));
+    mObj.id = "iondvAlertPopup";
+    mObj.setAttribute("style","background-color:rgba(0, 0, 0, 0.4);" +
+      "position:absolute;" +
+      "width:100%;" +
+      "height:100%;" +
+      "top:0px;" +
+      "left:0px;" +
+      "z-index:10000;");
+    mObj.style.height = document.documentElement.scrollHeight + "px";
+    const warnIcon = '<svg xmlns="http://www.w3.org/2000/svg"  width="40px" height="40px" viewBox="0 0 40 40" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><circle cx="20" cy="20" r="18"></circle><line x1="20" y1="12" x2="20" y2="22"></line><line x1="20" y1="27" x2="20" y2="28"></line></svg>'
+    const errorIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="40px" height="40px" viewBox="0 0 40 40" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><rect x="4" y="4" width="34" height="34" rx="2"></rect><path d="M14 14l14 14m0 -14l-14 14"></path></svg>'
+    const okIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="40px" height="40px" viewBox="0 0 40 40" stroke-width="3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h40v40H0z" fill="none"></path><path d="M5 20l12 12l22 -20"></path></svg>'
+    const icon = isError === null ? okIcon : isError ? errorIcon : warnIcon
+    const headerText = isError === null ? 'Information' : isError ? 'Error' : 'Warning'
+    const bgColorClass = isError === null ? 'iondvpopup-green' : isError ? 'iondvpopup-red' : 'iondvpopup-orange'
+    const headerBgColor = isError === null ? '#80ffad' : isError ? '#ff9286' : '#fdc987'
+    mObj.innerHTML = `<style>
+  .iondvpopup {
+    display: table;
+    position: relative;
+    margin: 40px auto 0;
+    width: 500px;
+    background-color: #8acaff;
+    color: #000000;
+    transition: all 0.2s ease;
+  }
+  .iondvpopup-orange {
+    background-color: #ffdeb1;
+  }
+  .iondvpopup-red {
+    background-color: #fab5af;
+  }
+  .iondvpopup-green {
+    background-color: #aefdd7;
+  }
+  .iondvpopup-icon {
+    display: table-cell;
+    vertical-align: middle;
+    width: 40px;
+    padding: 20px;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.25);
+  }
+  .iondvpopup-header {
+    display: table-caption;
+    vertical-align: middle;
+    width: 500px;
+    padding: 5px 0;
+    text-align: center;
+    background-color: ${headerBgColor};
+  }
+  .iondvpopup-body {
+    display: table-cell;
+    vertical-align: middle;
+    padding: 20px 20px 20px 10px;
+  }
+  .iondvpopup-body > p {
+      line-height: 1.2;
+      margin-top: 6px;
+    }
+  .iondvpopup-button {
+    position: relative;
+    margin: 15px 5px -10px;
+    background-color: rgba(0, 0, 0, 0.25);
+    box-shadow: 0 3px rgba(0, 0, 0, 0.4);
+    border:none;
+    padding: 10px 15px;
+    font-size: 16px;
+    font-family: 'Source Sans Pro';
+    color: #000000;
+    outline: none;
+    cursor: pointer;
+  }
+  .iondvpopup-button:hover {
+      background: rgba(0, 0, 0, 0.3);
+  }
+  .iondvpopup-button:active {
+      background: rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 rgba(0, 0, 0, 0.4);
+      top: 3px;
+  }
+  .iondvpopup-sub {
+    font-style: italic;
+  }
+</style>
+<div class="iondvpopup ${bgColorClass}">
+    <div class="iondvpopup-header">${headerText}</div>
+    <div class="display: table-row">
+      <div class="iondvpopup-icon">
+        ${icon}
+      </div>
+      <div class="iondvpopup-body">
+        <p>${msgText}</p>
+        <button class="iondvpopup-button" id="iondvPopupCloseBtn">OK</button>
+        ${isConfirm ? '<button class="iondvpopup-button" id="iondvPopupCancelBtn">Cancel</button>' : ''}
+      </div>
+    </div>
+</div>`
+    const btnOk = document.getElementById('iondvPopupCloseBtn')
+    if(btnOk) {
+      btnOk.focus()
+      btnOk.onclick = removeAlertPopup
+    }
+    const btnCancel = document.getElementById('iondvPopupCancelBtn')
+    if(btnCancel) {
+      btnCancel.onclick = cancelAlertPopup
+    }
+  })
+}
+
+
+ui.showPopup = async (msgText) => {
+  return await alertPopup(msgText, null)
+}
+
+ui.showErrorPopup = async (msgText) => {
+  return await alertPopup(msgText, true)
+}
+
+ui.showWarningPopup = async (msgText) => {
+  return await alertPopup(msgText, false)
 }
 
 ui.statusMessageRemove = () => {

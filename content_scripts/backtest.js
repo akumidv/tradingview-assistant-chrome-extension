@@ -264,7 +264,6 @@ function calculateAdditionValuesToReport(report) {
 }
 
 
-
 function randomNormalDistribution(min, max) {
   let u = 0, v = 0;
   while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
