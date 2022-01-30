@@ -210,7 +210,7 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
         (!testResults.filterAscending  && res.data[testResults.filterParamName] > testResults.filterValue)
       ) {
         isFiltered = true
-        res.data['comment'] = `Skipped for "${testResults.filterParamName}": ${res.data[testResults.filterParamName]}.${res.data['comment'] ? ' ' + res.data['comment'] : ''}`
+        res.data['comment'] = `Skipped for "${testResults.filterParamName}": ${backtest.convertValue(res.data[testResults.filterParamName])}.${res.data['comment'] ? ' ' + res.data['comment'] : ''}`
         res.message = res.data['comment']
         res.isFiltered = true
       }
