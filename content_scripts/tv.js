@@ -55,7 +55,7 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
       }
     }
   } else {
-    let dialogTitleEl = await page.waitForSelector(SEL.indicatorTitle, 1000)
+    let dialogTitleEl = await page.waitForSelector(SEL.indicatorTitle, 2500)
     if (!dialogTitleEl || !dialogTitleEl.innerText) {
       await page.mouseClickSelector(SEL.cancelBtn)
       await tv.openStrategyTab()

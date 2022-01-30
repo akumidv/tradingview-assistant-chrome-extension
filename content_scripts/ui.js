@@ -285,7 +285,7 @@ ui.statusMessage = (msgText, extraHeader = null) => {
     extraHeader = extraHeader !== null ? `<div style="font-size: 12px;margin-left: 5px;margin-right: 5px;text-align: left;">${extraHeader}</div>` : '' //;margin-bottom: 10px
     msgEl.innerHTML = '<button class="button button-close" id="iondvBoxClose">stop</button>' +
       '<div style="color: blue;font-size: 26px;margin: 5px 5px;text-align: center;">Attention!</div>' +
-      '<div style="font-size: 18px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements. You can reload the page to stop it.</div>' +
+      '<div style="font-size: 18px;margin-left: 5px;margin-right: 5px;text-align: center;">The page elements are controlled by the browser extension. Please do not click on the page elements.You can reload the page and the results for the last iteration will be saved.</div>' +
       extraHeader +
       '<div id="iondvMsg" style="margin: 5px 10px">' +
       msgText + '</div>';
