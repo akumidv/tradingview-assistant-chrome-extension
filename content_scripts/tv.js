@@ -188,7 +188,7 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
 			// const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
 			const isChecked = Boolean(checkboxEl.checked)
 			if(Boolean(propVal[propText]) !== isChecked) {
-				page.mouseClickEl(checkboxEl)
+				page.mouseClick(checkboxEl)
 				checkboxEl.checked = Boolean(propVal[propText])
 			}
         }
