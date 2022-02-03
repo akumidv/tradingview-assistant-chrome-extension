@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (link) // Activate saved or fist tab
       link.click();
   })
-  for(let elId of ['uploadSignals', 'testStrategy', 'downloadStrategyTestResults', 'getStrategyTemplate', 'uploadStrategyTestParameters', 'clearAll']) {
+  for(let elId of ['uploadSignals', 'testStrategy', 'downloadStrategyTestResults', 'getStrategyTemplate', 'uploadStrategyTestParameters', 'clearAll', 'show3DChart']) {
     function signalListener() {
       sendSignalToActiveTab(elId)
     }
