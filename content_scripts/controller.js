@@ -50,6 +50,10 @@
           case 'clearAll':
             await action.clearAll()
             break
+          case 'show3DChart':
+            const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+            window.postMessage({name: 'iondvScript', action: 'show3DChart'}, url)
+            break
           default:
             console.log('None of realisation for signal:', request)
         }

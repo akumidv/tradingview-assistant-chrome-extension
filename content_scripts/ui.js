@@ -23,8 +23,8 @@ scriptFonts.innerHTML = '@font-face {' +
   '.iondv_upload::before {\n' +
   '    font-family: "Font Awesome 5 Free"; font-weight: 900; font-size: 1.25em; content: "\\f574";\n' +
   '  }'
-
 document.documentElement.appendChild(scriptFonts);
+
 
 ui.checkInjectedElements = () => {
   if (action && !action.workerStatus) { // If do not running process

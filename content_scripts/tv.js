@@ -11,6 +11,11 @@ const script = document.createElement('script');
 script.src = chrome.runtime.getURL('page-context.js');
 document.documentElement.appendChild(script);
 
+const scriptPlot = document.createElement('script');
+scriptPlot.src = chrome.runtime.getURL('lib/plotly.min.js')
+document.documentElement.appendChild(scriptPlot);
+console.log(scriptPlot)
+
 const tvPageMessageData = {}
 
 window.addEventListener('message', messageHandler)
