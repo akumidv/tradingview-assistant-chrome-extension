@@ -90,7 +90,7 @@ window.addEventListener('message', function (event) {
         z: rawData,
         type: 'surface'
       }];
-      const layout = {
+      const layout = { // https://plotly.com/javascript/reference/layout/
         // title: 'Backtesting Results',
         title: {text: 'Backtesting Results', x: 'Slow MA', y:'Fast MA', z: 'Net Profit'},
         autosize: false,
