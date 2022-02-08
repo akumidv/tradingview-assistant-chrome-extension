@@ -21,7 +21,7 @@
             "run_at": "document_end"
         }
     ],
-    "permissions": ["storage", "activeTab"],
+    "permissions": ["storage", "unlimitedStorage", "activeTab"],
     "action": {
           "default_icon": {
             "16": "images/tv_assist_16.png",
