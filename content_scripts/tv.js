@@ -14,7 +14,6 @@ document.documentElement.appendChild(script);
 const scriptPlot = document.createElement('script');
 scriptPlot.src = chrome.runtime.getURL('lib/plotly.min.js')
 document.documentElement.appendChild(scriptPlot);
-console.log(scriptPlot)
 
 const tvPageMessageData = {}
 
