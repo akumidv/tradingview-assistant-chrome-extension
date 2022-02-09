@@ -112,6 +112,7 @@ action.testStrategy = async (request) => {
     return
   }
 
+
   if(isSequential) {
     await ui.showPopup(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
     testParams.cycles = paramSpaceNumber

@@ -305,3 +305,137 @@ ui.statusMessage = (msgText, extraHeader = null) => {
     }
   }
 }
+
+
+ui.showStrategyParameters = async (cycles) => {
+  return new Promise(resolve => {
+    const isStratParamElPresent = document.getElementById('iondvStratParam')
+    let stratParamEl =  isStratParamElPresent ? document.getElementById('iondvStratParam') : document.createElement("div");
+    let popupEl
+    console.log('showStrategyParameters', !!isStratParamElPresent)
+    if(!isStratParamElPresent) {
+      stratParamEl.id = "iondvStratParam";
+      stratParamEl.setAttribute("style", "background-color:rgba(0, 0, 0, 0.2);" +
+        "position:absolute;" +
+        "width:100%;" +
+        "height:100%;" +
+        "top:0px;" +
+        "left:0px;" +
+        "z-index:10000;");
+      stratParamEl.style.height = document.documentElement.scrollHeight + "px";
+      const stratParamStyleEl = stratParamEl.appendChild(document.createElement("style"));
+      stratParamStyleEl.innerHTML = ".iondv-button {\n" +
+        "                background-color: white;\n" +
+        "                border: 1px;\n" +
+        "                color: black;\n" +
+        "                padding: 10px 2px;\n" +
+        "                text-align: center;\n" +
+        "                text-decoration: none;\n" +
+        "                font-size: 14px;\n" +
+        "                margin-top:-10px;\n" +
+        "                margin-right:-0px;\n" +
+        "                -webkit-transition-duration: 0.4s; /* Safari */\n" +
+        "                transition-duration: 0.4s;\n" +
+        "                cursor: pointer;\n" +
+        "                width: 50px;\n" +
+        // "                float:right;\n" +
+        "                border-radius: 3px;\n" +
+        // "                display: inline-block;\n" +
+        "                line-height: 0;\n" +
+        "            }\n" +
+        "            .iondv-button-close:hover {\n" +
+        "                background-color: gray;\n" +
+        "                color: white;\n" +
+        "            }\n" +
+        "            .iondv-button-close {\n" +
+        "                background-color: white;\n" +
+        "                color: black;\n" +
+        "                border: 2px solid gray;\n" +
+        "            }" +
+        "\n" +
+        "table.stratParamTable {\n" +
+        "    width: 100%;\n" +
+        "     border-collapse: collapse;\n" +
+        "    border: 2px solid grey;\n" +
+        "    empty-cells: show;\n" +
+        "    table-layout: fixed;\n" +
+        "}\n" +
+        ".stratParamTable thead {\n" +
+        "    caption-side: bottom;\n" +
+        "   text-align: center;\n" +
+        "   padding: 5px 0;\n" +
+        "   font-size: 100%;\n" +
+        "}\n" +
+        ".stratParamTable td {\n" +
+        "   border: 1px solid grey;\n" +
+        "    font-size: 90%;\n" +
+        "    padding: 2px 2px;\n" +
+        "}\n" +
+        // ".stratParamTable td:first-child {\n" +
+        // "   width: 30%;\n" +
+        "}\n"
+      popupEl = stratParamEl.appendChild(document.createElement("div"));
+      popupEl.setAttribute("style","background-color: white;" +
+        "color: black;" +
+        "width: 800px;" +
+        "height: 800px;" +
+        "position: fixed;" +
+        "top: 50px;" +
+        "right: 0;" +
+        "left: 0;" +
+        "margin: auto;" +
+        "border: 1px solid lightblue;" +
+        "box-shadow: 3px 3px 7px #777;" +
+        // "display: flex;" +
+        "align-items: center; " +
+        "justify-content: left; " +
+        "text-align: left;");
+    } else {
+      popupEl = stratParamEl.querySelector('div')
+    }
+    popupEl.innerHTML = '<h1>Strategy parameters</h1>\n' +
+      '             <div>\n' +
+      '                 <div style="align-content: center"><button id="stratParamCancel" class="iondv-button">Cancel</button></div>\n' +
+      '                 <button id="stratParamSaveRun" class="iondv-button">Save&Run</button></div>\n' +
+      `<div style="align-content: center"><input id="stratParamCycles" type="number" value="${cycles ? cycles : 100}"></div>\n` +
+      '                 <table class="stratParamTable">\n' +
+      '                     <thead>\n' +
+      '                        <td>Parameter</td><td>From</td><td>To</td><td>Step</td><td>Default</td><td>Priority</td><td>Condition</td><td>Source</td>\n' +
+      '                     </thead>\n' +
+      '                     <tbody id="stratParamData">\n' +
+      '                       <tr><td><select><option value="Fast SMA" selected>Fast SMA</option></<select></td><td><input type="number" value="1" style="width:4em"></td><td><input type="number" value="15" style="width:4em"</td><td><input type="number" value="1" style="width:4em"</td><td><input type="number" value="9" style="width:4em"</td><td><input type="number" value="1" style="width:4em"</td><td><section><option value="<=" selected><=</option></section></td><td><section><option value="Slow SMA" selected>Slow SMA</option></section></td></tr>\n' +
+      '                       <tr><td><select><option value="Slow SMA" selected>Slow SMA</option></<select></td><td><input type="number" value="15" style="width:4em"></td><td><input type="number" value="45" style="width:4em"</td><td><input type="number" value="2" style="width:4em"</td><td><input type="number" value="21" style="width:4em"</td><td><input type="number" value="2" style="width:4em"</td><td><section><option value=" " selected> </option></section></td><td><section><option value=" " selected></option></section></td></tr>\n' +
+      '                     </tbody>\n' +
+      '                 </table>\n' +
+      '             </div>'
+    if(!isStratParamElPresent) {
+      const tvDialog = document.getElementById('overlap-manager-root')
+      if(tvDialog)
+        document.body.insertBefore(stratParamEl, tvDialog) // For avoid problem if msg overlap tv dialog window
+      else
+        document.body.appendChild(stratParamEl);
+    }
+    const btnClose = document.getElementById('stratParamCancel')
+    if(btnClose) {
+      btnClose.onclick = () => {
+        console.log('Cancel')
+          const stratParamWindowEl = document.getElementById('iondvStratParam')
+          if (stratParamWindowEl)
+            stratParamWindowEl.parentNode.removeChild(stratParamWindowEl)
+          return resolve(null)
+      }
+    }
+    const btnSaveRun = document.getElementById('stratParamSaveRun')
+    if(btnSaveRun) {
+      btnSaveRun.onclick = () => {
+        console.log('Save and run')
+        // TODO parse values from table
+        // TODO get cycles value
+        const stratParamWindowEl = document.getElementById('iondvStratParam')
+        if (stratParamWindowEl)
+          stratParamWindowEl.parentNode.removeChild(stratParamWindowEl)
+        return resolve({cycles: 10, data: []})
+      }
+    }
+  })
+}
