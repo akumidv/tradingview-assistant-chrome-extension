@@ -266,8 +266,8 @@ function calculateAdditionValuesToReport(report) {
 
 function randomNormalDistribution(min, max) {
   let u = 0, v = 0;
-  while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
-  while(v === 0) v = Math.random();
+  while(u === 0) u = crypto.getRandomValues(new Uint16Array(1))[0]/65536 //Math.random(); //Converting [0,1) to (0,1)
+  while(v === 0) v = crypto.getRandomValues(new Uint16Array(1))[0]/65536 //Math.random();
   let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
   num = num / 10.0 + 0.5; // Translate to 0 -> 1
   if (num > 1 || num < 0)
@@ -282,7 +282,8 @@ function randomNormalDistribution(min, max) {
 function randomInteger (min = 0, max = 10) {
   // min = Math.ceil(min);
   // max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor((crypto.getRandomValues(new Uint16Array(1))[0]/65536) * (max - min + 1)) + min;
+  // return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 // Random optimization
@@ -399,7 +400,7 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
     optimizationState.lastEnergy = currentEnergy;
     res.message += ` The best value ${res.bestValue}.`
   } else {
-    const randVal = Math.random()
+    const randVal = crypto.getRandomValues(new Uint16Array(1))[0]/65536 //Math.random()
     const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
     // console.log('#', optimizationState.currentTemp, randVal, expVal, currentEnergy, optimizationState.lastEnergy, currentEnergy - optimizationState.lastEnergy)
     if (randVal <= expVal) { // TODO need to optimize
