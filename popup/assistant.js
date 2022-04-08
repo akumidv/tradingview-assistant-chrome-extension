@@ -18,7 +18,7 @@ function getOptions(signal) {
     iondvOptions.optFilterValue = document.getElementById('optFilterValue').value || '50'
     iondvOptions.optFilterParamName = document.getElementById('optFilterParamName').value || 'Total Closed Trades: All'
 
-    iondvOptions.tabId = (signal === 'uploadSignals') ? 1 : 2
+    iondvOptions.tabId = (signal === 'uploadSignals') ? 2 : 1
     return iondvOptions
 }
 

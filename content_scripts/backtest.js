@@ -525,36 +525,48 @@ async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del test f
 
 // rute Force
 async function optBruteForce(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
-  if (!optimizationState.hasOwnProperty('paramIdx')) {
-    optimizationState.paramIdx = 0
-  }
-  let paramName = testResults.paramPriority[optimizationState.paramIdx]
-  if (!optimizationState.hasOwnProperty('valIdx')) {
-    optimizationState.valIdx = 0
+  const propVal = {}
+  let paramName = ''
+  let msg = ''
+  if (!optimizationState.hasOwnProperty('valuesIdx')) {
+    // optimizationState['valuesIdx'] = new Array(testResults.paramPriority.length)
+    optimizationState['valuesIdx'] = []
+    for(let i = 0; i < testResults.paramPriority.length; i++) {
+      optimizationState['valuesIdx'].push(0)
+      paramName = testResults.paramPriority[i]
+      propVal[paramName] = allRangeParams[paramName][0]
+    }
+    // optimizationState['valuesIdx'].forEach((val, idx) => optimizationState['valuesIdx'][idx] = 0)
+    for (let i = 0; i < testResults.paramPriority.length; i++) {
+      paramName = testResults.paramPriority[i]
+      propVal[paramName] = allRangeParams[paramName][0]
+    }
+    msg = 'All parameters set to init values'
   } else {
-    optimizationState.valIdx += 1
-    if(optimizationState.valIdx >= allRangeParams[paramName].length) {
-      optimizationState.valIdx = 0
-      optimizationState.paramIdx += 1
-      if( optimizationState.paramIdx >= testResults.paramPriority.length) {
-        return null // End
+    for (let i = 0; i < testResults.paramPriority.length; i++) {
+      paramName = testResults.paramPriority[i]
+      let valIdx = optimizationState['valuesIdx'][i]
+      propVal[paramName] = allRangeParams[paramName][valIdx]
+    }
+    for (let i = 0; i < testResults.paramPriority.length; i++) {
+      paramName = testResults.paramPriority[i]
+      let valIdx = optimizationState['valuesIdx'][i]
+
+      if (valIdx + 1 < allRangeParams[paramName].length) {
+        valIdx += 1
+        optimizationState['valuesIdx'][i] = valIdx
+        propVal[paramName] = allRangeParams[paramName][valIdx]
+        break
+      } else if (i + 1 === testResults.paramPriority.length) {
+        return null // End all variants
       } else {
-        paramName = testResults.paramPriority[optimizationState.paramIdx]
+        valIdx = 0
+        optimizationState['valuesIdx'][i] = valIdx // Next parameter
+        propVal[paramName] = allRangeParams[paramName][valIdx]
       }
     }
+    msg = `Changed "${paramName}" set to ${propVal[paramName]}.`
   }
-  const valIdx = optimizationState.valIdx
-
-
-  const propVal = {}
-  Object.keys(bestPropVal).forEach(paramName => {
-    propVal[paramName] = bestPropVal[paramName]
-  })
-  propVal[paramName] = allRangeParams[paramName][valIdx]
-  if(bestPropVal[paramName] === propVal[paramName])
-    return {error: null, currentValue: bestValue, message: `The same value of the "${paramName}" parameter equal to ${propVal[paramName]} is skipped`}
-  const msg = `Changed "${paramName}": ${bestPropVal[paramName]} => ${propVal[paramName]}.`
-
   const res = await backtest.getTestIterationResult(testResults, propVal)
   if(!res || !res.data || res.error !== null)
     return res
