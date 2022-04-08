@@ -9,6 +9,27 @@ Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingv
 
 ## Functionality
 
+
+### Backtesting trading strategies, optimisation of the strategy's parameters:
+
+![](docs/Screenshot1.png)
+
+* automatic getting a list of parameters and their types (numeric, lists and checkboxes are supported)
+* generation of the testing range according to the rule: the beginning value is 2 times less than the current one, the end is 2 times more than the current one.
+* saving the generated parameters of testing a trading strategy for their correction as a template in a file in CSV format
+* Loading adjusted parameter ranges from a CSV file
+* Configuring the optimisation model:
+    * Choosing the type of optimisation: searching for the maximum or minimum values
+    * Selecting an optimised value from the entire list of strategy results in Tradingview (Net Profit, Ratio Avg Win / Avg Loss, Sharpe Ratio, Sortino Ratio, etc.)
+    * Choosing a search strategy in the parameter space(random, sequential, annealing method)
+* Filtering of unsuitable results. For example, the number of tradings is less than necessary
+* Setting the number of cycles to search for parameters.
+* Performing automatic selection of parameters with storing all the results in the browser storage and the ability to save them as CSV files after testing, including in case of an error or page reloading
+
+#### Optimization Methods
+
+
+
 ### Upload external signals to tradingview chart
 
 Loading external buy or sell signals by timestamps from a CSV file*
@@ -29,7 +50,7 @@ plotchar(tickerName == syminfo.ticker and array.includes(arrTSBuy, tostring(time
 plotchar(tickerName == syminfo.ticker and array.includes(arrTSSell, tostring(time)) ? low : na, location = location.abovebar, color=color.red, char='▼')
 ```
 
-After that, upload the signals from the file created accordingly the template 
+After that, upload the signals from the file created accordingly the template
 ```CSV
 timestamp,ticker,timeframe,signal
 1625718600000,BTCUSDT,1m,BUY
@@ -37,25 +58,6 @@ timestamp,ticker,timeframe,signal
 ```
 
 The signals are stored in the browser, to activate them, open the properties of the created indicator named 'iondvSignals'.
-
-### Backtesting trading strategies, optimisation of the strategy's parameters:
-
-![](docs/Screenshot1.png)
-
-* automatic getting a list of parameters and their types (numeric, lists and checkboxes are supported)
-* generation of the testing range according to the rule: the beginning value is 2 times less than the current one, the end is 2 times more than the current one.
-* saving the generated parameters of testing a trading strategy for their correction as a template in a file in CSV format
-* Loading adjusted parameter ranges from a CSV file
-* Configuring the optimisation model:
-    * Choosing the type of optimisation: searching for the maximum or minimum values
-    * Selecting an optimised value from the entire list of strategy results in Tradingview (Net Profit, Ratio Avg Win / Avg Loss, Sharpe Ratio, Sortino Ratio, etc.)
-    * Choosing a search strategy in the parameter space(random, sequential, annealing method)
-* Filtering of unsuitable results. For example, the number of tradings is less than necessary
-* Setting the number of cycles to search for parameters.
-* Performing automatic selection of parameters with storing all the results in the browser storage and the ability to save them as CSV files after testing, including in case of an error or page reloading
-
-It is planned to implement the genetic method to optimise the parameters.
-
 
 ## Setup
 

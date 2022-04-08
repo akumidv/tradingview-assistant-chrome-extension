@@ -1,6 +1,6 @@
 // TradingView page injection script for get data from window.TradingView object
 
-window.addEventListener('message', function (event) {
+window.addEventListener('message', async function (event) {
   const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
   if (!event.origin.startsWith(url) || !event.data ||
     !event.data.hasOwnProperty('name') || event.data.name !== 'iondvScript' ||
@@ -18,90 +18,240 @@ window.addEventListener('message', function (event) {
       break
     }
     case 'show3DChart': {
-      const chart3d = document.getElementsByTagName('body')[0].appendChild(document.createElement("div"));
-      // const mObj = document.getElementsByTagName('body')[0].appendChild(document.createElement("div"));
-      // mObj.id = "iondvAlertPopup";
-      // const chart3d = document.createElement('div')
-      chart3d.id = 'iondv3chart'
-      chart3d.setAttribute("style","background-color:rgba(0, 0, 0, 0.4);" +
-        "position:absolute;" +
-        "width:100%;" +
-        "height:100%;" +
-        "top:0px;" +
-        "left:0px;" +
-        "z-index:10000;");
-      chart3d.style.height = document.documentElement.scrollHeight + "px";
-      // width:600px;height:250px;
-      chart3d.innerHTML = '<button id="iondvBoxClose" style="position: absolute;left: 50%;top: 50%;margin-top: -275px;margin-left: 240px;">Close</button>' +
-        '<div id="iondvPlotly" style="position: absolute;\n' +
-        '    left: 50%;\n' +
-        '    top: 50%;\n' +
-        '    padding: 5px;\n' +
-        '    width: 500px;height:500;\n' +
-        '    margin-top: -250px;\n' +
-        '    margin-left: -250px;\n' +
-        '    background: #fff;\n' +
-        '    border: 1px solid #ccc;\n' +
-        '    box-shadow: 3px 3px 7px #777;\n' +
-        '    -webkit-box-shadow: 3px 3px 7px #777;\n' +
-        '    -moz-border-radius: 22px;\n' +
-        '    -webkit-border-radius: 22px;\n' +
-        '    z-index: 999;\n' +
-        '    "></div>'
-      const btnClose = document.getElementById('iondvBoxClose')
-      function remove3DChart() {
-        const iondv3chartEl = document.getElementById('iondv3chart')
-        if (iondv3chartEl)
-          iondv3chartEl.parentNode.removeChild(iondv3chartEl)
+      try {
+        if (!event.data.hasOwnProperty('data'))
+          window.postMessage({name: 'iondvPage', action: event.data.action, message: "Can't get test results data"}, event.origin)
+        await show3DChart(event.data.data)
+        window.postMessage({name: 'iondvPage', action: event.data.action}, event.origin)
+      } catch (err) {
+        console.error(`[error] shor 3d chart.`, err)
+        window.postMessage({name: 'iondvPage', action: event.data.action, data: null, message: `${err}`}, event.origin)
       }
-      if(btnClose) {
-        btnClose.onclick = remove3DChart
-      }
-      const chartPlotly = document.getElementById('iondvPlotly');
-
-      const rawData = [
-        [27.80985,49.61936,83.08067,116.6632,130.414,150.7206,220.1871,156.1536,148.6416,203.7845,206.0386,107.1618,68.36975,45.3359,49.96142,21.89279,17.02552,11.74317,14.75226,13.6671,5.677561,3.31234,1.156517,-0.147662],
-        [27.71966,48.55022,65.21374,95.27666,116.9964,133.9056,152.3412,151.934,160.1139,179.5327,147.6184,170.3943,121.8194,52.58537,33.08871,38.40972,44.24843,69.5786,4.019351,3.050024,3.039719,2.996142,2.967954,1.999594],
-        [30.4267,33.47752,44.80953,62.47495,77.43523,104.2153,102.7393,137.0004,186.0706,219.3173,181.7615,120.9154,143.1835,82.40501,48.47132,74.71461,60.0909,7.073525,6.089851,6.53745,6.666096,7.306965,5.73684,3.625628],
-        [16.66549,30.1086,39.96952,44.12225,59.57512,77.56929,106.8925,166.5539,175.2381,185.2815,154.5056,83.0433,62.61732,62.33167,60.55916,55.92124,15.17284,8.248324,36.68087,61.93413,20.26867,68.58819,46.49812,0.2360095],
-        [8.815617,18.3516,8.658275,27.5859,48.62691,60.18013,91.3286,145.7109,116.0653,106.2662,68.69447,53.10596,37.92797,47.95942,47.42691,69.20731,44.95468,29.17197,17.91674,16.25515,14.65559,17.26048,31.22245,46.71704],
-        [6.628881,10.41339,24.81939,26.08952,30.1605,52.30802,64.71007,76.30823,84.63686,99.4324,62.52132,46.81647,55.76606,82.4099,140.2647,81.26501,56.45756,30.42164,17.28782,8.302431,2.981626,2.698536,5.886086,5.268358],
-        [21.83975,6.63927,18.97085,32.89204,43.15014,62.86014,104.6657,130.2294,114.8494,106.9873,61.89647,55.55682,86.80986,89.27802,122.4221,123.9698,109.0952,98.41956,77.61374,32.49031,14.67344,7.370775,0.03711011,0.6423392],
-        [53.34303,26.79797,6.63927,10.88787,17.2044,56.18116,79.70141,90.8453,98.27675,80.87243,74.7931,75.54661,73.4373,74.11694,68.1749,46.24076,39.93857,31.21653,36.88335,40.02525,117.4297,12.70328,1.729771,0.0],
-        [25.66785,63.05717,22.1414,17.074,41.74483,60.27227,81.42432,114.444,102.3234,101.7878,111.031,119.2309,114.0777,110.5296,59.19355,42.47175,14.63598,6.944074,6.944075,27.74936,0.0,0.0,0.09449376,0.07732264],
-        [12.827,69.20554,46.76293,13.96517,33.88744,61.82613,84.74799,121.122,145.2741,153.1797,204.786,227.9242,236.3038,228.3655,79.34425,25.93483,6.944074,6.944074,6.944075,7.553681,0.0,0.0,0.0,0.0],
-        [0.0,68.66396,59.0435,33.35762,47.45282,57.8355,78.91689,107.8275,168.0053,130.9597,212.5541,165.8122,210.2429,181.1713,189.7617,137.3378,84.65395,8.677168,6.956576,8.468093,0.0,0.0,0.0,0.0],
-        [0.0,95.17499,80.03818,59.89862,39.58476,50.28058,63.81641,80.61302,66.37824,198.7651,244.3467,294.2474,264.3517,176.4082,60.21857,77.41475,53.16981,56.16393,6.949235,7.531059,3.780177,0.0,0.0,0.0],
-        [0.0,134.9879,130.3696,96.86325,75.70494,58.86466,57.20374,55.18837,78.128,108.5582,154.3774,319.1686,372.8826,275.4655,130.2632,54.93822,25.49719,8.047439,8.084393,5.115252,5.678269,0.0,0.0,0.0],
-        [0.0,48.08919,142.5558,140.3777,154.7261,87.9361,58.11092,52.83869,67.14822,83.66798,118.9242,150.0681,272.9709,341.1366,238.664,190.2,116.8943,91.48672,14.0157,42.29277,5.115252,0.0,0.0,0.0],
-        [0.0,54.1941,146.3839,99.48143,96.19411,102.9473,76.14089,57.7844,47.0402,64.36799,84.23767,162.7181,121.3275,213.1646,328.482,285.4489,283.8319,212.815,164.549,92.29631,7.244015,1.167,0.0,0.0],
-        [0.0,6.919659,195.1709,132.5253,135.2341,89.85069,89.45549,60.29967,50.33806,39.17583,59.06854,74.52159,84.93402,187.1219,123.9673,103.7027,128.986,165.1283,249.7054,95.39966,10.00284,2.39255,0.0,0.0],
-        [0.0,21.73871,123.1339,176.7414,158.2698,137.235,105.3089,86.63255,53.11591,29.03865,30.40539,39.04902,49.23405,63.27853,111.4215,101.1956,40.00962,59.84565,74.51253,17.06316,2.435141,2.287471,-0.0003636982,0.0],
-        [0.0,0.0,62.04672,136.3122,201.7952,168.1343,95.2046,58.90624,46.94091,49.27053,37.10416,17.97011,30.93697,33.39257,44.03077,55.64542,78.22423,14.42782,9.954997,7.768213,13.0254,21.73166,2.156372,0.5317867],
-        [0.0,0.0,79.62993,139.6978,173.167,192.8718,196.3499,144.6611,106.5424,57.16653,41.16107,32.12764,13.8566,10.91772,12.07177,22.38254,24.72105,6.803666,4.200841,16.46857,15.70744,33.96221,7.575688,-0.04880907],
-        [0.0,0.0,33.2664,57.53643,167.2241,196.4833,194.7966,182.1884,119.6961,73.02113,48.36549,33.74652,26.2379,16.3578,6.811293,6.63927,6.639271,8.468093,6.194273,3.591233,3.81486,8.600739,5.21889,0.0],
-        [0.0,0.0,29.77937,54.97282,144.7995,207.4904,165.3432,171.4047,174.9216,100.2733,61.46441,50.19171,26.08209,17.18218,8.468093,6.63927,6.334467,6.334467,5.666687,4.272203,0.0,0.0,0.0,0.0],
-        [0.0,0.0,31.409,132.7418,185.5796,121.8299,185.3841,160.6566,116.1478,118.1078,141.7946,65.56351,48.84066,23.13864,18.12932,10.28531,6.029663,6.044627,5.694764,3.739085,3.896037,0.0,0.0,0.0],
-        [0.0,0.0,19.58994,42.30355,96.26777,187.1207,179.6626,221.3898,154.2617,142.1604,148.5737,67.17937,40.69044,39.74512,26.10166,14.48469,8.65873,3.896037,3.571392,3.896037,3.896037,3.896037,1.077756,0.0],
-        [0.001229679,3.008948,5.909858,33.50574,104.3341,152.2165,198.1988,191.841,228.7349,168.1041,144.2759,110.7436,57.65214,42.63504,27.91891,15.41052,8.056102,3.90283,3.879774,3.936718,3.968634,0.1236256,3.985531,-0.1835741],
-        [0.0,5.626141,7.676256,63.16226,45.99762,79.56688,227.311,203.9287,172.5618,177.1462,140.4554,123.9905,110.346,65.12319,34.31887,24.5278,9.561069,3.334991,5.590495,5.487353,5.909499,5.868994,5.833817,3.568177]]
-
-      const data = [{
-        z: rawData,
-        type: 'surface'
-      }];
-      const layout = { // https://plotly.com/javascript/reference/layout/
-        // title: 'Backtesting Results',
-        title: {text: 'Backtesting Results', x: 'Slow MA', y:'Fast MA', z: 'Net Profit'},
-        autosize: false,
-        width: 500,
-        height: 500,
-        margin: {l: 65, r: 50, b: 65, t: 90}
-      };
-      Plotly.newPlot(chartPlotly, data, layout);
       break
     }
     default:
       console.error(`[error] Unknown action for get data from page"${event.data.action}". Skip processing`)
+      window.postMessage({name: 'iondvPage', action: event.data.action, data: null, message: `${err}`}, event.origin)
   }
 })
+
+
+async function show3DChart (testResults) {
+  if (typeof testResults === 'undefined' || !testResults.hasOwnProperty('perfomanceSummary') || testResults.perfomanceSummary.length === 0)
+    throw ('Do not exist backtesting results, please try backtest again')
+  if (typeof Plotly === 'undefined')
+    throw ("3D Chart library hadn't loaded. Please wait and try again")
+
+  return new Promise(resolve => {
+    create3DPopup(testResults)
+    const btnClose = document.getElementById('iondvBoxClose')
+    if (btnClose) {
+      btnClose.onclick = () => {
+        const iondv3DChartEl = document.getElementById('iondv3DChart')
+        if (iondv3DChartEl)
+          iondv3DChartEl.parentNode.removeChild(iondv3DChartEl)
+        return resolve()
+      }
+    }
+    const [paramNames, resultsNames] = prepareAxisList(testResults)
+    let xSelVal = paramNames[0]
+    let ySelVal = paramNames[1]
+    let zSelVal = testResults.hasOwnProperty('optParamName') ? testResults.optParamName : resultsNames[0]
+
+    setAxisOptions('iondvX', paramNames, xSelVal, ySelVal)
+    setAxisOptions('iondvY', paramNames, ySelVal, xSelVal)
+    setAxisOptions('iondvZ', resultsNames, zSelVal)
+    let aproxType = document.getElementById('iondvAprox').value
+
+    document.getElementById('iondvX').onclick = () => {
+      const curVal = document.getElementById('iondvX').value
+      if (xSelVal !== curVal) {
+        xSelVal = curVal
+        updateParamList('iondvY', paramNames, xSelVal)
+        updateChart(testResults.perfomanceSummary, xSelVal, ySelVal, zSelVal, aproxType)
+      }
+    }
+    document.getElementById('iondvY').onclick = () => {
+      const curVal = document.getElementById('iondvY').value
+      if (ySelVal !== curVal) {
+        ySelVal = curVal
+        updateParamList('iondvX', paramNames, ySelVal)
+        updateChart(testResults.perfomanceSummary, xSelVal, ySelVal, zSelVal, aproxType)
+      }
+    }
+    document.getElementById('iondvZ').onclick = () => {
+      const curVal = document.getElementById('iondvZ').value
+      if (zSelVal !== curVal) {
+        zSelVal = curVal
+        updateChart(testResults.perfomanceSummary, xSelVal, ySelVal, zSelVal, aproxType)
+      }
+    }
+
+    document.getElementById('iondvAprox').onclick = () => {
+      const curVal = document.getElementById('iondvAprox').value
+      if (aproxType !== curVal) {
+        aproxType = curVal
+        updateChart(testResults.perfomanceSummary, xSelVal, ySelVal, zSelVal, aproxType)
+      }
+    }
+    updateChart(testResults.perfomanceSummary, xSelVal, ySelVal, zSelVal)
+
+  })
+}
+
+function create3DPopup(testResults) {
+  const chart3d = document.createElement("div")
+  chart3d.id = 'iondv3DChart'
+  chart3d.setAttribute("style", `background-color:rgba(0, 0, 0, 0.4);
+    position:absolute; width:100%; height:100%; top:0px; left:0px; z-index:10000;`);
+  chart3d.style.height = document.documentElement.scrollHeight + "px";
+
+  chart3d.innerHTML = `<button id="iondvBoxClose" style="position: absolute;left: 50%;top: 50%;margin-top: -325px;margin-left: 465px;">Close</button>
+    <div style="position: absolute; left: 50%;top: 50%; padding: 5px;
+        width: 900px;height:600px; margin-top: -300px; margin-left: -400px;
+        background: #fff; border: 1px solid #ccc; box-shadow: 3px 3px 7px #777;
+        -webkit-box-shadow: 3px 3px 7px #777;-moz-border-radius: 22px; -webkit-border-radius: 22px;
+        z-index: 999;">
+    <div style="margin:0;padding: 0px;clear: both;width: 100%;">
+      <div style="display:inline-block;vertical-align: middle;padding: 0px;width: 175px;">
+        <h3 style="padding-bottom: 10px">Backtesting Results</h3>
+        <p>Strategy name: ${testResults['name']}<br>
+        Symbol: ${testResults['ticker']}<br>
+        Timeframe: ${testResults['timeFrame']}<br>
+        Backtest method: ${testResults['method']}<br>
+        Backtest cycles: ${testResults['perfomanceSummary'].length + testResults['filteredSummary'].length}(${testResults['cycles']})<br>
+        Parameter space: ${testResults['paramSpace']}<br>
+        ${testResults['filterAscending'] !== null ? 'Filter by "' + testResults['filterParamName'] + '", value ' + testResults['filterValue']: ''}<br>
+        </p>
+        <div>Parameter on the x-axis <br><select id="iondvX" name="x" style="width: 170px"></select></div>
+        <div>Parameter on the y-axis <br><select id="iondvY" name="t" style="width: 170px"></select></div>
+        <div>Result on the z-axis <br><select id="iondvZ" name="z" style="width: 170px"></select></div>
+        <div>Aproximation type<br><select id="iondvAprox" name="aprox" style="width: 170px"><option value="minmax" selected="selected">MinMax</option><option value="max">Max</option><option value="min">Min</option><option value="avg">Average</option><</select></div>
+      </div>
+      <div style="display:inline-block;vertical-align: middle;padding: 0px;width:700px;height:600px">
+        <div id="iondvPlotly" style="width:100%;height:100%"></div>
+      </div>
+    </div>
+  </div>`
+  document.getElementsByTagName('body')[0].appendChild(chart3d)
+}
+
+
+function generateOptionsHtml (values, defVal = null) {
+  defVal = defVal === null ? values[0] : defVal
+  return  values.reduce((text, item) => `${text}<option value="${item}"${item === defVal ? ' selected="selected"' : ''}>${item}</option>`, '')
+}
+
+
+function setAxisOptions(elId, values, defVal, excludedVal = null) {
+  const filteredValues = excludedVal !== null ? values.filter(item => item !== excludedVal) : values
+  let optionsHtml = generateOptionsHtml(filteredValues, defVal)
+  const axis = document.getElementById(elId)
+  axis.value = defVal
+  axis.innerHTML = optionsHtml
+}
+
+
+function prepareAxisList(testResults) {
+  const paramNames = []
+  Object.keys(testResults.perfomanceSummary[0]).forEach(item => {
+    if(item.startsWith('__'))
+      paramNames.push(item.substring(2))
+  })
+  if (paramNames.length === 0)
+    throw('None of parameters present in data')
+  else if (paramNames.length === 1)
+    paramNames.push('none')
+  const resultsNames = Object.keys(testResults.perfomanceSummary[0]).filter(item => !item.startsWith('__') && item !== 'comment')
+  if (resultsNames.length === 0)
+    throw('None of results present in data')
+  return [paramNames,resultsNames]
+}
+
+
+function updateParamList(elId, paramNames, excludedVal) {
+  const curVal = document.getElementById(elId).value
+  setAxisOptions(elId, paramNames, curVal, excludedVal)
+}
+
+
+function showPlotlyData(chartPlotlyEl, xData, yData, zData){//rawData) {
+  const data = [{
+    x: xData, y: yData, z: zData,
+    type: 'surface',
+    contours: {z: {show:true}}
+  }];
+  const layout = {
+    // xaxis: {title: {text: 'x Axis'}},
+    // yaxis: {title: {text: 't Axis'}},
+    // zaxis: {title: {text: 'z Axis'}},
+    autosize: true,
+    width: 700,
+    height: 600,
+    // highlightcolor: "limegreen",
+    showlegend: false,
+    margin: { l: 65, r: 50, b: 65, t: 90 }
+  };
+  Plotly.newPlot(chartPlotlyEl, data, layout);
+}
+
+
+function updateChart(perfomanceSummary, xSelVal, ySelVal, zName, aproxType) {
+  const xName = `__${xSelVal}`
+  const yName = `__${ySelVal}`
+  const chartPlotly = document.getElementById('iondvPlotly');
+  const yAxisDict = {}
+  const zAxisDict = {}
+  perfomanceSummary.forEach(item => {
+    if (item.hasOwnProperty(xName) && item.hasOwnProperty(yName) && item.hasOwnProperty(zName)) {
+      if(!yAxisDict.hasOwnProperty(item[yName]))
+        yAxisDict[item[yName]] = null
+      if (!zAxisDict.hasOwnProperty(item[xName]))
+        zAxisDict[item[xName]] = {}
+      if (!zAxisDict[item[xName]].hasOwnProperty(item[yName]))
+        zAxisDict[item[xName]][item[yName]] = []
+      zAxisDict[item[xName]][item[yName]].push(item[zName])
+      // zAxisDict[item[xName]][item[yName]] = item[zName]
+    } else {
+      console.log('MISSED ONE OF KEYS',  xSelVal, ySelVal, zSelVal, item)
+    }
+  })
+
+  const xAxis = Object.keys(zAxisDict).sort((a,b) => a - b)
+  const yAxis = Object.keys(yAxisDict).sort((a,b) => a - b)
+  const zAxis = []
+  yAxis.forEach(y => {
+    const row = []
+    xAxis.forEach(x => {
+      if (zAxisDict.hasOwnProperty(x) && zAxisDict[x].hasOwnProperty(y)) {
+        if (!zAxisDict[x][y]) {
+          row.push(0)
+        }  else if (zAxisDict[x][y].length === 1) {
+          row.push(zAxisDict[x][y][0])
+        } else {
+          let val
+          switch (aproxType){
+            case 'max':
+              val = Math.max(...zAxisDict[x][y])
+              break
+            case 'min':
+              val = Math.min(...zAxisDict[x][y])
+              break
+            case 'avg':
+              val = zAxisDict[x][y].reduce((acc,v,i,a)=>(acc+v/a.length),0)
+              break
+            case 'minmax':
+            default:
+              val = Math.max(...zAxisDict[x][y]) > Math.abs(Math.min(...zAxisDict[x][y])) ? Math.max(...zAxisDict[x][y]) : Math.min(...zAxisDict[x][y])
+          }
+          row.push(val)
+        }
+      } else {
+        row.push(0)
+      }
+    })
+    zAxis.push(row)
+  })
+
+  showPlotlyData(chartPlotly,  xAxis, yAxis, zAxis)
+}

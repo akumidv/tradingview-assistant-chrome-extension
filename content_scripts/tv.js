@@ -19,16 +19,22 @@ const tvPageMessageData = {}
 
 window.addEventListener('message', messageHandler)
 
-async function messageHandler(event) {
-  const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
-  if (!event.origin.startsWith(url) || !event.data ||
-    !event.data.hasOwnProperty('name') || event.data.name !== 'iondvPage' ||
-    !event.data.hasOwnProperty('action')) {
-    return
-  }
 
-  tvPageMessageData[event.data.action] = event.data.data
+async function messageHandler(event) {
+  const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+  if (!event.origin.startsWith(url) || !event.data ||
+      !event.data.hasOwnProperty('name') || event.data.name !== 'iondvPage' ||
+      !event.data.hasOwnProperty('action'))
+    return
+  if (tvPageMessageData.hasOwnProperty(event.data.action) && typeof (tvPageMessageData[event.data.action]) === 'function') { // Callback
+    const resolve = tvPageMessageData[event.data.action]
+    delete tvPageMessageData[event.data.action]
+    resolve(event.data)
+  } else {
+    tvPageMessageData[event.data.action] = event.data.data
+  }
 }
+
 
 tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
   let strategyData = {}
