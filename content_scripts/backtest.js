@@ -49,6 +49,16 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
           isEnd = true
         break
       case 'random':
+        optRes = await optAllRandomIteration(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
+        if(optRes === null)
+          isEnd = true
+        break
+      case 'brute force':
+        optRes = await optBruteForce(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
+        if(optRes === null)
+          isEnd = true
+        break
+      case 'random improvement':
       default:
         optRes = await optRandomIteration(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
         if(optRes === null)
@@ -287,6 +297,25 @@ function randomInteger (min = 0, max = 10) {
 }
 
 // Random optimization
+async function optAllRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
+  const propData = optRandomGetPropertiesValues(allRangeParams, null, testResults.paramConditions)
+  let propVal = propData.data
+  const changedParam = propData.hasOwnProperty('changedParam') ? propData.changedParam : null
+  if(bestPropVal)
+    propVal = expandPropVal(propVal, bestPropVal)
+
+  const res = await backtest.getTestIterationResult(testResults, propVal, false, false, changedParam)
+  if(!res || !res.data || res.error !== null)
+    return res
+  res.data['comment'] = res.data['comment'] ? res.data['comment'] + propData.message : propData.message
+  if (!res.message)
+    res.message = propData.message
+  else
+    res.message += propData.message
+  return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+}
+
+
 async function optRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
   const propData = optRandomGetPropertiesValues(allRangeParams, bestPropVal)
   let propVal = propData.data
@@ -323,7 +352,7 @@ function optRandomGetPropertiesValues(allRangeParams, curPropVal) {
     allParamNames.forEach(paramName => {
       propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
     })
-    msg = `Changed all parameters.`
+    msg = `All parameters are changed randomly`
   }
   return {message: msg, data: propVal}
 }
@@ -492,6 +521,52 @@ async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del test f
   resData[testResults.optParamName] = allDimensionVal.reduce((sum, item) => item + sum, 0)
   return {error: 0, data: resData};
 }
+
+
+// rute Force
+async function optBruteForce(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
+  if (!optimizationState.hasOwnProperty('paramIdx')) {
+    optimizationState.paramIdx = 0
+  }
+  let paramName = testResults.paramPriority[optimizationState.paramIdx]
+  if (!optimizationState.hasOwnProperty('valIdx')) {
+    optimizationState.valIdx = 0
+  } else {
+    optimizationState.valIdx += 1
+    if(optimizationState.valIdx >= allRangeParams[paramName].length) {
+      optimizationState.valIdx = 0
+      optimizationState.paramIdx += 1
+      if( optimizationState.paramIdx >= testResults.paramPriority.length) {
+        return null // End
+      } else {
+        paramName = testResults.paramPriority[optimizationState.paramIdx]
+      }
+    }
+  }
+  const valIdx = optimizationState.valIdx
+
+
+  const propVal = {}
+  Object.keys(bestPropVal).forEach(paramName => {
+    propVal[paramName] = bestPropVal[paramName]
+  })
+  propVal[paramName] = allRangeParams[paramName][valIdx]
+  if(bestPropVal[paramName] === propVal[paramName])
+    return {error: null, currentValue: bestValue, message: `The same value of the "${paramName}" parameter equal to ${propVal[paramName]} is skipped`}
+  const msg = `Changed "${paramName}": ${bestPropVal[paramName]} => ${propVal[paramName]}.`
+
+  const res = await backtest.getTestIterationResult(testResults, propVal)
+  if(!res || !res.data || res.error !== null)
+    return res
+  res.data['comment'] = res.data['comment'] ? res.data['comment'] + msg : msg
+  if (!res.message)
+    res.message = msg
+  else
+    res.message += msg
+  return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+}
+
+
 
 async function optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
   if (!optimizationState.hasOwnProperty('paramIdx')) {

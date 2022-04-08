@@ -205,11 +205,10 @@ ui.statusMessageRemove = () => {
     statusMessageEl.parentNode.removeChild(statusMessageEl)
 }
 
-ui.autoCloseAlert = (msg, duration = 2000) => {
-  console.log('autoCloseAlert')
+ui.autoCloseAlert = (msg, duration = 3000) => {
   const altEl = document.createElement("div");
-  altEl.setAttribute("style","background-color: #ffeaa7;color:black; width: 450px;height: 300px;position: absolute;top:0;bottom:0;left:0;right:0;margin:auto;border: 1px solid black;font-family:arial;font-size:25px;font-weight:bold;display: flex; align-items: center; justify-content: center; text-align: center;");
-  altEl.setAttribute("id","iondvAlert");
+  altEl.setAttribute("style","background-color: #ffeaa7;color:black; width: 350px;height: 200px;position: absolute;top:0;bottom:0;left:0;right:0;margin:auto;border: 1px solid black;font-family:arial;font-size:15px;font-weight:bold;display: flex; align-items: center; justify-content: center; text-align: center;");
+  altEl.setAttribute("id","iondvAlertAutoClose");
   altEl.innerHTML = msg;
   setTimeout(function() {
     altEl.parentNode.removeChild(altEl);
