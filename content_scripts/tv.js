@@ -40,30 +40,73 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
   let strategyData = {}
   let indicatorName = null
   if(strategyName !== null) {
-    const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
-    if(!indicatorLegendsEl)
-      return null
-    for(let indicatorItemEl of indicatorLegendsEl) {
-      const indicatorTitleEl = indicatorItemEl.querySelector(SEL.tvLegendIndicatorItemTitle)
-      if (!indicatorTitleEl)
-        continue
-      if (strategyName && strategyName !== indicatorTitleEl.innerText)
-        continue
+    if (!strategyName) {
+      let isStrategyActiveEl = document.querySelector(SEL.strategyTesterTabActive)
+      if(!isStrategyActiveEl) {
+        const strategyTabEl = document.querySelector(SEL.strategyTesterTab)
+        if(strategyTabEl) {
+          strategyTabEl.click()
+        } else {
+          await ui.showErrorPopup('There is not strategy tester tab on the page. Open correct page please')
+          return null
+        }
+      }
+      let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
+      strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl
+      if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
+        await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
+        return null
+      }
+      indicatorName = strategyCaptionEl.innerText
 
-      page.mouseClick(indicatorTitleEl)
-      page.mouseClick(indicatorTitleEl)
+      let stratParamEl = document.querySelector(SEL.strategyDialogParam)
+      stratParamEl = !stratParamEl ? document.querySelector(SEL.strategyDialogParamNew) : stratParamEl
+      if(!stratParamEl) {
+        await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
+        return null
+      }
+      stratParamEl.click()
       const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
       if (!dialogTitle || !dialogTitle.innerText) {
+        await ui.showErrorPopup('There is open strategy properties. Open correct page please')
         if (document.querySelector(SEL.cancelBtn))
           document.querySelector(SEL.cancelBtn).click()
-        continue
+        return null
       }
+
       let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
       if (isIndicatorSave || isStrategyPropertiesTab) {
         indicatorName = dialogTitle.innerText
-        break
+
       }
     }
+    else {
+      const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
+      if(!indicatorLegendsEl)
+        return null
+      for(let indicatorItemEl of indicatorLegendsEl) {
+        const indicatorTitleEl = indicatorItemEl.querySelector(SEL.tvLegendIndicatorItemTitle)
+        if (!indicatorTitleEl)
+          continue
+        if (strategyName && strategyName !== indicatorTitleEl.innerText)
+          continue
+
+        page.mouseClick(indicatorTitleEl)
+        page.mouseClick(indicatorTitleEl)
+        const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
+        if (!dialogTitle || !dialogTitle.innerText) {
+          if (document.querySelector(SEL.cancelBtn))
+            document.querySelector(SEL.cancelBtn).click()
+          continue
+        }
+        let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
+        if (isIndicatorSave || isStrategyPropertiesTab) {
+          indicatorName = dialogTitle.innerText
+          break
+        }
+      }
+    }
+
   } else {
     let dialogTitleEl = await page.waitForSelector(SEL.indicatorTitle, 2500)
     if (!dialogTitleEl || !dialogTitleEl.innerText) {

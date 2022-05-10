@@ -1,4 +1,5 @@
 // TradingView page injection script for get data from window.TradingView object
+let isBaseTV = true
 
 window.addEventListener('message', async function (event) {
   const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
@@ -10,9 +11,21 @@ window.addEventListener('message', async function (event) {
     case 'getPerformance': {
       let tvData = {}
       try {
-        tvData = window.TradingView.bottomWidgetBar._widgets.backtesting._reportWidgetsSet.reportWidget._data.performance
+        if(isBaseTV)
+          tvData = window.TradingView.bottomWidgetBar._widgets.backtesting._reportWidgetsSet.reportWidget._data.performance
+        else if (isBaseTV === false)
+          tvData = window.TradingView.bottomWidgetBar._options.backtestingStrategyDispatcher._modelStrategies[0]._reportData.performance // First strategy, for new TV (deep history)
       } catch (err) {
-        console.error(err)
+        if (isBaseTV !== false) {
+          try {
+            tvData = window.TradingView.bottomWidgetBar._options.backtestingStrategyDispatcher._modelStrategies[0]._reportData.performance
+          } catch (e) {
+            isBaseTV = null
+            console.error("Can't get TV API perfomance data, please write to developer")
+            console.error(err)
+            console.error(e)
+          }
+        }
       }
       window.postMessage({name: 'iondvPage', action: event.data.action, data: tvData}, event.origin)
       break
