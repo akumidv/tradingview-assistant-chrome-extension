@@ -498,7 +498,7 @@ tv.parseReportTable = () => {
 }
 
 tv.getPerfomance = async () => {
-  return tv.parseReportTable
+  return tv.parseReportTable()
   // TODO change the object to get data
   function convertPercent(key, value) {
     if (!value)
