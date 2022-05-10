@@ -467,26 +467,27 @@ tv.parseReportTable = () => {
     if(rowEl) {
       const allTdEl = rowEl.querySelectorAll('td')
       if(!allTdEl || allTdEl.length < 2 || !allTdEl[0]) {
-        console.log(allTdEl[0].innerText)
+        // console.log(allTdEl[0].innerText)
         continue
       }
       let paramName = allTdEl[0].innerText
       for(let i = 1; i < allTdEl.length; i++) {
         let values = allTdEl[i].innerText
-        if(values && typeof values === 'string' && values.trim() && strategyHeaders[i]) {
-          values = values.replace(' ', ' ').trim()
-          const digitOfValues = values.match(/-?\d+\.?\d*/)
-          if(values.includes('\n') && (values.endsWith('%') || values.includes('N/A'))) {
+
+        if(values && typeof values === 'string' && strategyHeaders[i]) {
+          values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
+          let digitOfValues = values.match(/-?\d+\.?\d*/)
+          if((values.includes('\n') && values.endsWith('%'))) {
             const valuesPair = values.split('\n', 2)
-            if(valuesPair && valuesPair.length == 2) {
+            if(valuesPair && valuesPair.length === 2) {
               const digitVal0 = valuesPair[0].match(/-?\d+\.?\d*/)
               const digitVal1 = valuesPair[1].match(/-?\d+\.?\d*/)
+
               report[`${paramName}: ${strategyHeaders[i]}`] = Boolean(digitVal0) ? parseFloat(digitVal0[0]) : valuesPair[0]
               report[`${paramName}: ${strategyHeaders[i]} %`] = Boolean(digitVal1) ? parseFloat(digitVal1[0]) : valuesPair[0]
-              continue
             }
           } else if(digitOfValues)
-            report[`${paramName}: ${strategyHeaders[i]}`] = parseFloat(digitOfValues)
+            report[`${paramName}: ${strategyHeaders[i]}`] = parseFloat(digitOfValues[0])
           else
             report[`${paramName}: ${strategyHeaders[i]}`] = values
         }
@@ -497,6 +498,8 @@ tv.parseReportTable = () => {
 }
 
 tv.getPerfomance = async () => {
+  return tv.parseReportTable
+  // TODO change the object to get data
   function convertPercent(key, value) {
     if (!value)
       return 0
