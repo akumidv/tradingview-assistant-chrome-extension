@@ -565,7 +565,7 @@ async function optBruteForce(allRangeParams, testResults, bestValue, bestPropVal
         propVal[paramName] = allRangeParams[paramName][valIdx]
       }
     }
-    msg = `Changed "${paramName}" set to ${propVal[paramName]}.`
+    msg = `"${paramName}" set to ${propVal[paramName]}.`
   }
   const res = await backtest.getTestIterationResult(testResults, propVal)
   if(!res || !res.data || res.error !== null)
