@@ -85,7 +85,7 @@ action.testStrategy = async (request) => {
     return
   }
 
-  const testMethod = request.options && request.options.optMethod ? request.options.optMethod.toLowerCase() : 'random'
+  const testMethod = request.options && request.options.hasOwnProperty('optMethod') ? request.options.optMethod.toLowerCase() : 'random'
   let paramSpaceNumber = 0
   let isSequential = false
   if(['sequential'].includes(testMethod)) {
@@ -99,7 +99,7 @@ action.testStrategy = async (request) => {
   let testParams = await tv.switchToStrategyTab()
   if(!testParams)
     return
-
+  testParams.paramSpace = paramSpaceNumber
   let paramPriority = model.getParamPriorityList(paramRange) // Filter by allRangeParams
   paramPriority = paramPriority.filter(key => allRangeParams.hasOwnProperty(key))
   console.log('paramPriority list', paramPriority)
@@ -112,11 +112,12 @@ action.testStrategy = async (request) => {
     return
   }
 
+
   if(isSequential) {
     await ui.showPopup(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
     testParams.cycles = paramSpaceNumber
   } else {
-    const cyclesStr = prompt(`Please enter the number of cycles for optimization.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+    const cyclesStr = prompt(`Please enter the number of cycles for optimization for parameters space ${paramSpaceNumber}.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
     if(!cyclesStr)
       return
     let cycles = parseInt(cyclesStr)
@@ -164,4 +165,25 @@ action.testStrategy = async (request) => {
   console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
   file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
   ui.statusMessageRemove()
+}
+
+
+action.show3DChart= async () => {
+  const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
+  if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
+    await ui.showPopup('There is no results data for to show. Try to backtest again')
+    return
+  }
+  testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
+  const eventData = await send3dChartMessage(testResults)
+  if (eventData.hasOwnProperty('message'))
+    await ui.showPopup(eventData.message)
+}
+
+async function send3dChartMessage (testResults) {
+  return new Promise(resolve => {
+    const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+    tvPageMessageData['show3DChart'] = resolve
+    window.postMessage({name: 'iondvScript', action: 'show3DChart', data: testResults}, url) // TODO wait for data
+  })
 }

@@ -49,6 +49,16 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
           isEnd = true
         break
       case 'random':
+        optRes = await optAllRandomIteration(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
+        if(optRes === null)
+          isEnd = true
+        break
+      case 'brute force':
+        optRes = await optBruteForce(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
+        if(optRes === null)
+          isEnd = true
+        break
+      case 'random improvement':
       default:
         optRes = await optRandomIteration(allRangeParams, testResults, testResults.bestValue, testResults.bestPropVal, optimizationState)
         if(optRes === null)
@@ -266,8 +276,8 @@ function calculateAdditionValuesToReport(report) {
 
 function randomNormalDistribution(min, max) {
   let u = 0, v = 0;
-  while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
-  while(v === 0) v = Math.random();
+  while(u === 0) u = crypto.getRandomValues(new Uint16Array(1))[0]/65536 //Math.random(); //Converting [0,1) to (0,1)
+  while(v === 0) v = crypto.getRandomValues(new Uint16Array(1))[0]/65536 //Math.random();
   let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
   num = num / 10.0 + 0.5; // Translate to 0 -> 1
   if (num > 1 || num < 0)
@@ -282,10 +292,30 @@ function randomNormalDistribution(min, max) {
 function randomInteger (min = 0, max = 10) {
   // min = Math.ceil(min);
   // max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor((crypto.getRandomValues(new Uint16Array(1))[0]/65536) * (max - min + 1)) + min;
+  // return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 // Random optimization
+async function optAllRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
+  const propData = optRandomGetPropertiesValues(allRangeParams, null, testResults.paramConditions)
+  let propVal = propData.data
+  const changedParam = propData.hasOwnProperty('changedParam') ? propData.changedParam : null
+  if(bestPropVal)
+    propVal = expandPropVal(propVal, bestPropVal)
+
+  const res = await backtest.getTestIterationResult(testResults, propVal, false, false, changedParam)
+  if(!res || !res.data || res.error !== null)
+    return res
+  res.data['comment'] = res.data['comment'] ? res.data['comment'] + propData.message : propData.message
+  if (!res.message)
+    res.message = propData.message
+  else
+    res.message += propData.message
+  return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+}
+
+
 async function optRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
   const propData = optRandomGetPropertiesValues(allRangeParams, bestPropVal)
   let propVal = propData.data
@@ -322,7 +352,7 @@ function optRandomGetPropertiesValues(allRangeParams, curPropVal) {
     allParamNames.forEach(paramName => {
       propVal[paramName] = allRangeParams[paramName][randomInteger(0, allRangeParams[paramName].length - 1)]
     })
-    msg = `Changed all parameters.`
+    msg = `All parameters are changed randomly`
   }
   return {message: msg, data: propVal}
 }
@@ -399,7 +429,7 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
     optimizationState.lastEnergy = currentEnergy;
     res.message += ` The best value ${res.bestValue}.`
   } else {
-    const randVal = Math.random()
+    const randVal = crypto.getRandomValues(new Uint16Array(1))[0]/65536 //Math.random()
     const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy)/optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
     // console.log('#', optimizationState.currentTemp, randVal, expVal, currentEnergy, optimizationState.lastEnergy, currentEnergy - optimizationState.lastEnergy)
     if (randVal <= expVal) { // TODO need to optimize
@@ -491,6 +521,64 @@ async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del test f
   resData[testResults.optParamName] = allDimensionVal.reduce((sum, item) => item + sum, 0)
   return {error: 0, data: resData};
 }
+
+
+// rute Force
+async function optBruteForce(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
+  const propVal = {}
+  let paramName = ''
+  let msg = ''
+  if (!optimizationState.hasOwnProperty('valuesIdx')) {
+    // optimizationState['valuesIdx'] = new Array(testResults.paramPriority.length)
+    optimizationState['valuesIdx'] = []
+    for(let i = 0; i < testResults.paramPriority.length; i++) {
+      optimizationState['valuesIdx'].push(0)
+      paramName = testResults.paramPriority[i]
+      propVal[paramName] = allRangeParams[paramName][0]
+    }
+    // optimizationState['valuesIdx'].forEach((val, idx) => optimizationState['valuesIdx'][idx] = 0)
+    for (let i = 0; i < testResults.paramPriority.length; i++) {
+      paramName = testResults.paramPriority[i]
+      propVal[paramName] = allRangeParams[paramName][0]
+    }
+    msg = 'All parameters set to init values'
+  } else {
+    for (let i = 0; i < testResults.paramPriority.length; i++) {
+      paramName = testResults.paramPriority[i]
+      let valIdx = optimizationState['valuesIdx'][i]
+      propVal[paramName] = allRangeParams[paramName][valIdx]
+    }
+    for (let i = 0; i < testResults.paramPriority.length; i++) {
+      paramName = testResults.paramPriority[i]
+      let valIdx = optimizationState['valuesIdx'][i]
+
+      if (valIdx + 1 < allRangeParams[paramName].length) {
+        valIdx += 1
+        optimizationState['valuesIdx'][i] = valIdx
+        propVal[paramName] = allRangeParams[paramName][valIdx]
+        break
+      } else if (i + 1 === testResults.paramPriority.length) {
+        return null // End all variants
+      } else {
+        valIdx = 0
+        optimizationState['valuesIdx'][i] = valIdx // Next parameter
+        propVal[paramName] = allRangeParams[paramName][valIdx]
+      }
+    }
+    msg = `"${paramName}" set to ${propVal[paramName]}.`
+  }
+  const res = await backtest.getTestIterationResult(testResults, propVal)
+  if(!res || !res.data || res.error !== null)
+    return res
+  res.data['comment'] = res.data['comment'] ? res.data['comment'] + msg : msg
+  if (!res.message)
+    res.message = msg
+  else
+    res.message += msg
+  return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+}
+
+
 
 async function optSequentialIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
   if (!optimizationState.hasOwnProperty('paramIdx')) {

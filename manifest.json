@@ -3,7 +3,7 @@
     "author": "Andrei Kuminov (akumidv)",
     "description": "An assistant for backtesting trading strategies and showing external signals in Tradingview",
     "name": "Tradingview assistant",
-    "version": "1.1",
+    "version": "1.3",
     "icons": {
             "16": "images/tv_assist_16.png",
             "32": "images/tv_assist_32.png",
@@ -33,9 +33,8 @@
           "default_title": "TV",
           "default_popup": "popup/assistant.html"
     },
-
     "web_accessible_resources": [{
-      "resources": ["page-context.js", "fonts/fa-solid-900.woff2"],
+      "resources": ["page-context.js", "fonts/fa-solid-900.woff2", "lib/plotly.min.js"],
       "matches": ["<all_urls>"]
     }]
 }

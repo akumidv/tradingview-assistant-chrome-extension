@@ -16,7 +16,9 @@
         return sendResponse()
       }
       if(action.workerStatus !== null) {
-        console.log('Waiting for end previous work. Status:', action.workerStatus)
+        const msg = `Waiting for end previous work. Status: ${action.workerStatus}`
+        console.log(msg)
+        ui.autoCloseAlert(msg)
         return sendResponse()
       }
 
@@ -49,6 +51,14 @@
             break
           case 'clearAll':
             await action.clearAll()
+            break
+          case 'testAction':
+            await ui.showStrategyParameters(20)
+            break
+          case 'show3DChart':
+            await action.show3DChart()
+            // const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+            // window.postMessage({name: 'iondvScript', action: 'show3DChart'}, url)
             break
           default:
             console.log('None of realisation for signal:', request)
