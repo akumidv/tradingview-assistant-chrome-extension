@@ -227,7 +227,8 @@ tv.changeDialogTabToInput = async () => {
 
 tv.openCurrentStrategyParam = async () => {
 
-  const stratParamEl = document.querySelector(SEL.strategyDialogParam)
+  let stratParamEl = document.querySelector(SEL.strategyDialogParam)
+  stratParamEl = !stratParamEl ? document.querySelector(SEL.strategyDialogParamNew) : stratParamEl
   if(!stratParamEl) {
     await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
     return null
@@ -302,20 +303,23 @@ tv.switchToStrategyTab = async () => {
   }
   testResults.timeFrame = timeFrameEl.innerText
   testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
-  const strategyCaptionEl = document.querySelector(SEL.strategyCaption)
+  let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
+  strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl
   if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
     await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
     return null
   }
   testResults.name = strategyCaptionEl.innerText
 
-  const stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
+  let stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
+  stratSummaryEl = !stratSummaryEl ? await page.waitForSelector(SEL.strategySummaryNew, 1000) : stratSummaryEl
   if(!stratSummaryEl) {
     await ui.showErrorPopup('There is not strategy performance summary tab on the page. Open correct page please')
     return null
   }
   stratSummaryEl.click()
   await page.waitForSelector(SEL.strategySummaryActive, 1000)
+  await page.waitForSelector(SEL.strategySummaryActiveNew, 1000)
 
   await page.waitForSelector(SEL.strategyReport, 0)
   if(!tv.reportNode) {
