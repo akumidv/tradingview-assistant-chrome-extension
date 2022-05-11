@@ -25,6 +25,8 @@ Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingv
 * Filtering of unsuitable results. For example, the number of tradings is less than necessary
 * Setting the number of cycles to search for parameters.
 * Performing automatic selection of parameters with storing all the results in the browser storage and the ability to save them as CSV files after testing, including in case of an error or page reloading
+* Showing backtesting results on 3d chartto analyze the effect of various parameters on the result.
+![](docs/Screenshot3.png)
 
 #### Optimization Methods
 

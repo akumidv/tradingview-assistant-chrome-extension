@@ -108,11 +108,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (link) // Activate saved or fist tab
       link.click();
   })
-  for(let elId of ['uploadSignals', 'testStrategy', 'downloadStrategyTestResults', 'getStrategyTemplate', 'uploadStrategyTestParameters', 'clearAll', 'testAction', 'show3DChart']) {
+  for(let elId of ['uploadSignals', 'testStrategy', 'downloadStrategyTestResults', 'getStrategyTemplate', 'uploadStrategyTestParameters', 'clearAll', 'show3DChart']) { //, 'testAction'
     function signalListener() {
       sendSignalToActiveTab(elId)
     }
-    document.getElementById(elId).addEventListener('click', signalListener);
+    if (document.getElementById(elId))
+      document.getElementById(elId).addEventListener('click', signalListener);
+    else
+      console.error(`Can not find id ${elId}`)
   }
 
   document.getElementById('closeMsg').addEventListener('click', function () {

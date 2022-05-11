@@ -16,18 +16,20 @@ function loadProps(obj, search, name = '', level = 0) {
 
 
 // KEYS only
-function loadProps(obj, search, name = '', level = 0) {
+function searchKeys(obj, search, name = '', level = 0) {
+  if (typeof search === 'string')
+    return null
   const newLevel = level + 1
   if (newLevel > 10) return
   for (let p of Object.keys(obj)) {
-    if (typeof search === 'string' && typeof obj[p] === 'string' && obj[p].toLowerCase().includes(search.toLowerCase()))
-      console.log('!!!', `${name}${name ? '.' : ''}${p}`, obj[p])
+    if (p.toLowerCase().includes(search.toLowerCase()))
+      console.log('!!! Found', `${name}${name ? '.' : ''}${p}`, obj[p])
 
     if (!['window','parent', 'self','_tv_languages', 'frames', 'top', 'loginStateChange'].includes(p) && !p.includes('jQuery') && obj[p])
-      loadProps(obj[p], search,`${name}${name ? '.' : ''}${p}`, newLevel);
+      searchKeys(obj[p], search,`${name}${name ? '.' : ''}${p}`, newLevel);
   }
 }
-loadProps(window, 'stp.');
+searchKeys(window, 'netProfit');
 
 
 
