@@ -312,11 +312,11 @@
       <div class="row">
         <div class="column left">
           <p>To test the profit of strategies, upload a CSV file in which the lines correspond to the strategy parameters and contain the testing range.
-            <a href="data:text/csv;charset=utf-8,Parameter,From,To,Step
-SMALong,40,70,5
-EMAShort,5,15,
-%22Check MACD%22,false,true,
-%22Stop Loss%22,1,5,0.5%0A" download="strategy_template.csv">Sample template </a></p>
+            <a href="data:text/csv;charset=utf-8,Parameter,From,To,Step,Default,Priority
+SMALong,40,70,5,20,1
+EMAShort,5,15,1,21,2
+%22Check MACD%22,false,true,,false,3
+%22Stop Loss%22,1,5,0.51,4%0A" download="strategy_template.csv">Sample template </a></p>
         </div>
         <div class="column right">
           <div style="align-content: center"><button id="uploadStrategyTestParameters" class="button button-blue">Upload parameters</button></div>
