@@ -29,7 +29,19 @@ Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingv
 ![](docs/Screenshot3.png)
 
 #### Optimization Methods
+The **sequential improvements** optimization method is implement adjusting the best value already found. It does not perform a complete search of the entire parameter space.
+The logic of it work is as follows. The current best state (parameters for max results) is taken. The first parameter is taken and all its values in the range are checked sequentially. If the best result is found, then further verification is carried out from this state. Then the next parameter is taken and all its values in the range are checked and etc.
 
+The **brute force** optimization method implement backtesting all values in strategy space of parameters.
+
+The **annealing** method is an optimization method in which the search for the maximum possible result is carried out in fewer steps https://en.wikipedia.org/wiki/Simulated_annealing
+The method works this way: first, the best state and its parameters are determined. One parameter is randomly determined, then its value from range of possible values is randomly selected. The status in this value is checked. If it is better, then it is remembered and further parameter changes are made from it.
+As the number of tests increases, the spread of parameter values decreases around those already found. That is, if at the beginning of testing the values are randomly selected from the entire range of possible parameter values, then as optimization is carried out, this spread decreases ("cools down") near current values. So in first phase of test - this method is search the most possible state around all space on the finish stage this method trying to improve found best state.
+So that the system does not get stuck in one parameter area, as it happens with the sequential method, not one random parameter changes periodically, but all at once.
+
+The **random improvements** method is the simplest. One parameter is randomly determined and then a value is randomly selected for it from the entire range of possible values. If the condition is better, then it is remembered. And then the parameters from this state are randomly changed.
+
+The **random** method - always selects random values for all parameters at once (default)
 
 
 ### Upload external signals to tradingview chart
