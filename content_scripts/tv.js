@@ -467,45 +467,48 @@ tv.parseReportTable = () => {
     if(rowEl) {
       const allTdEl = rowEl.querySelectorAll('td')
       if(!allTdEl || allTdEl.length < 2 || !allTdEl[0]) {
-        // console.log(allTdEl[0].innerText)
         continue
       }
       let paramName = allTdEl[0].innerText
-      for(let i = 1; i < allTdEl.length; i++) {
+      const isSingleValue =  allTdEl.length === 3
+      for(let i = 1; i <  allTdEl.length; i++) {
+        if (isSingleValue && i === 2)
+          continue
         let values = allTdEl[i].innerText
 
         const isNegative = allTdEl[i].querySelector('[class="neg"]') && !['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown'].includes(paramName)
         if(values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
-          let digitOfValues = values.match(/-?\d+\.?\d*/)//
+          let digitOfValues = values.match(/-?\d+\.?\d*/)
+          const nameDigits = isSingleValue ? paramName : `${paramName}: ${strategyHeaders[i]}`
+          const namePercents = isSingleValue ? `${paramName} %` : `${paramName} %: ${strategyHeaders[i]}`
           if((values.includes('\n') && values.endsWith('%'))) {
             const valuesPair = values.split('\n', 2)
             if(valuesPair && valuesPair.length === 2) {
               const digitVal0 = valuesPair[0].match(/-?\d+\.?\d*/)
               const digitVal1 = valuesPair[1].match(/-?\d+\.?\d*/)
 
-              if(digitVal0) {
-                report[`${paramName}: ${strategyHeaders[i]}`] = parseFloat(digitVal0[0])
-                if (report[`${paramName}: ${strategyHeaders[i]}`] > 0 && isNegative)
-                  report[`${paramName}: ${strategyHeaders[i]}`] = report[`${paramName}: ${strategyHeaders[i]}`] * -1
+              if(Boolean(digitVal0)) {
+                report[nameDigits] = parseFloat(digitVal0[0])
+                if (report[nameDigits] > 0 && isNegative)
+                  report[nameDigits] = report[nameDigits] * -1
               } else {
-                report[`${paramName}: ${strategyHeaders[i]}`] = valuesPair[0]
+                report[nameDigits] = valuesPair[0]
               }
-              if(digitVal1) {
-                report[`${paramName}: ${strategyHeaders[i]} %`] = parseFloat(digitVal1[0])
-                if (report[`${paramName}: ${strategyHeaders[i]} %`] > 0 && isNegative)
-                  report[`${paramName}: ${strategyHeaders[i]} %`] = report[`${paramName}: ${strategyHeaders[i]} %`] * -1
+              if(Boolean(digitVal1)) {
+                report[namePercents] = parseFloat(digitVal1[0])
+                if (report[namePercents] > 0 && isNegative)
+                  report[namePercents] = report[namePercents] * -1
               } else {
-                report[`${paramName}: ${strategyHeaders[i]} %`] = valuesPair[0]
+                report[namePercents] = valuesPair[0]
               }
-
             }
-          } else if(digitOfValues)
-            report[`${paramName}: ${strategyHeaders[i]}`] = parseFloat(digitOfValues[0])
-          if (report[`${paramName}: ${strategyHeaders[i]}`] > 0 && isNegative)
-            report[`${paramName}: ${strategyHeaders[i]}`] = report[`${paramName}: ${strategyHeaders[i]} %`] * -1
-          else
-            report[`${paramName}: ${strategyHeaders[i]}`] = values
+          } else if(Boolean(digitOfValues)) {
+            report[nameDigits] = parseFloat(digitOfValues[0])
+            if (report[nameDigits] > 0 && isNegative)
+              report[nameDigits] = report[nameDigits] * -1
+          }   else
+            report[nameDigits] = values
         }
       }
     }
