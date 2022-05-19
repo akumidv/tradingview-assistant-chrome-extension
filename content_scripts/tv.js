@@ -455,14 +455,22 @@ tv.dialogHandler = async () => {
 
 tv.parseReportTable = () => {
   const strategyHeaders = []
-  const allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
+  let allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
+  if (!allHeadersEl || allHeadersEl.length === 0)
+    allHeadersEl = document.querySelectorAll(SEL.strategyReportHeaderOld)
+  if (!allHeadersEl || allHeadersEl.length !== 4)
+    throw new Error('Tradingview UI changed. Can\'t get performance headers. Please contact support')
   for(let headerEl of allHeadersEl) {
     if(headerEl)
       strategyHeaders.push(headerEl.innerText)
   }
 
   const report = {}
-  const allReportRowsEl = document.querySelectorAll(SEL.strategyReportRow)
+  let allReportRowsEl = document.querySelectorAll(SEL.strategyReportRow)
+  // if (!allReportRowsEl || allReportRowsEl.length === 0)
+  //   allReportRowsEl = document.querySelectorAll(SEL.strategyReportRowNew)
+  if (!allReportRowsEl || allReportRowsEl.length === 0)
+    throw new Error('Tradingview UI changed. Can\'t get performance rows. Please contact support')
   for(let rowEl of allReportRowsEl) {
     if(rowEl) {
       const allTdEl = rowEl.querySelectorAll('td')

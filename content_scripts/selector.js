@@ -28,8 +28,10 @@ const SEL = {
     strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > div.reports-content.fade',
     strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
     strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
-    strategyReportHeader: '#bottom-area div.backtesting-content-wrapper .report-data thead > tr > td',
-    strategyReportRow: '#bottom-area div.backtesting-content-wrapper .report-data tbody > tr',
+    strategyReportHeader: '#bottom-area div.backtesting-content-wrapper thead > tr > th',
+    strategyReportHeaderOld: '#bottom-area div.backtesting-content-wrapper thead > tr > td',
+    strategyReportRow: '#bottom-area div.backtesting-content-wrapper tbody > tr',
+    // strategyReportRowNew: '#bottom-area div.backtesting-content-wrapper tbody > tr',
     strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] div[class^="label-"]',
     strategyDefaultElement: '#study-defaults-manager',
     strategyImportExport: '#iondvImportExport'
