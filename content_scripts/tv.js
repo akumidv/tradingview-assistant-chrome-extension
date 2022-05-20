@@ -478,9 +478,9 @@ tv.parseReportTable = () => {
         continue
       }
       let paramName = allTdEl[0].innerText
-      const isSingleValue =  allTdEl.length === 3
+      let isSingleValue = allTdEl.length === 3 || ['Buy & Hold Return', 'Max Run-up', 'Max Drawdown', 'Sharpe Ratio', 'Sortino Ratio', 'Open PL'].includes(paramName)
       for(let i = 1; i <  allTdEl.length; i++) {
-        if (isSingleValue && i === 2)
+        if (isSingleValue && i >= 2)
           continue
         let values = allTdEl[i].innerText
 
@@ -505,7 +505,7 @@ tv.parseReportTable = () => {
                 report[nameDigits] = valuesPair[0]
               }
               if(Boolean(digitVal1)) {
-                report[namePercents] = parseFloat(digitVal0) //[0])
+                report[namePercents] = parseFloat(digitVal1) //[0])
                 if (report[namePercents] > 0 && isNegative)
                   report[namePercents] = report[namePercents] * -1
               } else {

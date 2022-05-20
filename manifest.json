@@ -4,6 +4,7 @@
     "description": "An assistant for backtesting trading strategies and showing external signals in Tradingview",
     "name": "Tradingview assistant",
     "version": "1.6",
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj2IHrKJZFtHWl1+9GrlGW0WZJGjxEjcOQ96cC0G/asn3n1L+Olgzy0BVLUpwAc1pJpMdU8sSf19YceyaL612EnVTIIUdIjk4kIiVLXTpwbcUsU/tk/zDZWQgxv0F72p5k6eOOYMyaMHgPlOkLp53NkCFTtE7Q+/kfaVBbHjvuZpAZ1v78zBFzBdoGcUZn7z3IrnxxUVkUoaLufJFoI3LWA81U5n7OQ9xu2GE2u5sH64JdHWjaAei9DrFi/2dJ1Kit9O8RgYqX9DGSP3rzSr1yq7ri4d/yabuyO7eifL+7k65UaQxf26l7H7jcEPyP2E/0K6Jr/ngwoiy28/jYYH1gQIDAQAB",
     "icons": {
             "16": "images/tv_assist_16.png",
             "32": "images/tv_assist_32.png",
