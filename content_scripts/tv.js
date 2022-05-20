@@ -487,24 +487,25 @@ tv.parseReportTable = () => {
         const isNegative = allTdEl[i].querySelector('[class="neg"]') && !['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown'].includes(paramName)
         if(values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
-          let digitOfValues = values.match(/-?\d+\.?\d*/)
+          const digitalValues = values.replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '')
+          let digitOfValues = digitalValues.match(/-?\d+\.?\d*/)
           const nameDigits = isSingleValue ? paramName : `${paramName}: ${strategyHeaders[i]}`
           const namePercents = isSingleValue ? `${paramName} %` : `${paramName} %: ${strategyHeaders[i]}`
           if((values.includes('\n') && values.endsWith('%'))) {
             const valuesPair = values.split('\n', 2)
             if(valuesPair && valuesPair.length === 2) {
-              const digitVal0 = valuesPair[0].match(/-?\d+\.?\d*/)
-              const digitVal1 = valuesPair[1].match(/-?\d+\.?\d*/)
+              const digitVal0 = valuesPair[0].replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //.match(/-?\d+\.?\d*/)
+              const digitVal1 = valuesPair[1].replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //match(/-?\d+\.?\d*/)
 
               if(Boolean(digitVal0)) {
-                report[nameDigits] = parseFloat(digitVal0[0])
+                report[nameDigits] = parseFloat(digitVal0)//[0])
                 if (report[nameDigits] > 0 && isNegative)
                   report[nameDigits] = report[nameDigits] * -1
               } else {
                 report[nameDigits] = valuesPair[0]
               }
               if(Boolean(digitVal1)) {
-                report[namePercents] = parseFloat(digitVal1[0])
+                report[namePercents] = parseFloat(digitVal0) //[0])
                 if (report[namePercents] > 0 && isNegative)
                   report[namePercents] = report[namePercents] * -1
               } else {
@@ -512,7 +513,7 @@ tv.parseReportTable = () => {
               }
             }
           } else if(Boolean(digitOfValues)) {
-            report[nameDigits] = parseFloat(digitOfValues[0])
+            report[nameDigits] = parseFloat(digitOfValues)//[0])
             if (report[nameDigits] > 0 && isNegative)
               report[nameDigits] = report[nameDigits] * -1
           }   else
