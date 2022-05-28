@@ -509,7 +509,7 @@ tv.parseReportTable = () => {
                 if (report[namePercents] > 0 && isNegative)
                   report[namePercents] = report[namePercents] * -1
               } else {
-                report[namePercents] = valuesPair[0]
+                report[namePercents] = valuesPair[1]
               }
             }
           } else if(Boolean(digitOfValues)) {
