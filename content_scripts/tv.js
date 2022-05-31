@@ -513,7 +513,7 @@ tv.parseReportTable = () => {
               }
             }
           } else if(Boolean(digitOfValues)) {
-            report[nameDigits] = nameDigits.includes('Trades')? parseInt(digitOfValues) : parseFloat(digitOfValues)//[0])
+            report[nameDigits] = nameDigits.includes('Trades')? parseInt(digitalValues) : parseFloat(digitalValues)//[0])
             if (report[nameDigits] > 0 && isNegative)
               report[nameDigits] = report[nameDigits] * -1
           }   else
