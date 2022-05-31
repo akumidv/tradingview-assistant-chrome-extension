@@ -461,7 +461,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       popupEl.innerHTML = `<div style="height: 150px; overflow-y: hidden; vertical-align:top;">
   <h1 style="padding: 25px">Strategy parameters</h1>
   <div style="align-content: center"><span style="padding:5px 15px">
-  Cycles <input id="stratParamCycles" type="number" value="10"> from ~<span id="cyclesAll">100</span></span>
+  Cycles <input id="stratParamCycles" type="number" value="10" style="width:8em"> from ~<span id="cyclesAll">100</span></span>
   <button id="stratParamSaveRun" class="iondv-button iondv-button-run">Save&Run</button>
   <button id="stratParamDefRun" class="iondv-button iondv-button-def">Run default</button>
   <button id="stratParamCancel" class="iondv-button iondv-button-close">Cancel</button>

@@ -498,14 +498,14 @@ tv.parseReportTable = () => {
               const digitVal1 = valuesPair[1].replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //match(/-?\d+\.?\d*/)
 
               if(Boolean(digitVal0)) {
-                report[nameDigits] = parseFloat(digitVal0)//[0])
+                report[nameDigits] = nameDigits.includes('Trades')? parseInt(digitVal0) : parseFloat(digitVal0)//[0])
                 if (report[nameDigits] > 0 && isNegative)
                   report[nameDigits] = report[nameDigits] * -1
               } else {
                 report[nameDigits] = valuesPair[0]
               }
               if(Boolean(digitVal1)) {
-                report[namePercents] = parseFloat(digitVal1) //[0])
+                report[namePercents] = namePercents.includes('Trades')? parseInt(digitVal1) : parseFloat(digitVal1) //[0])
                 if (report[namePercents] > 0 && isNegative)
                   report[namePercents] = report[namePercents] * -1
               } else {
@@ -513,7 +513,7 @@ tv.parseReportTable = () => {
               }
             }
           } else if(Boolean(digitOfValues)) {
-            report[nameDigits] = parseFloat(digitOfValues)//[0])
+            report[nameDigits] = nameDigits.includes('Trades')? parseInt(digitOfValues) : parseFloat(digitOfValues)//[0])
             if (report[nameDigits] > 0 && isNegative)
               report[nameDigits] = report[nameDigits] * -1
           }   else
