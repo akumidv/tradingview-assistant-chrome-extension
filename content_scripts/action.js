@@ -75,10 +75,30 @@ action.testStrategy = async (request) => {
     await ui.showErrorPopup('Could not find any strategy with parameters among the indicators. Add it to the chart and try again.')
     return
   }
-  const paramRange = await model.getStrategyParameters(strategyData)
+  let paramRange = await model.getStrategyParameters(strategyData)
   console.log('paramRange', paramRange)
   if(!paramRange)
     return
+
+  const initParams = {}
+  initParams.paramRange = paramRange
+  initParams.paramRangeSrc = model.getStrategyRange(strategyData)
+  const changedStrategyParams = await ui.showAndUpdateStrategyParameters(initParams)
+  if(changedStrategyParams === null)
+    return
+  const cycles = changedStrategyParams.cycles ? changedStrategyParams.cycles : 100
+  console.log('changedStrategyParams', changedStrategyParams)
+  if (changedStrategyParams.paramRange === null) {
+    console.log('Don not change paramRange')
+  } else if (typeof changedStrategyParams.paramRange === 'object' && Object.keys(changedStrategyParams.paramRange).length) {
+    paramRange = changedStrategyParams.paramRange
+    await model.saveStrategyParameters(paramRange)
+    console.log('ParamRange changes to', paramRange)
+  } else {
+    await ui.showErrorPopup('The strategy parameters invalid. Change them or run default parameters set.')
+    return
+  }
+
   const allRangeParams = model.createParamsFromRange(paramRange)
   console.log('allRangeParams', allRangeParams)
   if(!allRangeParams) {
@@ -112,19 +132,19 @@ action.testStrategy = async (request) => {
     return
   }
 
-
-  if(isSequential) {
-    await ui.showPopup(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
-    testParams.cycles = paramSpaceNumber
-  } else {
-    const cyclesStr = prompt(`Please enter the number of cycles for optimization for parameters space ${paramSpaceNumber}.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
-    if(!cyclesStr)
-      return
-    let cycles = parseInt(cyclesStr)
-    if(!cycles || cycles < 1)
-      return
-    testParams.cycles = cycles
-  }
+  // if(isSequential) {
+  //   await ui.showPopup(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+  //   testParams.cycles = paramSpaceNumber
+  // } else {
+  //   const cyclesStr = prompt(`Please enter the number of cycles for optimization for parameters space ${paramSpaceNumber}.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
+  //   if(!cyclesStr)
+  //     return
+  //   let cycles = parseInt(cyclesStr)
+  //   if(!cycles || cycles < 1)
+  //     return
+  //   testParams.cycles = cycles
+  // }
+  testParams.cycles = cycles
 
 
   if(request.options) {

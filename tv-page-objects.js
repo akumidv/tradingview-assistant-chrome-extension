@@ -12,7 +12,7 @@ function loadProps(obj, search, name = '', level = 0) {
           loadProps(obj[p], search,`${name}${name ? '.' : ''}${p}`, newLevel);
     }
 }
-loadProps(window, 'PUB;ewWFjX8As5NzQXtz8BFxHBaaGbu0PjxA')
+loadProps(window, 'PUB;')
 
 
 // KEYS only

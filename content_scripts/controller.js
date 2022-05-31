@@ -52,9 +52,6 @@
           case 'clearAll':
             await action.clearAll()
             break
-          case 'testAction':
-            await ui.showStrategyParameters(20)
-            break
           case 'show3DChart':
             await action.show3DChart()
             break
@@ -63,7 +60,7 @@
         }
       } catch (err) {
         console.error(err)
-        await ui.showErrorPopup(`An error has occurred.\n\nReload the page and try again.\nYou can describe the problem by following <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/" target="_blank">the link</a>.\n\nError message: ${err.message}`)
+        await ui.showErrorPopup(`An error has occurred.\n\nReload the page and try again.\nYou can describe the problem by following <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues" target="_blank">the link</a>.\n\nError message: ${err.message}`)
       }
       action.workerStatus = null
       ui.statusMessageRemove()

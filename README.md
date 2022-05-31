@@ -91,5 +91,21 @@ The `manifest.json` file is located in the root folder of the extension.
 Unpack the new version to the same directory as the previous version (it is better to delete the files of the previous version).
 Go to the extensions tab by following the link `chrome://extensions`. Click the restart button for the extension.
 
+### Issues
+Please add issues in this repository by following (link)[https://github.com/akumidv/tradingview-assistant-chrome-extension/issues].
+
+Very helpfull will be if you can attach full screenshot with tradingview page and errors. And also with open command tab in browser developer mode (please press F12 to open developer mode and click on console tab)
+
 ## PS
 ** The field separator for CSV files is a comma.
+
+
+## Contacts
+
+akumidv `[at]` yahoo.com  (Do no send errors to email please)
+
+https://linkedin.com/in/akuminov
+
+https://fb.com/akuminov
+
+Regarding contacts via social networks - they are banned in Russia, so I do not answer quickly.

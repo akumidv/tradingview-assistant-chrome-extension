@@ -19,6 +19,11 @@ model.getStrategyParameters = async (strategyData) => {
 }
 
 
+model.saveStrategyParameters = async (paramRange) => {
+  await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
+}
+
+
 model.getStrategyRange = (strategyData) => {
   const paramRange = {}
   Object.keys(strategyData.properties).forEach((key, idx) => {
