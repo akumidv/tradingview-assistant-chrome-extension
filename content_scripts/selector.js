@@ -16,7 +16,7 @@ const SEL = {
     cancelBtn: 'div[data-name="indicator-properties-dialog"] span[data-name="close"][data-role="button"]',
     strategyTesterTab: '#footer-chart-panel div[data-name="backtesting"]',
     strategyTesterTabActive: '#footer-chart-panel div[data-name="backtesting"][data-active="true"]',
-    strategyCaption: '#bottom-area div.backtesting-head-wrapper .strategy-select .caption',
+    strategyCaption: '#bottom-area div[class^="backtesting_head_wrapper"] [class^="settingGroup"] > div',
     strategyCaptionNew: '#select-backtesting-strategy',
     strategyDialogParam: '#bottom-area div.backtesting-head-wrapper .js-backtesting-open-format-dialog',
     strategyDialogParamNew: '#bottom-area div[class^="backtesting_head_wrapper"]  div[class^="setting"]  > button:nth-child(2)',

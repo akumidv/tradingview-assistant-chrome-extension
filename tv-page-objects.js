@@ -1,18 +1,18 @@
 function loadProps(obj, search, name = '', level = 0) {
   const newLevel = level + 1
-  if (newLevel > 15) return
+  if (newLevel > 5) return
   for (let p of Object.keys(obj)) {
         if (false && p.toLowerCase().includes('alert'))
             console.log(`${name}${name ? '.' : ''}${p}`)
         else if (typeof search === 'string' && typeof obj[p] === 'string' && obj[p].toLowerCase().includes(search.toLowerCase()))
-			    console.log('!!!', `${name}${name ? '.' : ''}${p}`, obj[p])
+			    console.log('>>>', `${name}${name ? '.' : ''}${p}`)//, obj[p])
         else if (typeof search === 'number' && obj[p] === search)
-          console.log('!!!', `${name}${name ? '.' : ''}${p}`, obj[p])
-        if (!['window','parent', 'self','_tv_languages', 'frames', 'top', 'loginStateChange'].includes(p) && !p.includes('jQuery') && obj[p])
+          console.log('>>>', `${name}${name ? '.' : ''}${p}`, obj[p])
+        if (!['window','parent', 'self','_tv_languages', 'frames', 'top', 'loginStateChange', 'onbeforeunload', '$', '_exposed_chartWidgetCollection'].includes(p) && !p.includes('jQuery') && !p.includes('cache') && !p.includes('Cache') && obj[p])
           loadProps(obj[p], search,`${name}${name ? '.' : ''}${p}`, newLevel);
     }
 }
-
+loadProps(window, 'PUB;ewWFjX8As5NzQXtz8BFxHBaaGbu0PjxA')
 
 
 // KEYS only

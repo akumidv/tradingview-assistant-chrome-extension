@@ -52,7 +52,7 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
         }
       }
       let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
-      strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl
+      strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // TODO 2del 22.05.31
       if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
         await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
         return null
@@ -347,7 +347,7 @@ tv.switchToStrategyTab = async () => {
   testResults.timeFrame = timeFrameEl.innerText
   testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
-  strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl
+  strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // TODO 2del 22.05.31
   if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
     await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
     return null
