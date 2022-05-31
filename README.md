@@ -75,7 +75,7 @@ The signals are stored in the browser, to activate them, open the properties of 
 
 ## Setup
 
-Install from (Chrome webstroe)[https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg]
+Install from [Chrome webstroe](https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg)
 
 Or manually add the latest version to chrome based browser from this repository by following the instruction below.
 
@@ -92,7 +92,7 @@ Unpack the new version to the same directory as the previous version (it is bett
 Go to the extensions tab by following the link `chrome://extensions`. Click the restart button for the extension.
 
 ### Issues
-Please add issues in this repository by following (link)[https://github.com/akumidv/tradingview-assistant-chrome-extension/issues].
+Please add issues in this repository by following [link](https://github.com/akumidv/tradingview-assistant-chrome-extension/issues).
 
 Very helpfull will be if you can attach full screenshot with tradingview page and errors. And also with open command tab in browser developer mode (please press F12 to open developer mode and click on console tab)
 
