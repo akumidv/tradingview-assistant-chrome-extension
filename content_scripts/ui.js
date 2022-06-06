@@ -394,14 +394,18 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
               paramRange[key] = [fromEl[0].value, '', 0, fromEl[0].value.split(';')[0], priority]
               paramSpace = fromEl[0].value.split(';').length
             } else {
-              const isInteger = testParams.paramRangeSrc[key][0] === Math.round(testParams.paramRangeSrc[key][0]) &&
+              let isInteger = testParams.paramRangeSrc[key][0] === Math.round(testParams.paramRangeSrc[key][0]) &&
                 testParams.paramRangeSrc[key][1] === Math.round(testParams.paramRangeSrc[key][1]) &&
                 testParams.paramRangeSrc[key][2] === Math.round(testParams.paramRangeSrc[key][2])
               if (Number(fromEl[0].value)) { // Not 0 or Nan
+                if (parseInt(fromEl[0].value) !== Number(fromEl[0].value) ||
+                   (Number(toEl[0].value) && parseInt(toEl[0].value) !== Number(toEl[0].value)) ||
+                   (Number(stepEl[0].value) && parseInt(stepEl[0].value) !== Number(stepEl[0].value)))
+                  isInteger = false
                 paramRange[key] = [isInteger ? parseInt(fromEl[0].value) : Number(fromEl[0].value),
                   Number(toEl[0].value)]
                 let step = isInteger ? parseInt(stepEl[0].value) : Number(stepEl[0].value)
-                step = isInteger && step !== 0 ? step : paramRange[key][1] < paramRange[key][0] ? -1 : 1
+                step = step !== 0 ? step : paramRange[key][1] < paramRange[key][0] ? -1 : 1
                 paramRange[key].push(step)
                 paramRange[key].push(isInteger ? parseInt(defEl[0].value) : Number(defEl[0].value))
                 paramRange[key].push(priority)
@@ -426,7 +430,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       return `<td><input type="checkbox" ${status? 'checked' : ''} style="width:1em"></td><td>${name}</td>
               <td><input type="text" value="${isBoolean ? 'true' : param[0]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
               <td><input type="text" value="${isBoolean ? 'false' : param[1]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
-              <td><input type="number" value="${param[2]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td><td><input value="${param[3]}" style="width:4em" ></td>
+              <td><input type="number"  step="any" value="${param[2]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td><td><input value="${param[3]}" style="width:4em" ></td>
               <td><input type="number" value="${param[4]}" style="width:4em"></td>`
     }
 
@@ -463,7 +467,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
   <div style="align-content: center"><span style="padding:5px 15px">
   Cycles <input id="stratParamCycles" type="number" value="10" style="width:8em"> from ~<span id="cyclesAll">100</span></span>
   <button id="stratParamSaveRun" class="iondv-button iondv-button-run">Save&Run</button>
-  <button id="stratParamDefRun" class="iondv-button iondv-button-def">Run default</button>
+  <button id="stratParamDefRun" class="iondv-button iondv-button-def">Skip&Run</button>
   <button id="stratParamCancel" class="iondv-button iondv-button-close">Cancel</button>
   </div>
   </div>
