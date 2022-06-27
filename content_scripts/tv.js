@@ -456,8 +456,8 @@ tv.dialogHandler = async () => {
 tv.parseReportTable = () => {
   const strategyHeaders = []
   let allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
-  if (!allHeadersEl || allHeadersEl.length === 0)
-    allHeadersEl = document.querySelectorAll(SEL.strategyReportHeaderOld)
+  // if (!allHeadersEl || allHeadersEl.length === 0)
+  //   allHeadersEl = document.querySelectorAll(SEL.strategyReportHeaderOld)
   if (!allHeadersEl || allHeadersEl.length !== 4)
     throw new Error('Tradingview UI changed. Can\'t get performance headers. Please contact support')
   for(let headerEl of allHeadersEl) {

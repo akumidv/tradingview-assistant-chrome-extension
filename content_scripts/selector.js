@@ -26,7 +26,7 @@ const SEL = {
     strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div:not(.fade).reports-content',
     strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
     strategyReportHeader: '#bottom-area div.backtesting-content-wrapper thead > tr > th',
-    strategyReportHeaderOld: '#bottom-area div.backtesting-content-wrapper thead > tr > td',
+    // strategyReportHeaderOld: '#bottom-area div.backtesting-content-wrapper thead > tr > td',
     strategyReportRow: '#bottom-area div.backtesting-content-wrapper tbody > tr',
     // strategyReportRowNew: '#bottom-area div.backtesting-content-wrapper tbody > tr',
     strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] div[class^="label-"]',

@@ -179,7 +179,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
   }
 
-  let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 1500)
+  let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 2500)
   let isProcessEnd = tv.isReportChanged
 
   if (isProcessStart)
@@ -188,7 +188,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
     isProcessStart = true
 
   let isProcessError = document.querySelector(SEL.strategyReportError)
-  await page.waitForTimeout(150) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+  await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
   reportData = await tv.getPerfomance() //tv.parseReportTable()
   if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
