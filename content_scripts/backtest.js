@@ -179,12 +179,14 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
   }
 
-  let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 2500)
+  // let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 2500)
+  let isProcessStart = await page.waitForSelector(SEL.strategyReportIsTransition, 5000)
   let isProcessEnd = tv.isReportChanged
 
-  if (isProcessStart)
-    isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 30000) // TODO to options
-  else if (isProcessEnd)
+  if (isProcessStart) {
+    isProcessEnd = await page.waitForSelector(SEL.strategyReportTransitionReady, 25000) // TODO to options
+    isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
+  } else if (isProcessEnd)
     isProcessStart = true
 
   let isProcessError = document.querySelector(SEL.strategyReportError)
