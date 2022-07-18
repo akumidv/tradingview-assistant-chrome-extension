@@ -374,8 +374,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
           const activeEl = cells[0].getElementsByTagName('input')
           if (!activeEl || !activeEl[0] || !activeEl[0].checked)
             continue
-          // const nameEl = cells[1].getElementsByTagName('input')
-          const nameEl = cells[1]
+          const nameEl = cells[1] // const nameEl = cells[1].getElementsByTagName('input')
           const fromEl = cells[2].getElementsByTagName('input')
           const toEl = cells[3].getElementsByTagName('input')
           const stepEl = cells[4].getElementsByTagName('input')
@@ -430,7 +429,8 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       return `<td><input type="checkbox" ${status? 'checked' : ''} style="width:1em"></td><td>${name}</td>
               <td><input type="text" value="${isBoolean ? 'true' : param[0]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
               <td><input type="text" value="${isBoolean ? 'false' : param[1]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
-              <td><input type="number"  step="any" value="${param[2]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td><td><input value="${param[3]}" style="width:4em" ></td>
+              <td><input type="number"  step="any" value="${param[2]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
+              <td><input type="text" value="${param[3]}" style="width:4em" ></td>
               <td><input type="number" value="${param[4]}" style="width:4em"></td>`
     }
 
@@ -489,13 +489,16 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       let paramRows = ''
       const processedParams = []
       for(let name in testParams.paramRange) {
-        if (isNaN(testParams.paramRange[name][0]) || testParams.paramRange[name][0] === null)
+        if (testParams.paramRange[name][0] === null || (isNaN(testParams.paramRange[name][0]) &&
+          (typeof testParams.paramRange[name][0] !== 'string' || !testParams.paramRange[name][0].includes(';'))))
           continue
         paramRows += `\n<tr>${prepareRow(name, testParams.paramRange[name], true)}</tr>`
         processedParams.push(name)
       }
       for(let name in testParams.paramRangeSrc) {
-        if(!processedParams.includes(name) && testParams.paramRangeSrc[name][0] !== null && !isNaN(testParams.paramRangeSrc[name][0]))
+        if(!processedParams.includes(name) && testParams.paramRangeSrc[name][0] !== null && (
+          !isNaN(testParams.paramRangeSrc[name][0]) ||
+          (typeof testParams.paramRangeSrc[name][0] === 'string') && testParams.paramRangeSrc[name][0].includes(';')))
           paramRows += `\n<tr>${prepareRow(name, testParams.paramRangeSrc[name], false)}</tr>`
       }
       if (paramRows)

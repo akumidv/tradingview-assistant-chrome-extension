@@ -57,16 +57,23 @@ page.$ = function (selector) {
   return document.querySelector(selector)
 }
 
+page.getElText = (element) => {
+  return element.innerText.replaceAll('​', '')
+}
+
 page.setSelByText = (selector, textValue) => {
   let isSet = false
   const selectorAllVal = document.querySelectorAll(selector)
   if (!selectorAllVal || !selectorAllVal.length)
     return isSet
-  for (let options of selectorAllVal) {
-    if(options && options.innerText.startsWith(textValue)) {
-      page.mouseClick(options)
-      isSet = true
-      break
+  for (let optionsEl of selectorAllVal) {
+    if(optionsEl) {//&& options.innerText.startsWith(textValue)) {
+      const itemValue = page.getElText(optionsEl).toLowerCase()
+      if(itemValue.startsWith(textValue.toLowerCase())) {
+        page.mouseClick(optionsEl)
+        isSet = true
+        break
+      }
     }
   }
   return isSet

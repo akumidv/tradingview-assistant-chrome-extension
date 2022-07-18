@@ -452,25 +452,31 @@ tv.dialogHandler = async () => {
   }
 }
 
+tv.isParsed = false
 
-tv.parseReportTable = () => {
+tv.parseReportTable = async () => {
   const strategyHeaders = []
+  await page.waitForSelector(SEL.strategyReportHeader, 2500)
   let allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
-  // if (!allHeadersEl || allHeadersEl.length === 0)
-  //   allHeadersEl = document.querySelectorAll(SEL.strategyReportHeaderOld)
   if (!allHeadersEl || allHeadersEl.length !== 4)
-    throw new Error('Tradingview UI changed. Can\'t get performance headers. Please contact support')
+    if (!tv.isParsed)
+      throw new Error('Tradingview UI changed. Can\'t get performance headers. Please contact support')
+    else
+      return {}
   for(let headerEl of allHeadersEl) {
     if(headerEl)
       strategyHeaders.push(headerEl.innerText)
   }
 
   const report = {}
+  await page.waitForSelector(SEL.strategyReportRow, 2500)
   let allReportRowsEl = document.querySelectorAll(SEL.strategyReportRow)
-  // if (!allReportRowsEl || allReportRowsEl.length === 0)
-  //   allReportRowsEl = document.querySelectorAll(SEL.strategyReportRowNew)
-  if (!allReportRowsEl || allReportRowsEl.length === 0)
-    throw new Error('Tradingview UI changed. Can\'t get performance rows. Please contact support')
+  if (!allReportRowsEl || allReportRowsEl.length === 0) {
+    if (!tv.isParsed)
+      throw new Error('Tradingview UI changed. Can\'t get performance rows. Please contact support')
+  } else {
+    tv.isParsed = true
+  }
   for(let rowEl of allReportRowsEl) {
     if(rowEl) {
       const allTdEl = rowEl.querySelectorAll('td')
@@ -526,7 +532,7 @@ tv.parseReportTable = () => {
 }
 
 tv.getPerfomance = async () => {
-  return tv.parseReportTable()
+  return await tv.parseReportTable()
   // TODO change the object to get data
   function convertPercent(key, value) {
     if (!value)
