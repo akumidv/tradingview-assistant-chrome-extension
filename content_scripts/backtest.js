@@ -497,8 +497,8 @@ function optAnnealingNewState(allRangeParams, temperature, curState) {
       propVal[paramName] = allRangeParams[paramName][newIndex2]
     }
     msg = `Changed "${paramName}": ${curVal} => ${propVal[paramName]}.`
-  }  else if (isAll) {
-    allParamNames.forEach(paramName => {
+  }  else if (isAll && curState) {
+      allParamNames.forEach(paramName => {
       const curIndex = allRangeParams[paramName].indexOf(curState[paramName])
       const sign = randomInteger(0,1) === 0 ? -1 : 1
       const baseOffset = Math.floor(temperature * randomNormalDistribution(0, (allRangeParams[paramName].length - 1)))
