@@ -158,7 +158,7 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
               continue
             }
             buttonEl.scrollIntoView()
-            await page.waitForTimeout(10)
+            await page.waitForTimeout(100)
             page.mouseClick(buttonEl)
             const isOptions = await page.waitForSelector(SEL.strategyListOptions, 1000)
             if(isOptions) {
@@ -231,7 +231,7 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
           if(!buttonEl || !buttonEl.innerText)
             continue
           buttonEl.scrollIntoView()
-		  await page.waitForTimeout(10)
+		      await page.waitForTimeout(100)
           page.mouseClick(buttonEl)
           page.setSelByText(SEL.strategyListOptions, propVal[propText])
         }
