@@ -458,15 +458,15 @@ tv.parseReportTable = async () => {
   const strategyHeaders = []
   await page.waitForSelector(SEL.strategyReportHeader, 2500)
   let allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
-  if (!allHeadersEl || allHeadersEl.length !== 4)
+  if (!allHeadersEl)
     if (!tv.isParsed)
       throw new Error('Tradingview UI changed. Can\'t get performance headers. Please contact support')
     else
       return {}
-  for(let headerEl of allHeadersEl) {
-    if(headerEl)
-      strategyHeaders.push(headerEl.innerText)
+  for (let i = 0; i < allHeadersEl.length - 1; i++) {
+      strategyHeaders.push(allHeadersEl[i].innerText)
   }
+  console.log("headers", strategyHeaders)
 
   const report = {}
   await page.waitForSelector(SEL.strategyReportRow, 2500)
@@ -477,6 +477,7 @@ tv.parseReportTable = async () => {
   } else {
     tv.isParsed = true
   }
+
   for(let rowEl of allReportRowsEl) {
     if(rowEl) {
       const allTdEl = rowEl.querySelectorAll('td')
@@ -485,12 +486,12 @@ tv.parseReportTable = async () => {
       }
       let paramName = allTdEl[0].innerText
       let isSingleValue = allTdEl.length === 3 || ['Buy & Hold Return', 'Max Run-up', 'Max Drawdown', 'Sharpe Ratio', 'Sortino Ratio', 'Open PL'].includes(paramName)
-      for(let i = 1; i <  allTdEl.length; i++) {
+      for(let i = 1; i <  allTdEl.length - 1; i++) {
         if (isSingleValue && i >= 2)
           continue
         let values = allTdEl[i].innerText
 
-        const isNegative = allTdEl[i].querySelector('[class="neg"]') && !['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown'].includes(paramName)
+        const isNegative = allTdEl[i].querySelector('[class^="negativeValue"]') && !['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown'].includes(paramName)
         if(values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
           const digitalValues = values.replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '')
