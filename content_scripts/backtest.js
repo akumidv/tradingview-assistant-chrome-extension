@@ -119,6 +119,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
   }
 
   resData = await tv.getPerfomance()//tv.parseReportTable()
+  console.log(resData)
   resData = calculateAdditionValuesToReport(resData)
   if (resData && resData.hasOwnProperty(testResults.optParamName)) {
     console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
