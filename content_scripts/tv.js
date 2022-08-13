@@ -490,7 +490,7 @@ tv.parseReportTable = async () => {
           continue
         let values = allTdEl[i].innerText
 
-        const isNegative = allTdEl[i].querySelector('[class="neg"]') && !['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown'].includes(paramName)
+        const isNegative = allTdEl[i].querySelector('[class^="negativeValue"]') && !['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown'].includes(paramName)
         if(values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
           const digitalValues = values.replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '')
