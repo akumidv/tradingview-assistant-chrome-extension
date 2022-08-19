@@ -458,7 +458,7 @@ tv.parseReportTable = async () => {
   const strategyHeaders = []
   await page.waitForSelector(SEL.strategyReportHeader, 2500)
   let allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
-  if (!allHeadersEl || allHeadersEl.length !== 4 || allHeadersEl.length !== 5) { // 5 - Extra column for full screen
+  if (!allHeadersEl || !(allHeadersEl.length === 4 || allHeadersEl.length === 5)) { // 5 - Extra column for full screen
     if (!tv.isParsed)
       throw new Error('Tradingview UI changed. Can\'t get performance headers. Please contact support')
     else
