@@ -396,7 +396,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
               let isInteger = testParams.paramRangeSrc[key][0] === Math.round(testParams.paramRangeSrc[key][0]) &&
                 testParams.paramRangeSrc[key][1] === Math.round(testParams.paramRangeSrc[key][1]) &&
                 testParams.paramRangeSrc[key][2] === Math.round(testParams.paramRangeSrc[key][2])
-              if (Number(fromEl[0].value)) { // Not 0 or Nan
+              if (!Number.isNaN(Number(fromEl[0].value))) { // Not 0 or Nan
                 if (parseInt(fromEl[0].value) !== Number(fromEl[0].value) ||
                    (Number(toEl[0].value) && parseInt(toEl[0].value) !== Number(toEl[0].value)) ||
                    (Number(stepEl[0].value) && parseInt(stepEl[0].value) !== Number(stepEl[0].value)))
