@@ -8,7 +8,7 @@ Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingv
 ## Declaimer
 **Attention!** 
 
-Active use of the extension can cause detection in the TradingView as a bot for backtesting and lead to the ban of the user's account.
+Active use of the extension can cause detection by the TradingView as using a bot for backtesting and lead to the ban of the user's account.
 
 Although the extension is not a bot (i.e. it does not work independently of the user in the cloud), it does not use the 
 TradingView API and does not interfere with data transmission, but only automates user behavior through the UI. Its use and 
@@ -19,6 +19,7 @@ all risks remain with the users.
 The developer of the extension does not response for any possible consequences of its use.
 
 **Recommendation**
+
 If your strategy requires a large amount of testing, it is recommended to order its conversion into python and perform 
 backtesting and hyperoptimization of parameters using resources, such as Google Collab or your computer. In addition, it significantly speeds up the search for parameters.
 
