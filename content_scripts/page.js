@@ -69,7 +69,7 @@ page.setSelByText = (selector, textValue) => {
   for (let optionsEl of selectorAllVal) {
     if(optionsEl) {//&& options.innerText.startsWith(textValue)) {
       const itemValue = page.getElText(optionsEl).toLowerCase()
-      if(itemValue.startsWith(textValue.toLowerCase())) {
+      if(itemValue && textValue && itemValue.startsWith(textValue.toLowerCase())) {
         page.mouseClick(optionsEl)
         isSet = true
         break
