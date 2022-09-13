@@ -5,6 +5,8 @@ Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingv
 
 [Watch the youtube video](https://youtu.be/xhnlSCIlEkw)
 
+Video [how to install from extension user](https://www.youtube.com/watch?v=FH7dI4K8w5k)
+
 ## Declaimer
 **Attention!** 
 
