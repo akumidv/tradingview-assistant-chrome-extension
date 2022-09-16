@@ -17,6 +17,21 @@ page.waitForSelector = async function (selector, timeout = 5000, isHide = false,
   });
 }
 
+page.waitForXPathSelector = async function (xPath, timeout = 5000, isHide = false, parentEl) {
+  parentEl = parentEl ? parentEl : document
+  return new Promise(async (resolve) => {
+    let iter = 0
+    let elem
+    const tikTime = timeout === 0 ? 1000 : 50
+    do {
+      await page.waitForTimeout(tikTime)
+      elem = document.evaluate(xPath, parentEl, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue
+      iter += 1
+    } while ((timeout === 0 ? true : (tikTime * iter) < timeout) && (isHide ? !!elem : !elem))
+    resolve(elem)
+  });
+}
+
 const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
 const inputEvent = new Event('input', { bubbles: true});
 const changeEvent = new Event('change', { bubbles: true});

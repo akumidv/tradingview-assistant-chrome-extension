@@ -21,6 +21,12 @@
         ui.autoCloseAlert(msg)
         return sendResponse()
       }
+      // Handle Deep Testing Button
+      await storage.removeKey(storage.DEEP_BACKTESTING_ENABLE);
+      const deepBackTestingSwitchButton = await page.waitForXPathSelector(XPATH.deepBackTestingSwitchButton);
+      const deepBackTestingSwitchButtonStatus = deepBackTestingSwitchButton.getAttribute('aria-checked');
+      await storage.setKeys(storage.DEEP_BACKTESTING_ENABLE, deepBackTestingSwitchButtonStatus);
+      //
 
       action.workerStatus = request.action
       try {

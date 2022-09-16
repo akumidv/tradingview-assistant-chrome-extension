@@ -1,4 +1,3 @@
-
 const SEL = {
     tvLegendIndicatorItem: 'div[data-name="legend"] div[class^="sourcesWrapper"] div[class^="sources"] div[data-name="legend-source-item"]',
     tvLegendIndicatorItemTitle: 'div[data-name="legend-source-title"]',
@@ -34,4 +33,11 @@ const SEL = {
     strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
     strategyDefaultElement: '#study-defaults-manager',
     strategyImportExport: '#iondvImportExport'
+}
+
+const XPATH = {
+    deepBackTestingSwitchButton: '//*[@id="bottom-area"]/div[4]/div/div[1]/div[1]/div[2]/div/span/input',
+    deepBackTestingGenerateButton: '//*[@id="bottom-area"]/div[4]/div/div[1]/div[1]/div[3]/button',
+    deepBackTestinginProcess: '//*[@id="bottom-area"]/div[4]/div/div[3]/div/div/div',
+    deepBackTestingReportReady: '//*[@id="bottom-area"]/div[4]/div/div[3]/div/div/div/div/table',
 }
