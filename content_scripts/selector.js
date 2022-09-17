@@ -20,7 +20,6 @@ const SEL = {
     strategyDialogParam: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"]  > div:nth-child(2) > button:nth-child(1)',
     strategySummary: '#bottom-area div[class^="backtesting"] div[class^="tabSwitcher"] > button:nth-child(2)',
     strategySummaryActive: '#bottom-area div[class^="backtesting"] div[class^="tabSwitcher"] > button[class*="activeTab"]:nth-child(2)',
-    // strategySummaryActiveNew: '#bottom-area div[class^="backtesting"] div[class^="tabSwitcher"] > button[class*="activeTab"]:nth-child(2)',
     strategyReport: '#bottom-area div.backtesting-content-wrapper > div.reports-content',
     strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > div.reports-content.fade',
     strategyReportIsTransition: '#bottom-area div.backtesting-content-wrapper > div.reports-content.opacity-transition',
@@ -28,10 +27,9 @@ const SEL = {
     strategyReportTransitionReady: '#bottom-area div.backtesting-content-wrapper > div:not(.opacity-transition).reports-content',
     strategyReportError: '#bottom-area div.backtesting-content-wrapper > div.reports-content.report-error',
     strategyReportHeader: '#bottom-area div.backtesting-content-wrapper thead > tr > th',
-    // strategyReportHeaderOld: '#bottom-area div.backtesting-content-wrapper thead > tr > td',
     strategyReportRow: '#bottom-area div.backtesting-content-wrapper tbody > tr',
-    // strategyReportRowNew: '#bottom-area div.backtesting-content-wrapper tbody > tr',
     strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
     strategyDefaultElement: '#study-defaults-manager',
+
     strategyImportExport: '#iondvImportExport'
 }
