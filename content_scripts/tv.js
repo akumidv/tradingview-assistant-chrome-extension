@@ -237,7 +237,7 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
         }
       } else if (propClassName.includes('fill-')) {
         const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
-        if(checkboxEl) {          
+        if(checkboxEl) {
 			// const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
 			const isChecked = Boolean(checkboxEl.checked)
 			if(Boolean(propVal[propText]) !== isChecked) {
@@ -251,8 +251,15 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
     }
   }
   // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
-  if(!isCheckOpenedWindow && document.querySelector(SEL.okBtn))
+  if(!isCheckOpenedWindow && document.querySelector(SEL.okBtn)) {
     document.querySelector(SEL.okBtn).click()
+
+    if (await helper.getDeepBackTestingStatus()) {
+      let deepBackTestingElement = await page.waitForXPathSelector(XPATH.deepBackTestingGenerateButton)
+      deepBackTestingElement.click();
+    }
+  }
+
   return true
 }
 

@@ -289,8 +289,12 @@ ui.statusMessage = (msgText, extraHeader = null) => {
   }
   const btnClose = document.getElementById('iondvBoxClose')
   if (btnClose) {
-    btnClose.onclick = () => {
+    btnClose.onclick = async () => {
       console.log('Stop clicked')
+      if (await helper.getDeepBackTestingStatus()) {
+        let deepBackTestingElement = await page.waitForXPathSelector(XPATH.deepBackTestingGenerateButton)
+        deepBackTestingElement.click();
+      }
       action.workerStatus = null
     }
   }

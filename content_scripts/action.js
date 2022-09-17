@@ -68,6 +68,12 @@ action.downloadStrategyTestResults = async () => {
 }
 
 action.testStrategy = async (request) => {
+  if (await helper.getDeepBackTestingStatus()) {
+    let deepBackTestingElement = await page.waitForXPathSelector(XPATH.deepBackTestingGenerateButton)
+    deepBackTestingElement.click();
+    await page.waitForSelector(SEL.strategyReportInProcess, 2500)
+  }
+
   console.log('request', request)
   ui.statusMessage('Get the initial parameters.')
   const strategyData = await tv.getStrategy()
