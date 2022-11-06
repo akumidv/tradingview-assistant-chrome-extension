@@ -30,6 +30,9 @@ const SEL = {
     strategyReportRow: '#bottom-area div.backtesting-content-wrapper tbody > tr',
     strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
     strategyDefaultElement: '#study-defaults-manager',
+    strategyDeepTestCheckbox: '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input',
+    strategyDeepTestStartDate: '#bottom-area div[class^="backtesting"]  [class^="historyParams"]  [class^="container" ]> div:nth-child(1) div[class^="pickerInput"] input',
+    strategyDeepTestGenerateBtn: '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"]',
 
     strategyImportExport: '#iondvImportExport'
 }

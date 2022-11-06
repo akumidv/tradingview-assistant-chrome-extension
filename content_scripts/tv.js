@@ -239,11 +239,11 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
         const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
         if(checkboxEl) {          
 			// const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
-			const isChecked = Boolean(checkboxEl.checked)
-			if(Boolean(propVal[propText]) !== isChecked) {
-				page.mouseClick(checkboxEl)
-				checkboxEl.checked = Boolean(propVal[propText])
-			}
+          const isChecked = Boolean(checkboxEl.checked)
+          if(Boolean(propVal[propText]) !== isChecked) {
+            page.mouseClick(checkboxEl)
+            checkboxEl.checked = Boolean(propVal[propText])
+          }
         }
       }
       if(propKeys.length === setResultNumber)
@@ -294,6 +294,21 @@ tv.openCurrentStrategyParam = async () => {
     return null
   }
   return true
+}
+
+tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
+  const deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckbox)
+  const isChecked = Boolean(deepCheckboxEl.checked)
+  if(isDeepTest !== isChecked) {
+    page.mouseClick(deepCheckboxEl)
+    deepCheckboxEl.checked = isDeepTest
+  }
+  if (isDeepTest && deepStartDate) {
+    const startDateEl = await page.waitForSelector(SEL.strategyDeepTestStartDate)
+    if (startDateEl) {
+      page.setInputElementValue(startDateEl, deepStartDate)
+    }
+  }
 }
 
 tv.checkAndOpenStrategy = async (name) => {
@@ -532,76 +547,97 @@ tv.parseReportTable = async () => {
   return report
 }
 
-tv.getPerfomance = async () => {
+tv.generateDeepTestReport = async () => {
+  const generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
+  if (generateBtnEl) {
+    generateBtnEl.click()
+    const reportHeader = await page.waitForSelector(SEL.strategyReportHeader, 60000)
+    if (!reportHeader) {
+      if (tv.isParsed)
+        return false
+      else
+        throw new Error('Error waiting Performance summary table for deep backtesting. Possible changes in TV UI?')
+    }
+  } else if (tv.isParsed) {
+    return false
+  } else {
+    throw new Error('Error for generate deep backtesting report due the button is not exist. Possible changes in TV UI?')
+  }
+  return true
+
+}
+
+tv.getPerformance = async () => {
+
   return await tv.parseReportTable()
   // TODO change the object to get data
-  function convertPercent(key, value) {
-    if (!value)
-      return 0
-    return key.endsWith('Percent') || key.startsWith('percent')? value * 100 : value
-  }
-
-  const perfDict = {
-    'netProfit': 'Net Profit',
-    'netProfitPercent': 'Net Profit %',
-    'grossProfit': 'Gross Profit',
-    'grossProfitPercent': 'Gross Profit %',
-    'grossLoss': 'Gross Loss',
-    'grossLossPercent': 'Gross Loss %',
-    'maxStrategyDrawDown': 'Max Drawdown',
-    'maxStrategyDrawDownPercent': 'Max Drawdown %',
-    'buyHoldReturn': 'Buy & Hold Return',
-    'buyHoldReturnPercent': 'Buy & Hold Return %',
-    'sharpeRatio': 'Sharpe Ratio',
-    'sortinoRatio': 'Sortino Ratio',
-    'profitFactor': 'Profit Factor',
-    'maxContractsHeld': 'Max Contracts Held',
-    'openPL': 'Open PL',
-    'openPLPercent': 'Open PL %',
-    'commissionPaid': 'Commission Paid',
-    'totalTrades': 'Total Closed Trades',
-    'totalOpenTrades': 'Total Open Trades',
-    'numberOfLosingTrades': 'Number Losing Trades',
-    'numberOfWiningTrades': 'Number Winning Trades',
-    'percentProfitable': 'Percent Profitable',
-    'avgTrade': 'Avg Trade',
-    'avgTradePercent': 'Avg Trade %',
-    'avgWinTrade': 'Avg Winning Trade',
-    'avgWinTradePercent': 'Avg Winning Trade %',
-    'avgLosTrade': 'Avg Losing Trade',
-    'avgLosTradePercent': 'Avg Losing Trade %',
-    'ratioAvgWinAvgLoss': 'Ratio Avg Win / Avg Loss',
-    'largestWinTrade': 'Largest Winning Trade',
-    'largestWinTradePercent': 'Largest Winning Trade %',
-    'largestLosTrade': 'Largest Losing Trade',
-    'largestLosTradePercent': 'Largest Losing Trade %',
-    'avgBarsInTrade': 'Avg # Bars in Trades',
-    'avgBarsInLossTrade': 'Avg # Bars In Losing Trades',
-    'avgBarsInWinTrade': 'Avg # Bars In Winning Trades',
-    'marginCalls': 'Margin Calls',
-  }
-
-  const performanceData = await tv.getPageData('getPerformance')
-  let data = {}
-  if (performanceData) {
-    if(performanceData.hasOwnProperty('all') && performanceData.hasOwnProperty('long') && performanceData.hasOwnProperty('short')) {
-      for (let key of Object.keys(performanceData['all'])) {
-        const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
-        data[`${keyName}: All`] = convertPercent(key, performanceData['all'][key])
-        if(performanceData['long'].hasOwnProperty(key))
-          data[`${keyName}: Long`] = convertPercent(key, performanceData['long'][key])
-        if(performanceData['short'].hasOwnProperty(key))
-          data[`${keyName}: Short`] = convertPercent(key, performanceData['short'][key])
-      }
-    }
-    for(let key of Object.keys(performanceData)) {
-      if (!['all', 'long', 'short'].includes(key)) {
-        const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
-        data[keyName] =  convertPercent(key, performanceData[key])
-      }
-    }
-  }
-  return data
+  // function convertPercent(key, value) {
+  //   if (!value)
+  //     return 0
+  //   return key.endsWith('Percent') || key.startsWith('percent')? value * 100 : value
+  // }
+  //
+  // const perfDict = {
+  //   'netProfit': 'Net Profit',
+  //   'netProfitPercent': 'Net Profit %',
+  //   'grossProfit': 'Gross Profit',
+  //   'grossProfitPercent': 'Gross Profit %',
+  //   'grossLoss': 'Gross Loss',
+  //   'grossLossPercent': 'Gross Loss %',
+  //   'maxStrategyDrawDown': 'Max Drawdown',
+  //   'maxStrategyDrawDownPercent': 'Max Drawdown %',
+  //   'buyHoldReturn': 'Buy & Hold Return',
+  //   'buyHoldReturnPercent': 'Buy & Hold Return %',
+  //   'sharpeRatio': 'Sharpe Ratio',
+  //   'sortinoRatio': 'Sortino Ratio',
+  //   'profitFactor': 'Profit Factor',
+  //   'maxContractsHeld': 'Max Contracts Held',
+  //   'openPL': 'Open PL',
+  //   'openPLPercent': 'Open PL %',
+  //   'commissionPaid': 'Commission Paid',
+  //   'totalTrades': 'Total Closed Trades',
+  //   'totalOpenTrades': 'Total Open Trades',
+  //   'numberOfLosingTrades': 'Number Losing Trades',
+  //   'numberOfWiningTrades': 'Number Winning Trades',
+  //   'percentProfitable': 'Percent Profitable',
+  //   'avgTrade': 'Avg Trade',
+  //   'avgTradePercent': 'Avg Trade %',
+  //   'avgWinTrade': 'Avg Winning Trade',
+  //   'avgWinTradePercent': 'Avg Winning Trade %',
+  //   'avgLosTrade': 'Avg Losing Trade',
+  //   'avgLosTradePercent': 'Avg Losing Trade %',
+  //   'ratioAvgWinAvgLoss': 'Ratio Avg Win / Avg Loss',
+  //   'largestWinTrade': 'Largest Winning Trade',
+  //   'largestWinTradePercent': 'Largest Winning Trade %',
+  //   'largestLosTrade': 'Largest Losing Trade',
+  //   'largestLosTradePercent': 'Largest Losing Trade %',
+  //   'avgBarsInTrade': 'Avg # Bars in Trades',
+  //   'avgBarsInLossTrade': 'Avg # Bars In Losing Trades',
+  //   'avgBarsInWinTrade': 'Avg # Bars In Winning Trades',
+  //   'marginCalls': 'Margin Calls',
+  // }
+  //
+  // const performanceData = await tv.getPageData('getPerformance')
+  // let data = {}
+  // if (performanceData) {
+  //   if(performanceData.hasOwnProperty('all') && performanceData.hasOwnProperty('long') && performanceData.hasOwnProperty('short')) {
+  //     for (let key of Object.keys(performanceData['all'])) {
+  //       const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
+  //       data[`${keyName}: All`] = convertPercent(key, performanceData['all'][key])
+  //       if(performanceData['long'].hasOwnProperty(key))
+  //         data[`${keyName}: Long`] = convertPercent(key, performanceData['long'][key])
+  //       if(performanceData['short'].hasOwnProperty(key))
+  //         data[`${keyName}: Short`] = convertPercent(key, performanceData['short'][key])
+  //     }
+  //   }
+  //   for(let key of Object.keys(performanceData)) {
+  //     if (!['all', 'long', 'short'].includes(key)) {
+  //       const keyName = perfDict.hasOwnProperty(key) ? perfDict[key] : key
+  //       data[keyName] =  convertPercent(key, performanceData[key])
+  //     }
+  //   }
+  // }
+  // return data
 }
 
 tv.getPageData = async (actionName, timeout = 1000) => {

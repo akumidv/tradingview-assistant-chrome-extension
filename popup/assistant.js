@@ -101,6 +101,10 @@ function setPopupInputsByOptions(getResults) {
         document.getElementById('optFilterValue').value = iondvOptions.optFilterValue
       if (document.getElementById('optFilterParamName') && iondvOptions.hasOwnProperty('optFilterParamName'))
         document.getElementById('optFilterParamName').value = iondvOptions.optFilterParamName
+
+      if(document.getElementById('deepStartDate') && iondvOptions.hasOwnProperty('deepStartDate'))
+        document.getElementById('deepStartDate').value = iondvOptions.deepStartDate
+
     }
     const link = document.querySelector(`div.tabs__links > a${typeof tabId === 'number' && tabId > 0 && tabId < 3 ? ':nth-child(' + tabId + ')' : ''}`);
     if (link) // Activate saved or fist tab
@@ -123,12 +127,10 @@ function getOptions(signal) {
   iondvOptions.optFilterParamName = document.getElementById('optFilterParamName').value || 'Total Closed Trades: All'
   const deepStartDateEl = document.getElementById('deepStartDate')
   if (deepStartDateEl) {
-    if (deepStartDateEl.value === '' || (deepStartDateEl.value && deepStartDateEl.value.match(/^20\d{2}-[0-1][0-2]-[0-3][0-9]/))) {
-      // deepStartDateEl.style.setProperty('--warningVisible', 'none')
+    if (deepStartDateEl.value === '' || (deepStartDateEl.value && deepStartDateEl.value.match(/^20\d{2}-[0-1][0-9]-[0-3][0-9]/))) {
       deepStartDateEl.style.removeProperty('color')
       iondvOptions.deepStartDate = deepStartDateEl.value
     } else {
-      // deepStartDateEl.style.setProperty('--warningVisible', 'block')
       deepStartDateEl.style.setProperty('color', 'red')
       iondvOptions.deepStartDate = null
     }

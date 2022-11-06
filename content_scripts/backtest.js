@@ -117,16 +117,17 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
       resData = newVal < resVal ?  newResData : resData
     }
   }
-
-  resData = await tv.getPerfomance()//tv.parseReportTable()
-  resData = calculateAdditionValuesToReport(resData)
+  const isReady = testResults.isDeepTest ? await tv.generateDeepTestReport() : true
+  if (isReady) {
+    resData = await tv.getPerformance()//tv.parseReportTable()
+    resData = calculateAdditionValuesToReport(resData)
+  }
   if (resData && resData.hasOwnProperty(testResults.optParamName)) {
     console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
     resVal = resData[testResults.optParamName]
     resData['comment'] = resData['comment'] ? `Current parameters. ${resData['comment']}` : 'Current parameters.'
     Object.keys(resPropVal).forEach(key => resData[`__${key}`] = resPropVal[key])
   }
-
 
   if(testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
     const defPropVal = expandPropVal(testResults.startParams.default, resPropVal)
@@ -170,6 +171,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
 }
 
 
+
 backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = false, isIgnoreSetParam = false) => {
   let reportData = {}
   tv.isReportChanged = false // Global value
@@ -180,19 +182,29 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
   }
 
   // let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 2500)
-  let isProcessStart = await page.waitForSelector(SEL.strategyReportIsTransition, 5000)
-  let isProcessEnd = tv.isReportChanged
+  let isProcessStart = false
+  let isProcessEnd = false
+  let isProcessError = null
+  if (testResults.isDeepTest) {
+    isProcessEnd = await tv.generateDeepTestReport()
+    isProcessStart = isProcessEnd
+    isProcessError = !isProcessEnd
+  } else {
+    isProcessStart = await page.waitForSelector(SEL.strategyReportIsTransition, 5000)
+    isProcessEnd = tv.isReportChanged
 
-  if (isProcessStart) {
-    isProcessEnd = await page.waitForSelector(SEL.strategyReportTransitionReady, 25000) // TODO to options
-    isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
-  } else if (isProcessEnd)
-    isProcessStart = true
+    if (isProcessStart) {
+      isProcessEnd = await page.waitForSelector(SEL.strategyReportTransitionReady, 25000) // TODO to options
+      isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
+    } else if (isProcessEnd)
+      isProcessStart = true
 
-  let isProcessError = document.querySelector(SEL.strategyReportError)
-  await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
-  reportData = await tv.getPerfomance() //tv.parseReportTable()
-  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
+    isProcessError = document.querySelector(SEL.strategyReportError)
+    await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+  }
+
+  reportData = await tv.getPerformance() //tv.parseReportTable()
+  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
       reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {

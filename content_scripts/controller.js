@@ -44,10 +44,10 @@
             await action.getStrategyTemplate()
             break
           case 'testStrategy':
-            await action.testStrategy(request)
+            await action.testStrategy(request, false)
             break
           case 'deepTestStrategy':
-            await action.deepTestStrategy(request)
+            await action.testStrategy(request, true)
             break
           case 'downloadStrategyTestResults':
             await action.downloadStrategyTestResults()
