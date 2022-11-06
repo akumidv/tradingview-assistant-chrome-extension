@@ -141,8 +141,9 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
             const digPropValue = parseFloat(propValue.replace(' ',''))  // tradingview sometimes adds a space as thousand separator
             if(!isNaN(digPropValue)){
               strategyData.properties[propText] = digPropValue
-            else
+            }else{
               strategyData.properties[propText] = propValue
+            }
           } else {
             strategyData.properties[propText] = propValue
           }
