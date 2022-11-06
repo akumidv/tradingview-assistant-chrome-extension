@@ -137,13 +137,13 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
         i++
         if (indicProperties[i] && indicProperties[i].querySelector('input')) {
           let propValue = indicProperties[i].querySelector('input').value
-          if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric' ||
-            (parseFloat(propValue) == propValue || parseInt(propValue) == propValue)) { // not only inputmode==numbers input have digits
-            const digPropValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just search point in string
-            if(!isNaN(propValue))
+          if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') { 
+            const digPropValue = parseFloat(propValue.replace(' ',''))  // tradingview sometimes adds a space as thousand separator
+            if(!isNaN(digPropValue)){
               strategyData.properties[propText] = digPropValue
-            else
+            }else{
               strategyData.properties[propText] = propValue
+            }
           } else {
             strategyData.properties[propText] = propValue
           }
