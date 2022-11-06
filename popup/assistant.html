@@ -1,355 +1,561 @@
 <!DOCTYPE>
 <html lang="en">
 <head>
-  <head>
-    <title>>Tradingview assistant</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <script src="assistant.js"></script>
-    <link rel="stylesheet" type="text/css" href="style.css">
-  </head>
-  <body>
+    <head>
+        <title>>Tradingview assistant</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <script src="assistant.js"></script>
+        <link rel="stylesheet" type="text/css" href="style.css">
+    </head>
+<body>
 <div class="wrapper">
     <div class="content">
-  <div class="popup_header">
-    <h2>Tradingview assistant</h2>
-  </div>
-
-
-  <div class="tabs">
-    <div id="content-1">
-        <div id="warningBacktest" class="subheader">
-            <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English version</a> of Tradingview</p>
-        </div>
-      <div class="row">
-        <div class="details">
-          <details open>
-          <summary>Strategy optimization parameters</summary>
-              <div>
-          <div  class="param-container">
-            <div class="param-box">
-              <div>
-                <label class="checkbox-minmax">
-                  <input id="optMinmax" type="checkbox" checked>
-                  <b></b>
-                </label>
-                <span> value of</span>
-              </div>
-              <div>
-                <select id="optParamName" name="optParamName">
-                    <option value="Net Profit: All" selected="selected">Net Profit: All</option>
-                    <option value="Net Profit %: All">Net Profit %: All</option>
-                    <option value="Net Profit: Long">Net Profit: Long</option>
-                    <option value="Net Profit %: Long">Net Profit %: Long</option>
-                    <option value="Net Profit: Short">Net Profit: Short</option>
-                    <option value="Net Profit %: Short">Net Profit %: Short</option>
-                    <option value="Gross Profit: All">Gross Profit: All</option>
-                    <option value="Gross Profit %: All">Gross Profit %: All</option>
-                    <option value="Gross Profit: Long">Gross Profit: Long</option>
-                    <option value="Gross Profit %: Long">Gross Profit %: Long</option>
-                    <option value="Gross Profit %: Short">Gross Profit %: Short</option>
-                    <option value="Gross Loss: All">Gross Loss: All</option>
-                    <option value="Gross Loss %: All">Gross Loss: All</option>
-                    <option value="Gross Loss: Long">Gross Loss: Long</option>
-                    <option value="Gross Loss %: Long">Gross Loss %: Long</option>
-                    <option value="Gross Loss: Short">Gross Loss: Short</option>
-                    <option value="Gross Loss %: Short">Gross Loss %: Short</option>
-                    <option value="Max Drawdown">Max Drawdown</option>
-                    <option value="Max Drawdown %">Max Drawdown %</option>
-                    <option value="Buy & Hold Return">Buy & Hold Return</option>
-                    <option value="Buy & Hold Return %">Buy & Hold Return %</option>
-                    <option value="Sharpe Ratio">Sharpe Ratio</option>
-                    <option value="Sortino Ratio">Sortino Ratio</option>
-                    <option value="Profit Factor: All">Profit Factor: All</option>
-                    <option value="Profit Factor: Long">Profit Factor: Long</option>
-                    <option value="Profit Factor: Short">Profit Factor: Short</option>
-                    <option value="Max Contracts Held: All">Max Contracts Held: All</option>
-                    <option value="Max Contracts Held: Long">Max Contracts Held: Long</option>
-                    <option value="Max Contracts Held: Short">Max Contracts Held: Short</option>
-                    <option value="Open PL">Open PL</option>
-                    <option value="Open PL %">Open PL %</option>
-                    <option value="Commission Paid: All">Commission Paid: All</option>
-                    <option value="Commission Paid: Long">Commission Paid: Long"</option>
-                    <option value="Commission Paid: Short">Commission Paid: Short</option>
-                    <option value="Total Closed Trades: All">Total Closed Trades: All</option>
-                    <option value="Total Closed Trades: Long">Total Closed Trades: Long</option>
-                    <option value="Total Closed Trades: Short">Total Closed Trades: Short</option>
-                    <option value="Total Open Trades: All">Total Open Trades: All</option>
-                    <option value="Total Open Trades: Long">Total Open Trades: Long</option>
-                    <option value="Total Open Trades: Short">Total Open Trades: Short</option>
-
-
-                    <option value="Number Winning Trades: All">Number Winning Trades: All</option>
-                    <option value="Number Winning Trades: Long">Number Winning Trades: Long</option>
-                    <option value="Number Winning Trades: Short">Number Winning Trades: Short</option>
-                    <option value="Number Losing Trades: All">Number Losing Trades: All</option>
-                    <option value="Number Losing Trades: Long">Number Losing Trades: Long</option>
-                    <option value="Number Losing Trades: Short">Number Losing Trades: Short</option>
-
-                    <option value="Percent Profitable: All">Percent Profitable: All</option>
-                    <option value="Percent Profitable: Long">Percent Profitable: Long</option>
-                    <option value="Percent Profitable: Short">Percent Profitable: Short</option>
-                    <option value="Avg Trade: All">Avg Trade: All</option>
-                    <option value="Avg Trade %: All">Avg Trade %: All</option>
-                    <option value="Avg Trade: Long">Avg Trade: Long</option>
-                    <option value="Avg Trade: Long %">Avg Trade: Long %</option>
-                    <option value="Avg Trade: Short">Avg Trade: Short</option>
-                    <option value="Avg Trade: Short %">Avg Trade: Short %</option>
-                    <option value="Avg Winning Trade: All">Avg Winning Trade: All</option>
-                    <option value="Avg Winning Trade %: All">Avg Winning Trade %: All</option>
-
-                    <option value="Avg Winning Trade: Long">Avg Winning Trade: Long</option>
-                    <option value="Avg Winning Trade: Long %">Avg Winning Trade: Long %</option>
-                    <option value="Avg Winning Trade: Short">Avg Winning Trade: Short</option>
-                    <option value="Avg Winning Trade: Short %">Avg Winning Trade: Short %</option>
-
-                    <option value="Avg Losing Trade: All">Avg Losing Trade: All</option>
-                    <option value="Avg Losing Trade %: All">Avg Losing Trade: All</option>
-                    <option value="Avg Losing Trade: Long">Avg Losing Trade: Long</option>
-                    <option value="Avg Losing Trade: Long %">Avg Losing Trade: Long %</option>
-                    <option value="Avg Losing Trade: Short">Avg Losing Trade: Short</option>
-                    <option value="Avg Losing Trade: Short %">Avg Losing Trade: Short %</option>
-
-
-                    <option value="Ratio Avg Win / Avg Loss: All">Ratio Avg Win / Avg Loss: All</option>
-                    <option value="Ratio Avg Win / Avg Loss: Long">Ratio Avg Win / Avg Loss: Long</option>
-                    <option value="Ratio Avg Win / Avg Loss: Short">Ratio Avg Win / Avg Loss: Short</option>
-
-
-                    <option value="Largest Winning Trade: All">Largest Winning Trade: All</option>
-                    <option value="Largest Winning Trade %: All">Largest Winning Trade %: All</option>
-                    <option value="Largest Winning Trade: Long">Largest Winning Trade: Long</option>
-                    <option value="Largest Winning Trade %: Long">Largest Winning Trade %: Long</option>
-                    <option value="Largest Winning Trade: Short">Largest Winning Trade: Short</option>
-                    <option value="Largest Winning Trade %: Short">Largest Winning Trade %: Short</option>
-
-                    <option value="Largest Losing Trade: All">Largest Losing Trade: All</option>
-                    <option value="Largest Losing Trade %: All">Largest Losing Trade %: All</option>
-                    <option value="Largest Losing Trade: Long">Largest Losing Trade: Long</option>
-                    <option value="Largest Losing Trade %: Long">Largest Losing Trade %: Long</option>
-                    <option value="Largest Losing Trade: Short">Largest Losing Trade: Short</option>
-                    <option value="Largest Losing Trade %: Short">Largest Losing Trade %: Short</option>
-
-                    <option value="Avg # Bars in Trades: All">Avg # Bars in Trades: All</option>
-                    <option value="Avg # Bars in Trades: Long">Avg # Bars in Trades: Long</option>
-                    <option value="Avg # Bars in Trades: Short">Avg # Bars in Trades: Short</option>
-                    <option value="Avg # Bars in Winning Trades: All">Avg # Bars in Winning Trades: All</option>
-                    <option value="Avg # Bars in Winning Trades: Long">Avg # Bars in Winning Trades: Long</option>
-                    <option value="Avg # Bars in Winning Trades: Short">Avg # Bars in Winning Trades: Short</option>
-                    <option value="Avg # Bars in Losing Trades: All">Avg # Bars in Losing Trades: All</option>
-                    <option value="Avg # Bars in Losing Trades: Long">Avg # Bars in Losing Trades: Long</option>
-                    <option value="Avg # Bars in Losing Trades: Short">Avg # Bars in Losing Trades: Short</option>
-                    <option value="Margin Calls: All">Margin Calls: All</option>
-                    <option value="Margin Calls: Long">Margin Calls: Long</option>
-                    <option value="Margin Calls: Short">Margin Calls: Short</option>
-
-                  <option value=".Percent Decimal">Percent Decimal</option>
-                  <option value=".Reward">Reward</option>
-                  <option value=".Margin">Margin</option>
-                  <option value=".Breakeven">Breakeven</option>
-                  <option value=".maxProfitFromTrades">Net profit if trades > 50</option>
-                </select>
-              </div>
-              <div>by</div>
-              <div>
-                <select id="optMethod" name="method">
-                    <option value="annealing">Annealing</option>
-                    <option value="random" selected="selected">Random</option>
-                    <option value="random improvement">Random improvement</option>
-                    <option value="sequential">Sequential improvement</option>
-                    <option value="brute force">Brute force</option>
-                </select>
-              </div>
-              <div>method</div>
-            </div>
-          </div></div>
-              <div>
-          <div  class="param-container">
-              <div class="param-box">
-                  <span>Filter</span>
-                  <div class="switch-toggle switch-3 switch-candy">
-                      <input id="optFilterOff" name="state-d" type="radio"  checked="checked"/>
-                      <label for="optFilterOff">OFF</label>
-
-                      <input id="optFilterMore" name="state-d" type="radio"/>
-                      <label for="optFilterMore" class="disabled">More</label>
-
-                      <input id="optFilterLess" name="state-d" type="radio" />
-                      <label for="optFilterLess">Less</label>
-                      <div id="filterParam">
-                          <span>than</span>
-                          <input id="optFilterValue" type="number" name="method" style="width: 5em" value="5">
-                          <span>for</span>
-                          <select id="optFilterParamName" name="optFilterParamName">
-                              <option value="Net Profit: All">Net Profit: All</option>
-                              <option value="Net Profit %: All">Net Profit %: All</option>
-                              <option value="Net Profit: Long">Net Profit: Long</option>
-                              <option value="Net Profit %: Long">Net Profit %: Long</option>
-                              <option value="Net Profit: Short">Net Profit: Short</option>
-                              <option value="Net Profit %: Short">Net Profit %: Short</option>
-                              <option value="Gross Profit: All">Gross Profit: All</option>
-                              <option value="Gross Profit %: All">Gross Profit %: All</option>
-                              <option value="Gross Profit: Long">Gross Profit: Long</option>
-                              <option value="Gross Profit %: Long">Gross Profit %: Long</option>
-                              <option value="Gross Profit %: Short">Gross Profit %: Short</option>
-                              <option value="Gross Loss: All">Gross Loss: All</option>
-                              <option value="Gross Loss %: All">Gross Loss: All</option>
-                              <option value="Gross Loss: Long">Gross Loss: Long</option>
-                              <option value="Gross Loss %: Long">Gross Loss %: Long</option>
-                              <option value="Gross Loss: Short">Gross Loss: Short</option>
-                              <option value="Gross Loss %: Short">Gross Loss %: Short</option>
-                              <option value="Max Drawdown">Max Drawdown</option>
-                              <option value="Max Drawdown %">Max Drawdown %</option>
-                              <option value="Buy & Hold Return">Buy & Hold Return</option>
-                              <option value="Buy & Hold Return %">Buy & Hold Return %</option>
-                              <option value="Sharpe Ratio">Sharpe Ratio</option>
-                              <option value="Sortino Ratio">Sortino Ratio</option>
-                              <option value="Profit Factor: All">Profit Factor: All</option>
-                              <option value="Profit Factor: Long">Profit Factor: Long</option>
-                              <option value="Profit Factor: Short">Profit Factor: Short</option>
-                              <option value="Max Contracts Held: All">Max Contracts Held: All</option>
-                              <option value="Max Contracts Held: Long">Max Contracts Held: Long</option>
-                              <option value="Max Contracts Held: Short">Max Contracts Held: Short</option>
-                              <option value="Open PL">Open PL</option>
-                              <option value="Open PL %">Open PL %</option>
-                              <option value="Commission Paid: All">Commission Paid: All</option>
-                              <option value="Commission Paid: Long">Commission Paid: Long"</option>
-                              <option value="Commission Paid: Short">Commission Paid: Short</option>
-                              <option value="Total Closed Trades: All" selected="selected">Total Closed Trades: All</option>
-                              <option value="Total Closed Trades: Long">Total Closed Trades: Long</option>
-                              <option value="Total Closed Trades: Short">Total Closed Trades: Short</option>
-                              <option value="Total Open Trades: All">Total Open Trades: All</option>
-                              <option value="Total Open Trades: Long">Total Open Trades: Long</option>
-                              <option value="Total Open Trades: Short">Total Open Trades: Short</option>
-
-
-                              <option value="Number Winning Trades: All">Number Winning Trades: All</option>
-                              <option value="Number Winning Trades: Long">Number Winning Trades: Long</option>
-                              <option value="Number Winning Trades: Short">Number Winning Trades: Short</option>
-                              <option value="Number Losing Trades: All">Number Losing Trades: All</option>
-                              <option value="Number Losing Trades: Long">Number Losing Trades: Long</option>
-                              <option value="Number Losing Trades: Short">Number Losing Trades: Short</option>
-
-                              <option value="Percent Profitable: All">Percent Profitable: All</option>
-                              <option value="Percent Profitable: Long">Percent Profitable: Long</option>
-                              <option value="Percent Profitable: Short">Percent Profitable: Short</option>
-                              <option value="Avg Trade: All">Avg Trade: All</option>
-                              <option value="Avg Trade %: All">Avg Trade %: All</option>
-                              <option value="Avg Trade: Long">Avg Trade: Long</option>
-                              <option value="Avg Trade: Long %">Avg Trade: Long %</option>
-                              <option value="Avg Trade: Short">Avg Trade: Short</option>
-                              <option value="Avg Trade: Short %">Avg Trade: Short %</option>
-                              <option value="Avg Winning Trade: All">Avg Winning Trade: All</option>
-                              <option value="Avg Winning Trade %: All">Avg Winning Trade %: All</option>
-
-                              <option value="Avg Winning Trade: Long">Avg Winning Trade: Long</option>
-                              <option value="Avg Winning Trade: Long %">Avg Winning Trade: Long %</option>
-                              <option value="Avg Winning Trade: Short">Avg Winning Trade: Short</option>
-                              <option value="Avg Winning Trade: Short %">Avg Winning Trade: Short %</option>
-
-                              <option value="Avg Losing Trade: All">Avg Losing Trade: All</option>
-                              <option value="Avg Losing Trade %: All">Avg Losing Trade: All</option>
-                              <option value="Avg Losing Trade: Long">Avg Losing Trade: Long</option>
-                              <option value="Avg Losing Trade: Long %">Avg Losing Trade: Long %</option>
-                              <option value="Avg Losing Trade: Short">Avg Losing Trade: Short</option>
-                              <option value="Avg Losing Trade: Short %">Avg Losing Trade: Short %</option>
-
-
-                              <option value="Ratio Avg Win / Avg Loss: All">Ratio Avg Win / Avg Loss: All</option>
-                              <option value="Ratio Avg Win / Avg Loss: Long">Ratio Avg Win / Avg Loss: Long</option>
-                              <option value="Ratio Avg Win / Avg Loss: Short">Ratio Avg Win / Avg Loss: Short</option>
-
-
-                              <option value="Largest Winning Trade: All">Largest Winning Trade: All</option>
-                              <option value="Largest Winning Trade %: All">Largest Winning Trade %: All</option>
-                              <option value="Largest Winning Trade: Long">Largest Winning Trade: Long</option>
-                              <option value="Largest Winning Trade %: Long">Largest Winning Trade %: Long</option>
-                              <option value="Largest Winning Trade: Short">Largest Winning Trade: Short</option>
-                              <option value="Largest Winning Trade %: Short">Largest Winning Trade %: Short</option>
-
-                              <option value="Largest Losing Trade: All">Largest Losing Trade: All</option>
-                              <option value="Largest Losing Trade %: All">Largest Losing Trade %: All</option>
-                              <option value="Largest Losing Trade: Long">Largest Losing Trade: Long</option>
-                              <option value="Largest Losing Trade %: Long">Largest Losing Trade %: Long</option>
-                              <option value="Largest Losing Trade: Short">Largest Losing Trade: Short</option>
-                              <option value="Largest Losing Trade %: Short">Largest Losing Trade %: Short</option>
-
-                              <option value="Avg # Bars in Trades: All">Avg # Bars in Trades: All</option>
-                              <option value="Avg # Bars in Trades: Long">Avg # Bars in Trades: Long</option>
-                              <option value="Avg # Bars in Trades: Short">Avg # Bars in Trades: Short</option>
-                              <option value="Avg # Bars in Winning Trades: All">Avg # Bars in Winning Trades: All</option>
-                              <option value="Avg # Bars in Winning Trades: Long">Avg # Bars in Winning Trades: Long</option>
-                              <option value="Avg # Bars in Winning Trades: Short">Avg # Bars in Winning Trades: Short</option>
-                              <option value="Avg # Bars in Losing Trades: All">Avg # Bars in Losing Trades: All</option>
-                              <option value="Avg # Bars in Losing Trades: Long">Avg # Bars in Losing Trades: Long</option>
-                              <option value="Avg # Bars in Losing Trades: Short">Avg # Bars in Losing Trades: Short</option>
-                              <option value="Margin Calls: All">Margin Calls: All</option>
-                              <option value="Margin Calls: Long">Margin Calls: Long</option>
-                              <option value="Margin Calls: Short">Margin Calls: Short</option>
-                          </select>
-                      </div>
-                  </div>
-
-              </div>
-          </div>
-              </div>
-        </details>
+        <div class="popup_header">
+            <h2>Tradingview assistant</h2>
         </div>
 
-        <div class="column left">
-          <p>If the range of test parameters is loaded or for automatic testing.</p>
-        </div>
-        <div class="column right">
-          <div style="align-content: center"><button id="testStrategy" class="button button-green">Test strategy</button></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="column left">
-          <p>To download the results of the last testing for this ticker and timeframe.</p>
-        </div>
-        <div class="column right">
-          <div style="align-content: center"><button id="downloadStrategyTestResults" class="button button-blue">Download results</button></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="column left">
-          <p>Getting a template for setting the testing parameters of the current strategy.</p>
-        </div>
-        <div class="column right">
-          <div style="align-content: center"><button id="getStrategyTemplate" class="button button-blue">Get template</button></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="column left">
-          <p>To test the profit of strategies, upload a CSV file in which the lines correspond to the strategy parameters and contain the testing range.
-            <a href="data:text/csv;charset=utf-8,Parameter,From,To,Step,Default,Priority
+
+        <div class="tabs">
+            <div id="content-1">
+                <div id="warningBacktest" class="subheader">
+                    <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English
+                        version</a> of Tradingview</p>
+                </div>
+                <div class="row">
+                    <div class="details">
+                        <details open>
+                            <summary>Strategy optimization parameters</summary>
+                            <div>
+                                <div class="param-container">
+                                    <div class="param-box">
+                                        <div>
+                                            <label class="checkbox-minmax">
+                                                <input id="optMinmax" type="checkbox" checked>
+                                                <b></b>
+                                            </label>
+                                            <span> value of</span>
+                                        </div>
+                                        <div>
+                                            <select id="optParamName" name="optParamName">
+                                                <option value="Net Profit: All" selected="selected">Net Profit: All
+                                                </option>
+                                                <option value="Net Profit %: All">Net Profit %: All</option>
+                                                <option value="Net Profit: Long">Net Profit: Long</option>
+                                                <option value="Net Profit %: Long">Net Profit %: Long</option>
+                                                <option value="Net Profit: Short">Net Profit: Short</option>
+                                                <option value="Net Profit %: Short">Net Profit %: Short</option>
+                                                <option value="Gross Profit: All">Gross Profit: All</option>
+                                                <option value="Gross Profit %: All">Gross Profit %: All</option>
+                                                <option value="Gross Profit: Long">Gross Profit: Long</option>
+                                                <option value="Gross Profit %: Long">Gross Profit %: Long</option>
+                                                <option value="Gross Profit %: Short">Gross Profit %: Short</option>
+                                                <option value="Gross Loss: All">Gross Loss: All</option>
+                                                <option value="Gross Loss %: All">Gross Loss: All</option>
+                                                <option value="Gross Loss: Long">Gross Loss: Long</option>
+                                                <option value="Gross Loss %: Long">Gross Loss %: Long</option>
+                                                <option value="Gross Loss: Short">Gross Loss: Short</option>
+                                                <option value="Gross Loss %: Short">Gross Loss %: Short</option>
+                                                <option value="Max Drawdown">Max Drawdown</option>
+                                                <option value="Max Drawdown %">Max Drawdown %</option>
+                                                <option value="Buy & Hold Return">Buy & Hold Return</option>
+                                                <option value="Buy & Hold Return %">Buy & Hold Return %</option>
+                                                <option value="Sharpe Ratio">Sharpe Ratio</option>
+                                                <option value="Sortino Ratio">Sortino Ratio</option>
+                                                <option value="Profit Factor: All">Profit Factor: All</option>
+                                                <option value="Profit Factor: Long">Profit Factor: Long</option>
+                                                <option value="Profit Factor: Short">Profit Factor: Short</option>
+                                                <option value="Max Contracts Held: All">Max Contracts Held: All</option>
+                                                <option value="Max Contracts Held: Long">Max Contracts Held: Long
+                                                </option>
+                                                <option value="Max Contracts Held: Short">Max Contracts Held: Short
+                                                </option>
+                                                <option value="Open PL">Open PL</option>
+                                                <option value="Open PL %">Open PL %</option>
+                                                <option value="Commission Paid: All">Commission Paid: All</option>
+                                                <option value="Commission Paid: Long">Commission Paid: Long"</option>
+                                                <option value="Commission Paid: Short">Commission Paid: Short</option>
+                                                <option value="Total Closed Trades: All">Total Closed Trades: All
+                                                </option>
+                                                <option value="Total Closed Trades: Long">Total Closed Trades: Long
+                                                </option>
+                                                <option value="Total Closed Trades: Short">Total Closed Trades: Short
+                                                </option>
+                                                <option value="Total Open Trades: All">Total Open Trades: All</option>
+                                                <option value="Total Open Trades: Long">Total Open Trades: Long</option>
+                                                <option value="Total Open Trades: Short">Total Open Trades: Short
+                                                </option>
+
+
+                                                <option value="Number Winning Trades: All">Number Winning Trades: All
+                                                </option>
+                                                <option value="Number Winning Trades: Long">Number Winning Trades:
+                                                    Long
+                                                </option>
+                                                <option value="Number Winning Trades: Short">Number Winning Trades:
+                                                    Short
+                                                </option>
+                                                <option value="Number Losing Trades: All">Number Losing Trades: All
+                                                </option>
+                                                <option value="Number Losing Trades: Long">Number Losing Trades: Long
+                                                </option>
+                                                <option value="Number Losing Trades: Short">Number Losing Trades:
+                                                    Short
+                                                </option>
+
+                                                <option value="Percent Profitable: All">Percent Profitable: All</option>
+                                                <option value="Percent Profitable: Long">Percent Profitable: Long
+                                                </option>
+                                                <option value="Percent Profitable: Short">Percent Profitable: Short
+                                                </option>
+                                                <option value="Avg Trade: All">Avg Trade: All</option>
+                                                <option value="Avg Trade %: All">Avg Trade %: All</option>
+                                                <option value="Avg Trade: Long">Avg Trade: Long</option>
+                                                <option value="Avg Trade: Long %">Avg Trade: Long %</option>
+                                                <option value="Avg Trade: Short">Avg Trade: Short</option>
+                                                <option value="Avg Trade: Short %">Avg Trade: Short %</option>
+                                                <option value="Avg Winning Trade: All">Avg Winning Trade: All</option>
+                                                <option value="Avg Winning Trade %: All">Avg Winning Trade %: All
+                                                </option>
+
+                                                <option value="Avg Winning Trade: Long">Avg Winning Trade: Long</option>
+                                                <option value="Avg Winning Trade: Long %">Avg Winning Trade: Long %
+                                                </option>
+                                                <option value="Avg Winning Trade: Short">Avg Winning Trade: Short
+                                                </option>
+                                                <option value="Avg Winning Trade: Short %">Avg Winning Trade: Short %
+                                                </option>
+
+                                                <option value="Avg Losing Trade: All">Avg Losing Trade: All</option>
+                                                <option value="Avg Losing Trade %: All">Avg Losing Trade: All</option>
+                                                <option value="Avg Losing Trade: Long">Avg Losing Trade: Long</option>
+                                                <option value="Avg Losing Trade: Long %">Avg Losing Trade: Long %
+                                                </option>
+                                                <option value="Avg Losing Trade: Short">Avg Losing Trade: Short</option>
+                                                <option value="Avg Losing Trade: Short %">Avg Losing Trade: Short %
+                                                </option>
+
+
+                                                <option value="Ratio Avg Win / Avg Loss: All">Ratio Avg Win / Avg Loss:
+                                                    All
+                                                </option>
+                                                <option value="Ratio Avg Win / Avg Loss: Long">Ratio Avg Win / Avg Loss:
+                                                    Long
+                                                </option>
+                                                <option value="Ratio Avg Win / Avg Loss: Short">Ratio Avg Win / Avg
+                                                    Loss: Short
+                                                </option>
+
+
+                                                <option value="Largest Winning Trade: All">Largest Winning Trade: All
+                                                </option>
+                                                <option value="Largest Winning Trade %: All">Largest Winning Trade %:
+                                                    All
+                                                </option>
+                                                <option value="Largest Winning Trade: Long">Largest Winning Trade:
+                                                    Long
+                                                </option>
+                                                <option value="Largest Winning Trade %: Long">Largest Winning Trade %:
+                                                    Long
+                                                </option>
+                                                <option value="Largest Winning Trade: Short">Largest Winning Trade:
+                                                    Short
+                                                </option>
+                                                <option value="Largest Winning Trade %: Short">Largest Winning Trade %:
+                                                    Short
+                                                </option>
+
+                                                <option value="Largest Losing Trade: All">Largest Losing Trade: All
+                                                </option>
+                                                <option value="Largest Losing Trade %: All">Largest Losing Trade %:
+                                                    All
+                                                </option>
+                                                <option value="Largest Losing Trade: Long">Largest Losing Trade: Long
+                                                </option>
+                                                <option value="Largest Losing Trade %: Long">Largest Losing Trade %:
+                                                    Long
+                                                </option>
+                                                <option value="Largest Losing Trade: Short">Largest Losing Trade:
+                                                    Short
+                                                </option>
+                                                <option value="Largest Losing Trade %: Short">Largest Losing Trade %:
+                                                    Short
+                                                </option>
+
+                                                <option value="Avg # Bars in Trades: All">Avg # Bars in Trades: All
+                                                </option>
+                                                <option value="Avg # Bars in Trades: Long">Avg # Bars in Trades: Long
+                                                </option>
+                                                <option value="Avg # Bars in Trades: Short">Avg # Bars in Trades:
+                                                    Short
+                                                </option>
+                                                <option value="Avg # Bars in Winning Trades: All">Avg # Bars in Winning
+                                                    Trades: All
+                                                </option>
+                                                <option value="Avg # Bars in Winning Trades: Long">Avg # Bars in Winning
+                                                    Trades: Long
+                                                </option>
+                                                <option value="Avg # Bars in Winning Trades: Short">Avg # Bars in
+                                                    Winning Trades: Short
+                                                </option>
+                                                <option value="Avg # Bars in Losing Trades: All">Avg # Bars in Losing
+                                                    Trades: All
+                                                </option>
+                                                <option value="Avg # Bars in Losing Trades: Long">Avg # Bars in Losing
+                                                    Trades: Long
+                                                </option>
+                                                <option value="Avg # Bars in Losing Trades: Short">Avg # Bars in Losing
+                                                    Trades: Short
+                                                </option>
+                                                <option value="Margin Calls: All">Margin Calls: All</option>
+                                                <option value="Margin Calls: Long">Margin Calls: Long</option>
+                                                <option value="Margin Calls: Short">Margin Calls: Short</option>
+
+                                                <option value=".Percent Decimal">Percent Decimal</option>
+                                                <option value=".Reward">Reward</option>
+                                                <option value=".Margin">Margin</option>
+                                                <option value=".Breakeven">Breakeven</option>
+                                                <option value=".maxProfitFromTrades">Net profit if trades > 50</option>
+                                            </select>
+                                        </div>
+                                        <div>by</div>
+                                        <div>
+                                            <select id="optMethod" name="method">
+                                                <option value="annealing">Annealing</option>
+                                                <option value="random" selected="selected">Random</option>
+                                                <option value="random improvement">Random improvement</option>
+                                                <option value="sequential">Sequential improvement</option>
+                                                <option value="brute force">Brute force</option>
+                                            </select>
+                                        </div>
+                                        <div>method</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="param-container">
+                                    <div class="param-box">
+                                        <span>Filter</span>
+                                        <div class="switch-toggle switch-3 switch-candy">
+                                            <input id="optFilterOff" name="state-d" type="radio" checked="checked"/>
+                                            <label for="optFilterOff">OFF</label>
+
+                                            <input id="optFilterMore" name="state-d" type="radio"/>
+                                            <label for="optFilterMore" class="disabled">More</label>
+
+                                            <input id="optFilterLess" name="state-d" type="radio"/>
+                                            <label for="optFilterLess">Less</label>
+                                            <div id="filterParam">
+                                                <span>than</span>
+                                                <input id="optFilterValue" type="number" name="method"
+                                                       style="width: 5em" value="5">
+                                                <span>for</span>
+                                                <select id="optFilterParamName" name="optFilterParamName">
+                                                    <option value="Net Profit: All">Net Profit: All</option>
+                                                    <option value="Net Profit %: All">Net Profit %: All</option>
+                                                    <option value="Net Profit: Long">Net Profit: Long</option>
+                                                    <option value="Net Profit %: Long">Net Profit %: Long</option>
+                                                    <option value="Net Profit: Short">Net Profit: Short</option>
+                                                    <option value="Net Profit %: Short">Net Profit %: Short</option>
+                                                    <option value="Gross Profit: All">Gross Profit: All</option>
+                                                    <option value="Gross Profit %: All">Gross Profit %: All</option>
+                                                    <option value="Gross Profit: Long">Gross Profit: Long</option>
+                                                    <option value="Gross Profit %: Long">Gross Profit %: Long</option>
+                                                    <option value="Gross Profit %: Short">Gross Profit %: Short</option>
+                                                    <option value="Gross Loss: All">Gross Loss: All</option>
+                                                    <option value="Gross Loss %: All">Gross Loss: All</option>
+                                                    <option value="Gross Loss: Long">Gross Loss: Long</option>
+                                                    <option value="Gross Loss %: Long">Gross Loss %: Long</option>
+                                                    <option value="Gross Loss: Short">Gross Loss: Short</option>
+                                                    <option value="Gross Loss %: Short">Gross Loss %: Short</option>
+                                                    <option value="Max Drawdown">Max Drawdown</option>
+                                                    <option value="Max Drawdown %">Max Drawdown %</option>
+                                                    <option value="Buy & Hold Return">Buy & Hold Return</option>
+                                                    <option value="Buy & Hold Return %">Buy & Hold Return %</option>
+                                                    <option value="Sharpe Ratio">Sharpe Ratio</option>
+                                                    <option value="Sortino Ratio">Sortino Ratio</option>
+                                                    <option value="Profit Factor: All">Profit Factor: All</option>
+                                                    <option value="Profit Factor: Long">Profit Factor: Long</option>
+                                                    <option value="Profit Factor: Short">Profit Factor: Short</option>
+                                                    <option value="Max Contracts Held: All">Max Contracts Held: All
+                                                    </option>
+                                                    <option value="Max Contracts Held: Long">Max Contracts Held: Long
+                                                    </option>
+                                                    <option value="Max Contracts Held: Short">Max Contracts Held:
+                                                        Short
+                                                    </option>
+                                                    <option value="Open PL">Open PL</option>
+                                                    <option value="Open PL %">Open PL %</option>
+                                                    <option value="Commission Paid: All">Commission Paid: All</option>
+                                                    <option value="Commission Paid: Long">Commission Paid: Long"
+                                                    </option>
+                                                    <option value="Commission Paid: Short">Commission Paid: Short
+                                                    </option>
+                                                    <option value="Total Closed Trades: All" selected="selected">Total
+                                                        Closed Trades: All
+                                                    </option>
+                                                    <option value="Total Closed Trades: Long">Total Closed Trades:
+                                                        Long
+                                                    </option>
+                                                    <option value="Total Closed Trades: Short">Total Closed Trades:
+                                                        Short
+                                                    </option>
+                                                    <option value="Total Open Trades: All">Total Open Trades: All
+                                                    </option>
+                                                    <option value="Total Open Trades: Long">Total Open Trades: Long
+                                                    </option>
+                                                    <option value="Total Open Trades: Short">Total Open Trades: Short
+                                                    </option>
+
+
+                                                    <option value="Number Winning Trades: All">Number Winning Trades:
+                                                        All
+                                                    </option>
+                                                    <option value="Number Winning Trades: Long">Number Winning Trades:
+                                                        Long
+                                                    </option>
+                                                    <option value="Number Winning Trades: Short">Number Winning Trades:
+                                                        Short
+                                                    </option>
+                                                    <option value="Number Losing Trades: All">Number Losing Trades:
+                                                        All
+                                                    </option>
+                                                    <option value="Number Losing Trades: Long">Number Losing Trades:
+                                                        Long
+                                                    </option>
+                                                    <option value="Number Losing Trades: Short">Number Losing Trades:
+                                                        Short
+                                                    </option>
+
+                                                    <option value="Percent Profitable: All">Percent Profitable: All
+                                                    </option>
+                                                    <option value="Percent Profitable: Long">Percent Profitable: Long
+                                                    </option>
+                                                    <option value="Percent Profitable: Short">Percent Profitable:
+                                                        Short
+                                                    </option>
+                                                    <option value="Avg Trade: All">Avg Trade: All</option>
+                                                    <option value="Avg Trade %: All">Avg Trade %: All</option>
+                                                    <option value="Avg Trade: Long">Avg Trade: Long</option>
+                                                    <option value="Avg Trade: Long %">Avg Trade: Long %</option>
+                                                    <option value="Avg Trade: Short">Avg Trade: Short</option>
+                                                    <option value="Avg Trade: Short %">Avg Trade: Short %</option>
+                                                    <option value="Avg Winning Trade: All">Avg Winning Trade: All
+                                                    </option>
+                                                    <option value="Avg Winning Trade %: All">Avg Winning Trade %: All
+                                                    </option>
+
+                                                    <option value="Avg Winning Trade: Long">Avg Winning Trade: Long
+                                                    </option>
+                                                    <option value="Avg Winning Trade: Long %">Avg Winning Trade: Long
+                                                        %
+                                                    </option>
+                                                    <option value="Avg Winning Trade: Short">Avg Winning Trade: Short
+                                                    </option>
+                                                    <option value="Avg Winning Trade: Short %">Avg Winning Trade: Short
+                                                        %
+                                                    </option>
+
+                                                    <option value="Avg Losing Trade: All">Avg Losing Trade: All</option>
+                                                    <option value="Avg Losing Trade %: All">Avg Losing Trade: All
+                                                    </option>
+                                                    <option value="Avg Losing Trade: Long">Avg Losing Trade: Long
+                                                    </option>
+                                                    <option value="Avg Losing Trade: Long %">Avg Losing Trade: Long %
+                                                    </option>
+                                                    <option value="Avg Losing Trade: Short">Avg Losing Trade: Short
+                                                    </option>
+                                                    <option value="Avg Losing Trade: Short %">Avg Losing Trade: Short
+                                                        %
+                                                    </option>
+
+
+                                                    <option value="Ratio Avg Win / Avg Loss: All">Ratio Avg Win / Avg
+                                                        Loss: All
+                                                    </option>
+                                                    <option value="Ratio Avg Win / Avg Loss: Long">Ratio Avg Win / Avg
+                                                        Loss: Long
+                                                    </option>
+                                                    <option value="Ratio Avg Win / Avg Loss: Short">Ratio Avg Win / Avg
+                                                        Loss: Short
+                                                    </option>
+
+
+                                                    <option value="Largest Winning Trade: All">Largest Winning Trade:
+                                                        All
+                                                    </option>
+                                                    <option value="Largest Winning Trade %: All">Largest Winning Trade
+                                                        %: All
+                                                    </option>
+                                                    <option value="Largest Winning Trade: Long">Largest Winning Trade:
+                                                        Long
+                                                    </option>
+                                                    <option value="Largest Winning Trade %: Long">Largest Winning Trade
+                                                        %: Long
+                                                    </option>
+                                                    <option value="Largest Winning Trade: Short">Largest Winning Trade:
+                                                        Short
+                                                    </option>
+                                                    <option value="Largest Winning Trade %: Short">Largest Winning Trade
+                                                        %: Short
+                                                    </option>
+
+                                                    <option value="Largest Losing Trade: All">Largest Losing Trade:
+                                                        All
+                                                    </option>
+                                                    <option value="Largest Losing Trade %: All">Largest Losing Trade %:
+                                                        All
+                                                    </option>
+                                                    <option value="Largest Losing Trade: Long">Largest Losing Trade:
+                                                        Long
+                                                    </option>
+                                                    <option value="Largest Losing Trade %: Long">Largest Losing Trade %:
+                                                        Long
+                                                    </option>
+                                                    <option value="Largest Losing Trade: Short">Largest Losing Trade:
+                                                        Short
+                                                    </option>
+                                                    <option value="Largest Losing Trade %: Short">Largest Losing Trade
+                                                        %: Short
+                                                    </option>
+
+                                                    <option value="Avg # Bars in Trades: All">Avg # Bars in Trades:
+                                                        All
+                                                    </option>
+                                                    <option value="Avg # Bars in Trades: Long">Avg # Bars in Trades:
+                                                        Long
+                                                    </option>
+                                                    <option value="Avg # Bars in Trades: Short">Avg # Bars in Trades:
+                                                        Short
+                                                    </option>
+                                                    <option value="Avg # Bars in Winning Trades: All">Avg # Bars in
+                                                        Winning Trades: All
+                                                    </option>
+                                                    <option value="Avg # Bars in Winning Trades: Long">Avg # Bars in
+                                                        Winning Trades: Long
+                                                    </option>
+                                                    <option value="Avg # Bars in Winning Trades: Short">Avg # Bars in
+                                                        Winning Trades: Short
+                                                    </option>
+                                                    <option value="Avg # Bars in Losing Trades: All">Avg # Bars in
+                                                        Losing Trades: All
+                                                    </option>
+                                                    <option value="Avg # Bars in Losing Trades: Long">Avg # Bars in
+                                                        Losing Trades: Long
+                                                    </option>
+                                                    <option value="Avg # Bars in Losing Trades: Short">Avg # Bars in
+                                                        Losing Trades: Short
+                                                    </option>
+                                                    <option value="Margin Calls: All">Margin Calls: All</option>
+                                                    <option value="Margin Calls: Long">Margin Calls: Long</option>
+                                                    <option value="Margin Calls: Short">Margin Calls: Short</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>If the range of test parameters is loaded or for automatic testing.</p>
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="testStrategy" class="button button-green">Test strategy</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>Deep backtesting (for TV premium subscription).</p>
+                        <p><label for="deepStartDate">The start date</label>
+                            <input id="deepStartDate" type="text" name="deepStartDate" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+                                   placeholder="2021-10-02" title="Set date in ISO format" style="width: 10em" required/></p>
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="deepTestStrategy" class="button button-green">Deep backtesting</button>
+                        </div>
+                    </div>
+<!--                    <div class="column left">-->
+<!--                        <p>The initial date of deep testing, an empty value for using the default value.</p>-->
+<!--                    </div>-->
+<!--                    <div class="column right">-->
+<!--                        <input id="deepStartDate1" name="deepStartDate" pattern="^\d{4}-\d{2}-\d{2}$"-->
+<!--                               placeholder="2021-10-02" style="width: 10em" />-->
+<!--                    </div>-->
+                </div>
+
+                <div class="row">
+                    <div class="column left">
+                        <p>Getting a template for setting the testing parameters of the current strategy.</p>
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="getStrategyTemplate" class="button button-blue">Get template</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>To test the profit of strategies, upload a CSV file in which the lines correspond to the
+                            strategy parameters and contain the testing range.
+                            <a href="data:text/csv;charset=utf-8,Parameter,From,To,Step,Default,Priority
 SMALong,40,70,5,20,1
 EMAShort,5,15,1,21,2
 %22Check MACD%22,false,true,,false,3
 %22Stop Loss%22,1,5,0.51,4%0A" download="strategy_template.csv">Sample template </a></p>
-        </div>
-        <div class="column right">
-          <div style="align-content: center"><button id="uploadStrategyTestParameters" class="button button-blue">Upload parameters</button></div>
-        </div>
-      </div>
-      <div class="row">
-              <div class="column left">
-                  <p>View 3D char with the results</p>
-              </div>
-          <div class="column right">
-              <div style="align-content: center"><button id="show3DChart" class="button button-blue">3D Chart</button></div>
-          </div>
-      </div>
-    </div>
-      <div id="content-2">
-          <div id="warningSignals" class="subheader">
-              <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English version</a> of Tradingview</p>
-          </div>
-          <div class="row">
-              <div class="column left">
-                  To display the signals, you need to create a pine script named 'iondvSignals' from the
-                  <a href="data:text/plain;charset=utf-8,//©akumidv
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="uploadStrategyTestParameters" class="button button-blue">Upload parameters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="content-2">
+                <div id="warningResults" class="subheader">
+                    <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English
+                        version</a> of Tradingview</p>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>To download the results of the last testing for this ticker and timeframe.</p>
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="downloadStrategyTestResults" class="button button-blue">Download results
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>View 3D char with the results</p>
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="show3DChart" class="button button-blue">3D Chart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="content-3">
+                <div id="warningSignals" class="subheader">
+                    <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English
+                        version</a> of Tradingview</p>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        To display the signals, you need to create a pine script named 'iondvSignals' from the
+                        <a href="data:text/plain;charset=utf-8,//©akumidv
 //@version=4
 study(%22iondv Signals%22,shorttitle=%22iondvSignals%22,overlay=true)
 strTSBuy=input(%22%22,%22TSBuy%22)
@@ -359,73 +565,106 @@ timeFrame=input(%22%22,%22Timeframe%22)
 var arrTSBuy=str.split(strTSBuy,%22,%22)
 var arrTSSell=str.split(strTSSell,%22,%22)
 plotchar(tickerName==syminfo.ticker and array.includes(arrTSBuy,tostring(time))?low:na,location=location.belowbar,color=color.green,char='▲',title='Buy')
-plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))?high:na,location=location.abovebar,color=color.red,char='▼',title='Sell')%0A" download="iondv_signals_pinescript.txt">
-                      file</a> and add it to the graph.
-                  After that, upload the signals from the file created by the
-                  <a href="data:text/csv;charset=utf-8,timestamp,ticker,timeframe,signal
+plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))?high:na,location=location.abovebar,color=color.red,char='▼',title='Sell')%0A"
+                           download="iondv_signals_pinescript.txt">
+                            file</a> and add it to the graph.
+                        After that, upload the signals from the file created by the
+                        <a href="data:text/csv;charset=utf-8,timestamp,ticker,timeframe,signal
 1625718600000,BTCUSDT,1m,BUY
 2021-07-27T01:00:00Z,BABA,1H,SELL%0A" download="signals_template.csv">template</a>.
-                  The signals are stored in the browser, to activate them, open the properties of the created indicator named 'iondvSignals'.
-              </div>
-              <div class="column right">
-                  <div style="align-content: center"><button id="uploadSignals" class="button button-ocean">Upload signals</button></div>
-              </div>
-          </div>
-      </div>
+                        The signals are stored in the browser, to activate them, open the properties of the created
+                        indicator named 'iondvSignals'.
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="uploadSignals" class="button button-ocean">Upload signals</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-      <div id="content-3">
-      <div class="header"></div>
-      <div class="row">
-        <div class="column left">
-          <p>Clear all stored data</p>
+            <div id="content-4">
+                <div class="header"></div>
+                <div class="row">
+                    <div class="column left">
+                        <p>Clear all stored data</p>
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="clearAll" class="button button-red">Clear all</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div id="content-5">
+                <div class="row">
+                    <h3>Optimization Methods</h3>
+                    <p style="padding: 2px;">The <strong>sequential improvements</strong> optimization method is
+                        implement adjusting the best value already found. It does not perform a complete search of
+                        the entire parameter space.
+                        The logic of it work is as follows. The current best state (parameters for max results) is
+                        taken. The first parameter is taken and all its values in the range are checked
+                        sequentially. If the best result is found, then further verification is carried out from
+                        this state. Then the next parameter is taken and all its values in the range are checked and
+                        etc.</p>
+                    <p style="padding: 2px;">The <strong>brute force</strong> optimization method implement
+                        backtesting all values in strategy space of parameters.</p>
+                    <p style="padding: 2px;">The <strong>annealing</strong> method is an optimization method in
+                        which the search for the maximum possible result is carried out in <a
+                                href="https://en.wikipedia.org/wiki/Simulated_annealing" target="_blank">fewer
+                            steps</a>
+                        The method works this way: first, the best state and its parameters are determined. One
+                        parameter is randomly determined, then its value from range of possible values is randomly
+                        selected. The status in this value is checked. If it is better, then it is remembered and
+                        further parameter changes are made from it.
+                        As the number of tests increases, the spread of parameter values decreases around those
+                        already found. That is, if at the beginning of testing the values are randomly selected from
+                        the entire range of possible parameter values, then as optimization is carried out, this
+                        spread decreases ("cools down") near current values. So in first phase of test - this method
+                        is search the most possible state around all space on the finish stage this method trying to
+                        improve found best state.
+                        So that the system does not get stuck in one parameter area, as it happens with the
+                        sequential method, not one random parameter changes periodically, but all at once.
+                        .</p>
+                    <p style="padding: 2px;">The <strong>random improvements</strong> method is the simplest. One
+                        parameter is randomly determined and then a value is randomly selected for it from the
+                        entire range of possible values. If the condition is better, then it is remembered. And then
+                        the parameters from this state are randomly changed.</p>
+                    <p style="padding: 2px;">The <strong>random</strong> method - always selects random values for
+                        all parameters at once (default)</p>
+
+                </div>
+            </div>
+            <div class="tabs__links">
+                <a href="#content-1">Testing a strategy</a>
+                <a href="#content-2">Results</a>
+                <a href="#content-3">External signals</a>
+                <a href="#content-4">Tools</a>
+                <a href="#content-5">Help</a>
+            </div>
         </div>
-        <div class="column right">
-          <div style="align-content: center"><button id="clearAll" class="button button-red">Clear all</button></div>
+
+
+        <div id="shim"></div>
+        <div id="msgbx">
+            <div class="msg-header">
+                <h5>Warning.</h5>
+            </div>
+            <p id="msg-text"></p>
+            <div style="text-align: center">
+                <button id="closeMsg" class="button">Close</button>
+            </div>
         </div>
-      </div>
-
-    </div>
-      <div id="content-4">
-          <div class="row">
-          <h3>Optimization Methods</h3>
-          <p style="padding: 2px;">The <strong>sequential improvements</strong> optimization method is implement adjusting the best value already found. It does not perform a complete search of the entire parameter space.
-              The logic of it work is as follows. The current best state (parameters for max results) is taken. The first parameter is taken and all its values in the range are checked sequentially. If the best result is found, then further verification is carried out from this state. Then the next parameter is taken and all its values in the range are checked and etc.</p>
-          <p style="padding: 2px;">The <strong>brute force</strong> optimization method implement backtesting all values in strategy space of parameters.</p>
-          <p style="padding: 2px;">The <strong>annealing</strong> method is an optimization method in which the search for the maximum possible result is carried out in <a href="https://en.wikipedia.org/wiki/Simulated_annealing" target="_blank">fewer steps</a>
-              The method works this way: first, the best state and its parameters are determined. One parameter is randomly determined, then its value from range of possible values is randomly selected. The status in this value is checked. If it is better, then it is remembered and further parameter changes are made from it.
-              As the number of tests increases, the spread of parameter values decreases around those already found. That is, if at the beginning of testing the values are randomly selected from the entire range of possible parameter values, then as optimization is carried out, this spread decreases ("cools down") near current values. So in first phase of test - this method is search the most possible state around all space on the finish stage this method trying to improve found best state.
-              So that the system does not get stuck in one parameter area, as it happens with the sequential method, not one random parameter changes periodically, but all at once.
-              .</p>
-          <p style="padding: 2px;">The <strong>random improvements</strong> method is the simplest. One parameter is randomly determined and then a value is randomly selected for it from the entire range of possible values. If the condition is better, then it is remembered. And then the parameters from this state are randomly changed.</p>
-          <p style="padding: 2px;">The <strong>random</strong> method - always selects random values for all parameters at once (default)</p>
-
-          </div>
-      </div>
-    <div class="tabs__links">
-      <a href="#content-1">Testing a strategy</a>
-        <a href="#content-2">External signals</a>
-        <a href="#content-3">Tools</a>
-        <a href="#content-4">Help</a>
-    </div>
-  </div>
-
-
-
-  <div id="shim"></div>
-  <div id="msgbx">
-    <div class="msg-header">
-      <h5>Warning.</h5>
-    </div>
-    <p id="msg-text"></p>
-    <div style="text-align: center"><button id="closeMsg" class="button">Close</button></div>
-  </div>
     </div>
     <div class="footer">
-        <p class="footer footer-text">Active use of the extension can cause detection by the TradingView as using a bot
+        <p class="footer footer-text">Active use of the extension can cause detection by the TradingView as using a
+            bot
             for backtesting and lead to the ban of the user's account. Use it on your own risk.
-            Additional <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension" target="_blank">info and contact to developer</a></p>
+            Additional <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension" target="_blank">info
+                and contact to developer</a></p>
     </div>
 </div>
-  </body>
+</body>
 </html>
 

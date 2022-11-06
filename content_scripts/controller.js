@@ -46,6 +46,9 @@
           case 'testStrategy':
             await action.testStrategy(request)
             break
+          case 'deepTestStrategy':
+            await action.deepTestStrategy(request)
+            break
           case 'downloadStrategyTestResults':
             await action.downloadStrategyTestResults()
             break

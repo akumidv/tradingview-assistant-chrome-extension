@@ -67,14 +67,38 @@ action.downloadStrategyTestResults = async () => {
   file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
 }
 
+action.deepTestStrategy = async (request) => {
+  console.log('request', request)
+  try {
+    const strategyData = await action._getStrategyData()
+    const [allRangeParams, paramRange, cycles] = await action._getRangeParams(strategyData)
+    const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles)
+    action._showStartMsg( testParams.paramSpace, testParams.cycles)
+    const testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
+    await action._saveTestResults(testResults, testParams)
+  } catch (err) {
+    await ui.showErrorPopup(`{err}`)
+  }
+  ui.statusMessageRemove()
+}
+
+
 action.testStrategy = async (request) => {
   console.log('request', request)
-  ui.statusMessage('Get the initial parameters.')
-  const strategyData = await tv.getStrategy()
-  if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    await ui.showErrorPopup('Could not find any strategy with parameters among the indicators. Add it to the chart and try again.')
-    return
+  try {
+    const strategyData = await action._getStrategyData()
+    const [allRangeParams, paramRange, cycles] = await action._getRangeParams(strategyData)
+    const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles)
+    action._showStartMsg( testParams.paramSpace, testParams.cycles)
+    const testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
+    await action._saveTestResults(testResults, testParams)
+  } catch (err) {
+    await ui.showErrorPopup(`{err}`)
   }
+  ui.statusMessageRemove()
+}
+
+action._getRangeParams = async (strategyData) => {
   let paramRange = await model.getStrategyParameters(strategyData)
   console.log('paramRange', paramRange)
   if(!paramRange)
@@ -84,8 +108,9 @@ action.testStrategy = async (request) => {
   initParams.paramRange = paramRange
   initParams.paramRangeSrc = model.getStrategyRange(strategyData)
   const changedStrategyParams = await ui.showAndUpdateStrategyParameters(initParams)
-  if(changedStrategyParams === null)
-    return
+  if(changedStrategyParams === null) {
+    throw new Error('Error get changed strategy parameters')
+  }
   const cycles = changedStrategyParams.cycles ? changedStrategyParams.cycles : 100
   console.log('changedStrategyParams', changedStrategyParams)
   if (changedStrategyParams.paramRange === null) {
@@ -95,16 +120,27 @@ action.testStrategy = async (request) => {
     await model.saveStrategyParameters(paramRange)
     console.log('ParamRange changes to', paramRange)
   } else {
-    await ui.showErrorPopup('The strategy parameters invalid. Change them or run default parameters set.')
-    return
+    throw new Error ('The strategy parameters invalid. Change them or run default parameters set.')
   }
 
   const allRangeParams = model.createParamsFromRange(paramRange)
   console.log('allRangeParams', allRangeParams)
   if(!allRangeParams) {
-    return
+    throw new Error ('Empty range parameters for strategy')
   }
+  return [allRangeParams, paramRange, cycles]
+}
 
+action._getStrategyData = async () => {
+  ui.statusMessage('Get the initial parameters.')
+  const strategyData = await tv.getStrategy()
+  if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+    throw new Error('Could not find any strategy with parameters among the indicators. Add it to the chart and try again.')
+  }
+  return strategyData
+}
+
+action._getTestParams = async (request, strategyData, allRangeParams, paramRange, cycles) => {
   const testMethod = request.options && request.options.hasOwnProperty('optMethod') ? request.options.optMethod.toLowerCase() : 'random'
   let paramSpaceNumber = 0
   let isSequential = false
@@ -155,13 +191,16 @@ action.testStrategy = async (request) => {
     testParams.filterValue = request.options.hasOwnProperty('optFilterValue') ? request.options.optFilterValue : 50
     testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total Closed Trades: All'
   }
+  return testParams
+}
 
-
+action._showStartMsg = (paramSpaceNumber, cycles) => {
   let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
-  extraHeader += (paramSpaceNumber/testParams.cycles) > 10 ? `<br />This is too large for ${testParams.cycles} cycles. It is recommended to use up to 3-4 essential parameters, remove the rest from the strategy parameters file.` : ''
-
+  extraHeader += (paramSpaceNumber/cycles) > 10 ? `<br />This is too large for ${testParams.cycles} cycles. It is recommended to use up to 3-4 essential parameters, remove the rest from the strategy parameters file.` : ''
   ui.statusMessage('Started.', extraHeader)
-  const testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
+}
+
+action._saveTestResults = async (testResults, testParams) => {
   console.log('testResults', testResults)
   if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
     await ui.showWarningPopup('There is no data for conversion. Try to do test again')
@@ -184,7 +223,6 @@ action.testStrategy = async (request) => {
   await ui.showPopup(text)
   console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
   file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
-  ui.statusMessageRemove()
 }
 
 
