@@ -298,6 +298,10 @@ tv.openCurrentStrategyParam = async () => {
 
 tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
   const deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckbox)
+  if (!deepCheckboxEl && !isDeepTest)
+    return
+  if (isDeepTest && !deepCheckboxEl)
+    throw new Error('Deep Backtesting mode switch not found. Do you have Premium subscription or may be TV UI changed?')
   const isChecked = Boolean(deepCheckboxEl.checked)
   if(isDeepTest !== isChecked) {
     page.mouseClick(deepCheckboxEl)
