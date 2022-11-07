@@ -118,7 +118,8 @@ file.convertResultsToCSV = (testResults) => {
       return 0
     if (typeof value !== 'number')
       return JSON.stringify(value)
-    return (Math.round(value * 100)/100).toFixed(2)
+    return parseFloat(value) === parseInt(value) ? parseInt(value) : parseFloat(value)
+    // return (Math.round(value * 100)/100).toFixed(2)
   }
 
   if(!testResults || !testResults.perfomanceSummary || !testResults.perfomanceSummary.length)

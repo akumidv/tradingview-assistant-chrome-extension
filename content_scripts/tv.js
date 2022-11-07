@@ -137,13 +137,13 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
         i++
         if (indicProperties[i] && indicProperties[i].querySelector('input')) {
           let propValue = indicProperties[i].querySelector('input').value
-          if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric') { 
-            const digPropValue = parseFloat(propValue.replace(' ',''))  // tradingview sometimes adds a space as thousand separator
-            if(!isNaN(digPropValue)){
+          if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric' ||
+            (parseFloat(propValue) == propValue || parseInt(propValue) == propValue)) { // not only inputmode==numbers input have digits
+            const digPropValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just search point in string
+            if(!isNaN(propValue))
               strategyData.properties[propText] = digPropValue
-            }else{
+            else
               strategyData.properties[propText] = propValue
-            }
           } else {
             strategyData.properties[propText] = propValue
           }
@@ -571,9 +571,42 @@ tv.generateDeepTestReport = async () => {
 
 }
 
-tv.getPerformance = async () => {
+tv.getPerformance = async (testResults, isIgnoreError=false) => {
+  let reportData = {}
 
-  return await tv.parseReportTable()
+  // let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 2500)
+  let isProcessStart = false
+  let isProcessEnd = false
+  let isProcessError = null
+  if (testResults.isDeepTest) {
+    isProcessEnd = await tv.generateDeepTestReport()
+    isProcessStart = isProcessEnd
+    isProcessError = !isProcessEnd
+  } else {
+    isProcessStart = await page.waitForSelector(SEL.strategyReportIsTransition, 5000)
+    isProcessEnd = tv.isReportChanged
+    if (isProcessStart) {
+      isProcessEnd = await page.waitForSelector(SEL.strategyReportTransitionReady, 25000) // TODO to options
+      isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
+    } else if (isProcessEnd)
+      isProcessStart = true
+
+    isProcessError = document.querySelector(SEL.strategyReportError)
+    await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+  }
+
+  // reportData = await tv.getPerformance() //tv.parseReportTable()
+  reportData = await tv.parseReportTable() //tv.parseReportTable()
+  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
+    const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
+    if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
+      reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {
+      isProcessEnd = true
+      isProcessStart = true
+    }
+  }
+  return {error: isProcessError ? 2 : !isProcessStart ? 1 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
+  // return await tv.parseReportTable()
   // TODO change the object to get data
   // function convertPercent(key, value) {
   //   if (!value)

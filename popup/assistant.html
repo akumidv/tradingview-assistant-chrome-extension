@@ -474,21 +474,16 @@
                     <div class="column left">
                         <p>Deep backtesting (for TV premium subscription).</p>
                         <p><label for="deepStartDate">The start date</label>
-                            <input id="deepStartDate" type="text" name="deepStartDate" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
-                                   placeholder="2021-10-02" title="Set date in ISO format" style="width: 10em" required/></p>
+                            <input id="deepStartDate" type="text" name="deepStartDate"
+                                   pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"
+                                   placeholder="2021-10-02" title="Set date in ISO format" style="width: 10em"
+                                   required/></p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
                             <button id="deepTestStrategy" class="button button-green">Deep backtesting</button>
                         </div>
                     </div>
-<!--                    <div class="column left">-->
-<!--                        <p>The initial date of deep testing, an empty value for using the default value.</p>-->
-<!--                    </div>-->
-<!--                    <div class="column right">-->
-<!--                        <input id="deepStartDate1" name="deepStartDate" pattern="^\d{4}-\d{2}-\d{2}$"-->
-<!--                               placeholder="2021-10-02" style="width: 10em" />-->
-<!--                    </div>-->
                 </div>
 
                 <div class="row">
@@ -587,6 +582,18 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 <div class="header"></div>
                 <div class="row">
                     <div class="column left">
+                        <p>Delay between backtests to reduce TV API loading and reduce the risk of suspicious activity.</p>
+                        <p><label>Random delay for the specified value</label>
+                            <input id="randomDelay" type="checkbox" checked/></p>
+                    </div>
+                    <div class="column right">
+                        <input id="backtestDelay" type="number"
+                               placeholder="1.5" value="0.25" style="width: 5em"/>
+                        <label for="backtestDelay">sec.</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
                         <p>Clear all stored data</p>
                     </div>
                     <div class="column right">
@@ -597,6 +604,8 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 </div>
 
             </div>
+
+
             <div id="content-5">
                 <div class="row">
                     <h3>Optimization Methods</h3>
@@ -640,7 +649,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 <a href="#content-1">Testing a strategy</a>
                 <a href="#content-2">Results</a>
                 <a href="#content-3">External signals</a>
-                <a href="#content-4">Tools</a>
+                <a href="#content-4">Options & Tools</a>
                 <a href="#content-5">Help</a>
             </div>
         </div>

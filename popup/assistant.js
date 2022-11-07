@@ -17,13 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function setOptionsEvents() {
-  for(let elId of ['optMinmax', 'optParamName', 'optMethod', 'optFilterOff', 'optFilterMore', 'optFilterLess', 'optFilterValue', 'optFilterParamName']) {
+  for(let elId of ['optMinmax', 'optParamName', 'optMethod', 'optFilterOff', 'optFilterMore', 'optFilterLess', 'optFilterValue', 'optFilterParamName', 'randomDelay']) {
     function saveOptListener() {
       saveOptions(elId)
     }
     document.getElementById(elId).addEventListener('click', saveOptListener)
   }
-  for(let elId of ['deepStartDate']) {
+  for(let elId of ['deepStartDate', 'backtestDelay']) {
     function saveOptListener() {
       saveOptions(elId)
     }
@@ -104,7 +104,13 @@ function setPopupInputsByOptions(getResults) {
 
       if(document.getElementById('deepStartDate') && iondvOptions.hasOwnProperty('deepStartDate'))
         document.getElementById('deepStartDate').value = iondvOptions.deepStartDate
-
+      if(document.getElementById('backtestDelay') && iondvOptions.hasOwnProperty('backtestDelay')) {
+        if (iondvOptions.backtestDelay !== null)
+          document.getElementById('backtestDelay').value = iondvOptions.backtestDelay
+      }
+      if(document.getElementById('randomDelay') && iondvOptions.hasOwnProperty('randomDelay')) {
+        document.getElementById('randomDelay').checked = Boolean(iondvOptions.randomDelay)
+      }
     }
     const link = document.querySelector(`div.tabs__links > a${typeof tabId === 'number' && tabId > 0 && tabId < 3 ? ':nth-child(' + tabId + ')' : ''}`);
     if (link) // Activate saved or fist tab
@@ -135,6 +141,11 @@ function getOptions(signal) {
       iondvOptions.deepStartDate = null
     }
   }
+  if(document.getElementById('backtestDelay')) {
+    const delayValue =  document.getElementById('backtestDelay').value
+    iondvOptions.backtestDelay = delayValue === '' || isNaN(parseFloat(delayValue)) ? null : Math.abs(parseFloat(delayValue))
+  }
+  iondvOptions.randomDelay = document.getElementById('randomDelay').checked
 
 
   iondvOptions.tabId = (signal === 'uploadSignals') ? 3 : 1

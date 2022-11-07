@@ -73,14 +73,16 @@ action.testStrategy = async (request, isDeepTest = false) => {
   try {
     const strategyData = await action._getStrategyData()
     const [allRangeParams, paramRange, cycles] = await action._getRangeParams(strategyData)
-    const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles)
-    action._showStartMsg( testParams.paramSpace, testParams.cycles)
-    testParams.isDeepTest = isDeepTest
-    await tv.setDeepTest(isDeepTest, testParams.deepStartDate)
-    const testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
-    await action._saveTestResults(testResults, testParams)
-    if (isDeepTest)
-      await tv.setDeepTest(!isDeepTest) // Reverse (switch off)
+    if(allRangeParams !== null) { // click cancel on paramterts
+      const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles)
+      action._showStartMsg(testParams.paramSpace, testParams.cycles)
+      testParams.isDeepTest = isDeepTest
+      await tv.setDeepTest(isDeepTest, testParams.deepStartDate)
+      const testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
+      await action._saveTestResults(testResults, testParams)
+      if (isDeepTest)
+        await tv.setDeepTest(!isDeepTest) // Reverse (switch off)
+    }
   } catch (err) {
     console.error(err)
     await ui.showErrorPopup(`${err}`)
@@ -92,14 +94,15 @@ action._getRangeParams = async (strategyData) => {
   let paramRange = await model.getStrategyParameters(strategyData)
   console.log('paramRange', paramRange)
   if(!paramRange)
-    return
+    throw new Error('Error get changed strategy parameters')
+    // return
 
   const initParams = {}
   initParams.paramRange = paramRange
   initParams.paramRangeSrc = model.getStrategyRange(strategyData)
   const changedStrategyParams = await ui.showAndUpdateStrategyParameters(initParams)
   if(changedStrategyParams === null) {
-    throw new Error('Error get changed strategy parameters')
+    return [null, null, null]
   }
   const cycles = changedStrategyParams.cycles ? changedStrategyParams.cycles : 100
   console.log('changedStrategyParams', changedStrategyParams)
@@ -181,6 +184,8 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
     testParams.filterValue = request.options.hasOwnProperty('optFilterValue') ? request.options.optFilterValue : 50
     testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total Closed Trades: All'
     testParams.deepStartDate = !request.options.hasOwnProperty('deepStartDate') || request.options['deepStartDate'] === '' ? null : request.options['deepStartDate']
+    testParams.backtestDelay = !request.options.hasOwnProperty('backtestDelay') || !request.options['backtestDelay'] ? 0 : request.options['backtestDelay']
+    testParams.randomDelay = !request.options.hasOwnProperty('randomDelay') ? Boolean(request.options['randomDelay']) : true
   }
   return testParams
 }

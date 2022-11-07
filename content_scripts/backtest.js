@@ -2,6 +2,18 @@ const backtest = {
   DEF_MAX_PARAM_NAME: 'Net Profit All'
 }
 
+backtest.delay = async (backtestDelay = 0, isRandom = true) => {
+  const minimalDelay = 0.2 // 20%
+  if (backtestDelay) {
+    let delay = backtestDelay * 1000
+    if (isRandom) {
+      const delay10percent = delay * minimalDelay
+      delay = randomInteger(delay10percent, (delay - delay10percent) * 2) // fro, 0.1 value to 2x value - in average ~ delay == value
+    }
+    await page.waitForTimeout(delay)
+  }
+}
+
 backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
   testResults.perfomanceSummary = []
   testResults.filteredSummary = []
@@ -15,6 +27,8 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
 
   // Get best init value and properties values
   ui.statusMessage('Get the best initial values.')
+
+
   const initRes = await getInitBestValues(testResults, allRangeParams)
   if(initRes && initRes.hasOwnProperty('bestValue') && initRes.bestValue !== null && initRes.hasOwnProperty('bestPropVal') && initRes.hasOwnProperty('data')) {
     testResults.initBestValue = initRes.bestValue
@@ -38,6 +52,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
       console.log('Stop command detected')
       break
     }
+    await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
     let optRes = {}
     switch(testResults.method) {
       case 'annealing':
@@ -100,7 +115,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
 
   let resVal =  null
   let resPropVal = testResults.startParams.current
-  let resData = null
+  let resData = {}
 
   function setBestVal (newVal, newPropVal, newResData) {
     if(resVal === null || resPropVal === null) {
@@ -117,10 +132,13 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
       resData = newVal < resVal ?  newResData : resData
     }
   }
+  await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
   const isReady = testResults.isDeepTest ? await tv.generateDeepTestReport() : true
   if (isReady) {
-    resData = await tv.getPerformance()//tv.parseReportTable()
-    resData = calculateAdditionValuesToReport(resData)
+    const res  = await tv.getPerformance(testResults)//tv.parseReportTable()
+    resData = res['data']
+    if (res['error'] === null)
+      resData = calculateAdditionValuesToReport(resData)
   }
   if (resData && resData.hasOwnProperty(testResults.optParamName)) {
     console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
@@ -132,6 +150,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
   if(testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
     const defPropVal = expandPropVal(testResults.startParams.default, resPropVal)
     if(resPropVal === null || Object.keys(resPropVal).some(key => resPropVal[key] !== defPropVal[key])) {
+      await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
       const res = await backtest.getTestIterationResult(testResults, defPropVal, true) // Ignore error because propValues can be the same
       if(res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
         console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
@@ -145,13 +164,11 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
   }
 
   if(!testResults.isSkipInitBestResult && testResults.startParams.hasOwnProperty('best') && testResults.startParams.best) {
-    if(resPropVal === null ||
-      (
-        (testResults.startParams.current && Object.keys(testResults.startParams.current).some(key => testResults.startParams.current[key] !== testResults.startParams.best[key])) &&
-        (testResults.startParams.default && Object.keys(testResults.startParams.default).some(key => testResults.startParams.default[key] !== testResults.startParams.best[key]))
-      )
-    ) {
+    const isBestIdenticalCurrent = testResults.startParams.current && Object.keys(testResults.startParams.current).some(key => testResults.startParams.current[key] !== testResults.startParams.best[key])
+    const isBestIdenticalDefault = testResults.startParams.default && Object.keys(testResults.startParams.default).some(key => testResults.startParams.default[key] !== testResults.startParams.best[key])
+    if(resPropVal === null || (!isBestIdenticalCurrent && !isBestIdenticalDefault)) {
       const bestPropVal = expandPropVal(testResults.startParams.best, resPropVal)
+      await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
       const res = await backtest.getTestIterationResult(testResults, bestPropVal, true)  // Ignore error because propValues can be the same
       if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
         console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
@@ -173,54 +190,27 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
 
 
 backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = false, isIgnoreSetParam = false) => {
-  let reportData = {}
+
   tv.isReportChanged = false // Global value
   if (!isIgnoreSetParam) {
     const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal)
     if(!isParamsSet)
       return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
   }
+  const res = await tv.getPerformance(testResults, isIgnoreError)
 
-  // let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 2500)
-  let isProcessStart = false
-  let isProcessEnd = false
-  let isProcessError = null
-  if (testResults.isDeepTest) {
-    isProcessEnd = await tv.generateDeepTestReport()
-    isProcessStart = isProcessEnd
-    isProcessError = !isProcessEnd
+  Object.keys(propVal).forEach(key => res['data'][`__${key}`] = propVal[key])
+
+
+  if(res.error === null || isIgnoreError) {
+    res['data']  = calculateAdditionValuesToReport(res['data'])
   } else {
-    isProcessStart = await page.waitForSelector(SEL.strategyReportIsTransition, 5000)
-    isProcessEnd = tv.isReportChanged
-
-    if (isProcessStart) {
-      isProcessEnd = await page.waitForSelector(SEL.strategyReportTransitionReady, 25000) // TODO to options
-      isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
-    } else if (isProcessEnd)
-      isProcessStart = true
-
-    isProcessError = document.querySelector(SEL.strategyReportError)
-    await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+    res['data']['comment'] = res['error'] === 2 ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
+                             res['error'] === 1 ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
+                             res['error'] === 3 ? 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.' : ''
   }
-
-  reportData = await tv.getPerformance() //tv.parseReportTable()
-  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
-    const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
-    if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
-      reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {
-      isProcessEnd = true
-      isProcessStart = true
-    }
-  }
-  if((!isProcessError && isProcessEnd) || isIgnoreError) {
-    reportData = calculateAdditionValuesToReport(reportData)
-  }
-  Object.keys(propVal).forEach(key => reportData[`__${key}`] = propVal[key])
-  reportData['comment'] = isProcessError ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
-    !isProcessStart ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
-      !isProcessEnd ? 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.' : ''
-
-  return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
+  return res
+  // return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
 }
 
 async function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
