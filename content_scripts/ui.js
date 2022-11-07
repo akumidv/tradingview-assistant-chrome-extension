@@ -429,7 +429,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
 
     function prepareRow(name, param, status) {
       const isBoolean = typeof param[0] === 'boolean'
-      return `<td><input type="checkbox" ${status? 'checked' : ''} style="width:1em"></td><td>${name}</td>
+      return `<td><input type="checkbox" ${status? 'checked' : ''} style="width:1em" name="iondv-active-check-box"></td><td>${name}</td>
               <td><input type="text" value="${isBoolean ? 'true' : param[0]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
               <td><input type="text" value="${isBoolean ? 'false' : param[1]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
               <td><input type="number"  step="any" value="${param[2]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
@@ -479,7 +479,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
   </div>
   <div style="height: 640px; overflow-y: auto; vertical-align:top;">
   <table class="stratParamTable">
-   <thead><td style="width: 10%">Active</td><td style="width: 40%">Parameter</td><td>From</td><td>To</td><td>Step</td><td>Default</td><td>Priority</td></thead>
+   <thead><td style="width: 10%"><input type="checkbox" id="iondvCheckAll" style="width:1em">Active</td><td style="width: 40%">Parameter</td><td>From</td><td>To</td><td>Step</td><td>Default</td><td>Priority</td></thead>
    <tbody id="stratParamData"></tbody>
   </table></div>`
       if (!isStratParamElPresent) {
@@ -518,6 +518,19 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
           const cyclesAllEl = document.getElementById('cyclesAll')
           if(cylceEl)
             cylceEl.value = isNaN(parseInt(cyclesAllEl.innerText)) ? 10 : parseInt(cyclesAllEl.innerText)
+        }
+      }
+      const checkAllEl = document.getElementById('iondvCheckAll')
+      if (checkAllEl) {
+        checkAllEl.onchange = () => {
+          const allCheckbox = document.getElementById('iondvCheckAll')
+          const checkAllEl = document.querySelectorAll('[name="iondv-active-check-box"]')
+          if(checkAllEl && allCheckbox) {
+            for(const el of checkAllEl) {
+              el.checked = allCheckbox.checked
+            }
+            updateParamsAndSpace()
+          }
         }
       }
       const btnClose = document.getElementById('stratParamCancel')

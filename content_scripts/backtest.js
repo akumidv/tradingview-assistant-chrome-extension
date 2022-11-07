@@ -207,7 +207,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
   } else {
     res['data']['comment'] = res['error'] === 2 ? 'The tradingview error occurred when calculating the strategy based on these parameter values' :
                              res['error'] === 1 ? 'The tradingview calculation process has not started for the strategy based on these parameter values'  :
-                             res['error'] === 3 ? 'The calculation of the strategy parameters took more than 30 seconds for one combination. Testing of this combination is skipped.' : ''
+                             res['error'] === 3 ? `The calculation of the strategy parameters took more than ${testResults.dataLoadingTime} seconds for one combination. Testing of this combination is skipped.` : ''
   }
   return res
   // return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
