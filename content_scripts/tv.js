@@ -268,8 +268,8 @@ tv.changeDialogTabToInput = async () => {
   return isInputTabActive ? true : false
 }
 
-tv.openCurrentStrategyParam = async () => {
 
+tv.openCurrentStrategyParam = async () => {
   let stratParamEl = document.querySelector(SEL.strategyDialogParam)
   stratParamEl = !stratParamEl ? document.querySelector(SEL.strategyDialogParamNew) : stratParamEl
   if(!stratParamEl) {
@@ -318,8 +318,13 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
 tv.checkAndOpenStrategy = async (name) => {
   let indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
   if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-    if(!await tv.switchToStrategyTab())
+    try {
+      await tv.switchToStrategyTab()
+    } catch {
       return null
+    }
+    // if(!await tv.switchToStrategyTab())
+    //   return null
     if(!await tv.openCurrentStrategyParam())
       return null
     indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
@@ -338,8 +343,9 @@ tv.openStrategyTab = async () => {
     if(strategyTabEl) {
       strategyTabEl.click()
     } else {
-      await ui.showErrorPopup('There is not strategy tester tab on the page. Open correct page please')
-      return null
+      throw new Error('There is not strategy tester tab on the page. Open correct page please')
+      // await ui.showErrorPopup('There is not strategy tester tab on the page. Open correct page please')
+      // return null
     }
   }
   return true
@@ -347,37 +353,42 @@ tv.openStrategyTab = async () => {
 
 
 tv.switchToStrategyTab = async () => {
-  if(!await tv.openStrategyTab())
-    return null
+  await tv.openStrategyTab()
+  // if(!await tv.openStrategyTab())
+  //   return null
   const testResults = {}
   const tickerEl = document.querySelector(SEL.ticker)
   if(!tickerEl || !tickerEl.innerText) {
-    await ui.showErrorPopup('There is not symbol element on page. Open correct page please')
-    return null
+    throw new Error('There is not symbol element on page. Open correct page please')
+    // await ui.showErrorPopup('There is not symbol element on page. Open correct page please')
+    // return null
   }
   testResults.ticker = tickerEl.innerText
   let timeFrameEl = document.querySelector(SEL.timeFrameActive)
   if(!timeFrameEl)
     timeFrameEl = document.querySelector(SEL.timeFrame)
   if(!timeFrameEl || !timeFrameEl.innerText) {
-    await ui.showErrorPopup('There is not timeframe element on page. Open correct page please')
-    return null
+    throw new Error('There is not timeframe element on page. Open correct page please')
+    // await ui.showErrorPopup('There is not timeframe element on page. Open correct page please')
+    // return null
   }
   testResults.timeFrame = timeFrameEl.innerText
   testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
   // strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // TODO 2del 22.05.31
   if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
-    await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
-    return null
+    throw new Error('There is not strategy name element on page. Open correct page please')
+    // await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
+    // return null
   }
   testResults.name = strategyCaptionEl.innerText
 
   let stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
   // stratSummaryEl = !stratSummaryEl ? await page.waitForSelector(SEL.strategySummaryNew, 1000) : stratSummaryEl
   if(!stratSummaryEl) {
-    await ui.showErrorPopup('There is not strategy performance summary tab on the page. Open correct page please')
-    return null
+    throw new Error('There is not strategy performance summary tab on the page. Open correct page please')
+    // await ui.showErrorPopup('There is not strategy performance summary tab on the page. Open correct page please')
+    // return null
   }
   stratSummaryEl.click()
   await page.waitForSelector(SEL.strategySummaryActive, 1000)
@@ -551,11 +562,11 @@ tv.parseReportTable = async () => {
   return report
 }
 
-tv.generateDeepTestReport = async () => {
+tv.generateDeepTestReport = async (loadingTime = 60000) => {
   const generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
   if (generateBtnEl) {
     generateBtnEl.click()
-    const reportHeader = await page.waitForSelector(SEL.strategyReportHeader, 60000)
+    const reportHeader = await page.waitForSelector(SEL.strategyReportHeader, loadingTime)
     if (!reportHeader) {
       if (tv.isParsed)
         return false
@@ -579,14 +590,14 @@ tv.getPerformance = async (testResults, isIgnoreError=false) => {
   let isProcessEnd = false
   let isProcessError = null
   if (testResults.isDeepTest) {
-    isProcessEnd = await tv.generateDeepTestReport()
+    isProcessEnd = await tv.generateDeepTestReport(testResults.dataLoadingTime * 2000)
     isProcessStart = isProcessEnd
     isProcessError = !isProcessEnd
   } else {
     isProcessStart = await page.waitForSelector(SEL.strategyReportIsTransition, 5000)
     isProcessEnd = tv.isReportChanged
     if (isProcessStart) {
-      isProcessEnd = await page.waitForSelector(SEL.strategyReportTransitionReady, 25000) // TODO to options
+      isProcessEnd = await page.waitForSelector(SEL.strategyReportTransitionReady, testResults.dataLoadingTime * 1000) // TODO to options
       isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
     } else if (isProcessEnd)
       isProcessStart = true

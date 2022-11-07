@@ -133,7 +133,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
     }
   }
   await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
-  const isReady = testResults.isDeepTest ? await tv.generateDeepTestReport() : true
+  const isReady = testResults.isDeepTest ? await tv.generateDeepTestReport(testResults.dataLoadingTime * 2000) : true
   if (isReady) {
     const res  = await tv.getPerformance(testResults)//tv.parseReportTable()
     resData = res['data']

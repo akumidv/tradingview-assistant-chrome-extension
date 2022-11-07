@@ -146,8 +146,7 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
   console.log('paramSpaceNumber', paramSpaceNumber)
 
   let testParams = await tv.switchToStrategyTab()
-  if(!testParams)
-    return
+
   testParams.paramSpace = paramSpaceNumber
   let paramPriority = model.getParamPriorityList(paramRange) // Filter by allRangeParams
   paramPriority = paramPriority.filter(key => allRangeParams.hasOwnProperty(key))
@@ -157,8 +156,9 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
   testParams.startParams = await model.getStartParamValues(paramRange, strategyData)
   console.log('testParams.startParams', testParams.startParams)
   if(!testParams.hasOwnProperty('startParams') || !testParams.startParams.hasOwnProperty('current') || !testParams.startParams.current) {
-    await ui.showErrorPopup('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
-    return
+    throw new Error('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
+    // await ui.showErrorPopup('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
+    // return null
   }
 
   // if(isSequential) {
@@ -185,7 +185,8 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
     testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total Closed Trades: All'
     testParams.deepStartDate = !request.options.hasOwnProperty('deepStartDate') || request.options['deepStartDate'] === '' ? null : request.options['deepStartDate']
     testParams.backtestDelay = !request.options.hasOwnProperty('backtestDelay') || !request.options['backtestDelay'] ? 0 : request.options['backtestDelay']
-    testParams.randomDelay = !request.options.hasOwnProperty('randomDelay') ? Boolean(request.options['randomDelay']) : true
+    testParams.randomDelay = request.options.hasOwnProperty('randomDelay') ? Boolean(request.options['randomDelay']) : true
+    testParams.dataLoadingTime = request.options.hasOwnProperty('dataLoadingTime') && !isNaN(parseInt(request.options['dataLoadingTime'])) ? request.options['dataLoadingTime'] :30
   }
   return testParams
 }

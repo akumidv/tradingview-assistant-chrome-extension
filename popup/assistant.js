@@ -23,7 +23,7 @@ function setOptionsEvents() {
     }
     document.getElementById(elId).addEventListener('click', saveOptListener)
   }
-  for(let elId of ['deepStartDate', 'backtestDelay']) {
+  for(let elId of ['deepStartDate', 'backtestDelay', 'dataLoadingTime']) {
     function saveOptListener() {
       saveOptions(elId)
     }
@@ -104,6 +104,9 @@ function setPopupInputsByOptions(getResults) {
 
       if(document.getElementById('deepStartDate') && iondvOptions.hasOwnProperty('deepStartDate'))
         document.getElementById('deepStartDate').value = iondvOptions.deepStartDate
+      if(document.getElementById('dataLoadingTime') && iondvOptions.hasOwnProperty('dataLoadingTime')) {
+        document.getElementById('dataLoadingTime').value = iondvOptions.dataLoadingTime !== null ? iondvOptions.dataLoadingTime : 30
+      }
       if(document.getElementById('backtestDelay') && iondvOptions.hasOwnProperty('backtestDelay')) {
         if (iondvOptions.backtestDelay !== null)
           document.getElementById('backtestDelay').value = iondvOptions.backtestDelay
@@ -140,6 +143,10 @@ function getOptions(signal) {
       deepStartDateEl.style.setProperty('color', 'red')
       iondvOptions.deepStartDate = null
     }
+  }
+  if(document.getElementById('dataLoadingTime')) {
+    const delayValue =  document.getElementById('dataLoadingTime').value
+    iondvOptions.dataLoadingTime = delayValue === '' || isNaN(parseInt(delayValue)) ? 30 : Math.abs(parseInt(delayValue))
   }
   if(document.getElementById('backtestDelay')) {
     const delayValue =  document.getElementById('backtestDelay').value

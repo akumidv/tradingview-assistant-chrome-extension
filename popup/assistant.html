@@ -594,6 +594,17 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 </div>
                 <div class="row">
                     <div class="column left">
+                        <p>The maximum waiting time for data for the strategy, if the results table has not been updated
+                            (2 times more is used for deep backtesting). Reduce to speed up on simple strategies, increase if there is often a data extraction error..</p>
+                    </div>
+                    <div class="column right">
+                        <input id="dataLoadingTime" type="number"
+                               placeholder="30" value="30" style="width: 5em"/>
+                        <label for="dataLoadingTime">sec.</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
                         <p>Clear all stored data</p>
                     </div>
                     <div class="column right">
