@@ -22,7 +22,10 @@ scriptFonts.innerHTML = '@font-face {' +
   '  }\n' +
   '.iondv_upload::before {\n' +
   '    font-family: "Font Awesome 5 Free"; font-weight: 900; font-size: 1.25em; content: "\\f574";\n' +
-  '  }'
+  '  }\n' +
+  '.iondv_copy::before {\n' +
+  '    font-family: "Font Awesome 5 Free"; font-weight: 900; font-size: 1.25em; content: "\\f0c5";\n' +
+  '  }\n'
 document.documentElement.appendChild(scriptFonts)
 
 ui.checkInjectedElements = () => {
@@ -447,6 +450,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       } catch {}
       return 100
     }
+
     try{
       const isStratParamElPresent = document.getElementById('iondvStratParam')
       let stratParamEl = isStratParamElPresent ? document.getElementById('iondvStratParam') : document.createElement('div')
@@ -465,7 +469,9 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       popupEl.innerHTML = `<div style="height: 150px; overflow-y: hidden; vertical-align:top;">
   <h1 style="padding: 25px">Strategy parameters</h1>
   <div style="align-content: center"><span style="padding:5px 15px">
-  Cycles <input id="stratParamCycles" type="number" value="10" style="width:8em"> from ~<span id="cyclesAll">100</span></span>
+  Cycles <input id="stratParamCycles" type="number" value="10" style="width:8em"> 
+  <a id="iondvCycleCopy" style="cursor: pointer;padding-right: 5px"><i class="iondv_icon iondv_copy"></i></a>
+  from ~<span id="cyclesAll">100</span></span>
   <button id="stratParamSaveRun" class="iondv-button iondv-button-run">Save&Run</button>
   <button id="stratParamDefRun" class="iondv-button iondv-button-def">Skip&Run</button>
   <button id="stratParamCancel" class="iondv-button iondv-button-close">Cancel</button>
@@ -476,7 +482,6 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
    <thead><td style="width: 10%">Active</td><td style="width: 40%">Parameter</td><td>From</td><td>To</td><td>Step</td><td>Default</td><td>Priority</td></thead>
    <tbody id="stratParamData"></tbody>
   </table></div>`
-
       if (!isStratParamElPresent) {
         const tvDialog = document.getElementById('overlap-manager-root')
         if (tvDialog)
@@ -506,6 +511,15 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
 
       updateParamsAndSpace()
       tbody.addEventListener('change', updateParamsAndSpace)
+      const copyCycleBtn = document.getElementById('iondvCycleCopy')
+      if (copyCycleBtn) {
+        copyCycleBtn.onclick = async () => {
+          const cylceEl = document.getElementById('stratParamCycles')
+          const cyclesAllEl = document.getElementById('cyclesAll')
+          if(cylceEl)
+            cylceEl.value = isNaN(parseInt(cyclesAllEl.innerText)) ? 10 : parseInt(cyclesAllEl.innerText)
+        }
+      }
       const btnClose = document.getElementById('stratParamCancel')
       if (btnClose) {
         btnClose.onclick = () => {
