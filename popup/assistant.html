@@ -235,8 +235,9 @@
                             </div>
                             <div>
                                 <div class="param-container">
+                                    <span>Filter to use the best results corresponding to the parameters:</span>
                                     <div class="param-box">
-                                        <span>Filter</span>
+
                                         <div class="switch-toggle switch-3 switch-candy">
                                             <input id="optFilterOff" name="state-d" type="radio" checked="checked"/>
                                             <label for="optFilterOff">OFF</label>
@@ -453,8 +454,21 @@
                                                 </select>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="param-container">
+                                    <div class="param-box">
+                                        <div>
+                                            <input id="shouldTestTF" type="checkbox"/>
+                                            <label for="shouldTestTF">Backtesting the strategy on timeframes (divided by comma)</label>
+                                        </div>
+                                        <div><input id="listOfTF" type="text" placeholder="1m,2h,1D,2W,1M" title="Set list of timeframes, where symbol format is: 1m - minutes, 2h - hours, 3D - days, 4W - weeks, 5M - month " style="width: 10em">
+                                            <label for="listOfTF" class="disabled"></label></div>
 
                                     </div>
+                                    <span style="font-size: 80%">the recommendation is to use around or less 100-200 cycles per test</span>
                                 </div>
                             </div>
                         </details>

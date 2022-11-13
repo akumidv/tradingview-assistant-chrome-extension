@@ -120,10 +120,10 @@ Very helpfull will be if you can attach full screenshot with tradingview page an
 
 ## Contacts
 
-akumidv `[at]` yahoo.com  (Do no send errors to email please)
+akumidv `[at]` yahoo.com  (Do not send errors to email please, use [github issues](https://github.com/akumidv/tradingview-assistant-chrome-extension/issues) for them)
 
 https://linkedin.com/in/akuminov
 
 https://fb.com/akuminov
 
-Regarding contacts via social networks - they are banned in Russia, so I do not answer quickly.
+Regarding contacts via social networks - they are banned in Russia, so I do not answer quickly. Email is preferred way, but usually I do not have the ability to answer quickly (2-3 days delay).

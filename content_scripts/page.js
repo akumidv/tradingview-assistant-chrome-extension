@@ -18,8 +18,15 @@ page.waitForSelector = async function (selector, timeout = 5000, isHide = false,
 }
 
 const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-const inputEvent = new Event('input', { bubbles: true});
-const changeEvent = new Event('change', { bubbles: true});
+page._inputEvent = new Event('input', { bubbles: true});
+page._changeEvent = new Event('change', { bubbles: true});
+
+page._mouseEvents ={};
+["mouseover", "mousedown", "mouseup", "click",
+  "dblclick", "contextmenu"].forEach(eventType => {
+  page._mouseEvents[eventType] = document.createEvent('MouseEvents')
+  page._mouseEvents[eventType].initEvent (eventType, true, true)
+})
 
 page.getTextForSel = function (selector, elParent) {
     elParent = elParent ? elParent : document
@@ -29,22 +36,35 @@ page.getTextForSel = function (selector, elParent) {
 
 page.setInputElementValue = function  (element, value, isChange = false) {
     reactValueSetter.call(element, value)
-    element.dispatchEvent(inputEvent);
-    if(isChange) element.dispatchEvent(changeEvent);
+    element.dispatchEvent(page._inputEvent);
+    if(isChange) element.dispatchEvent(page._changeEvent);
   }
 
 
-function mouseTrigger (el, eventType) {
-    const clickEvent = document.createEvent ('MouseEvents');
-    clickEvent.initEvent (eventType, true, true);
-    el.dispatchEvent(clickEvent);
-  }
+// function mouseTrigger (el, eventType) {
+//   // const clickEvent = document.createEvent ('MouseEvents');
+//   // clickEvent.initEvent (eventType, true, true);
+//   // el.dispatchEvent(clickEvent);
+//
+//   // if (!el.hasOwnProperty('iondvEvents'))
+//   //   el.iondvEvents = {};
+//   // if(!el.iondvEvents.hasOwnProperty(eventType)) {
+//   //   const clickEvent = document.createEvent ('MouseEvents');
+//   //   clickEvent.initEvent (eventType, true, true);
+//   //   el.iondvEvents[eventType] = clickEvent
+//   // }
+//   el.dispatchEvent(iondvMouseEvents[eventType]);
+// }
+
 
 page.mouseClick = function (el) {
-  mouseTrigger (el, "mouseover");
-  mouseTrigger (el, "mousedown");
-  mouseTrigger (el, "mouseup");
-  mouseTrigger (el, "click");
+  ["mouseover", "mousedown", "mouseup", "click"].forEach((eventType) =>
+    el.dispatchEvent(page._mouseEvents[eventType])
+  )
+  // mouseTrigger (el, "mouseover");
+  // mouseTrigger (el, "mousedown");
+  // mouseTrigger (el, "mouseup");
+  // mouseTrigger (el, "click");
 }
 
 page.mouseClickSelector = function (selector) {

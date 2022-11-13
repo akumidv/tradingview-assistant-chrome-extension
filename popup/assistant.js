@@ -17,13 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function setOptionsEvents() {
-  for(let elId of ['optMinmax', 'optParamName', 'optMethod', 'optFilterOff', 'optFilterMore', 'optFilterLess', 'optFilterValue', 'optFilterParamName', 'randomDelay']) {
+  for(let elId of ['optMinmax', 'optParamName', 'optMethod', 'optFilterOff', 'optFilterMore', 'optFilterLess', 'optFilterValue', 'optFilterParamName', 'randomDelay', 'shouldTestTF']) {
     function saveOptListener() {
       saveOptions(elId)
     }
     document.getElementById(elId).addEventListener('click', saveOptListener)
   }
-  for(let elId of ['deepStartDate', 'backtestDelay', 'dataLoadingTime']) {
+  for(let elId of ['deepStartDate', 'backtestDelay', 'dataLoadingTime', 'listOfTF']) {
     function saveOptListener() {
       saveOptions(elId)
     }
@@ -114,6 +114,13 @@ function setPopupInputsByOptions(getResults) {
       if(document.getElementById('randomDelay') && iondvOptions.hasOwnProperty('randomDelay')) {
         document.getElementById('randomDelay').checked = Boolean(iondvOptions.randomDelay)
       }
+      if(document.getElementById('shouldTestTF') && iondvOptions.hasOwnProperty('shouldTestTF')) {
+        document.getElementById('shouldTestTF').checked = Boolean(iondvOptions.shouldTestTF)
+      }
+      if(document.getElementById('listOfTF') && iondvOptions.hasOwnProperty('listOfTF')) {
+        if (iondvOptions.listOfTF !== null)
+          document.getElementById('listOfTF').value = iondvOptions.listOfTF
+      }
     }
     const link = document.querySelector(`div.tabs__links > a${typeof tabId === 'number' && tabId > 0 && tabId < 3 ? ':nth-child(' + tabId + ')' : ''}`);
     if (link) // Activate saved or fist tab
@@ -145,15 +152,20 @@ function getOptions(signal) {
     }
   }
   if(document.getElementById('dataLoadingTime')) {
-    const delayValue =  document.getElementById('dataLoadingTime').value
-    iondvOptions.dataLoadingTime = delayValue === '' || isNaN(parseInt(delayValue)) ? 30 : Math.abs(parseInt(delayValue))
+    const dataLoadingTime =  document.getElementById('dataLoadingTime').value
+    iondvOptions.dataLoadingTime = dataLoadingTime === '' ? null : isNaN(parseInt(dataLoadingTime)) ? 30 : Math.abs(parseInt(dataLoadingTime))
   }
   if(document.getElementById('backtestDelay')) {
     const delayValue =  document.getElementById('backtestDelay').value
-    iondvOptions.backtestDelay = delayValue === '' || isNaN(parseFloat(delayValue)) ? null : Math.abs(parseFloat(delayValue))
+    iondvOptions.backtestDelay = delayValue === '' ? null : isNaN(parseFloat(delayValue)) ? null : Math.abs(parseFloat(delayValue))
   }
   iondvOptions.randomDelay = document.getElementById('randomDelay').checked
+  iondvOptions.shouldTestTF = document.getElementById('shouldTestTF').checked
 
+  if(document.getElementById('listOfTF')) {
+    const listOfTF =  document.getElementById('listOfTF').value
+    iondvOptions.listOfTF = listOfTF === '' ? null : listOfTF
+  }
 
   iondvOptions.tabId = (signal === 'uploadSignals') ? 3 : 1
   return iondvOptions

@@ -357,25 +357,31 @@ tv.switchToStrategyTab = async () => {
   // if(!await tv.openStrategyTab())
   //   return null
   const testResults = {}
-  const tickerEl = document.querySelector(SEL.ticker)
-  if(!tickerEl || !tickerEl.innerText) {
-    throw new Error('There is not symbol element on page. Open correct page please')
-    // await ui.showErrorPopup('There is not symbol element on page. Open correct page please')
-    // return null
-  }
-  testResults.ticker = tickerEl.innerText
-  let timeFrameEl = document.querySelector(SEL.timeFrameActive)
-  if(!timeFrameEl)
-    timeFrameEl = document.querySelector(SEL.timeFrame)
-  if(!timeFrameEl || !timeFrameEl.innerText) {
-    throw new Error('There is not timeframe element on page. Open correct page please')
-    // await ui.showErrorPopup('There is not timeframe element on page. Open correct page please')
-    // return null
-  }
-  testResults.timeFrame = timeFrameEl.innerText
-  testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
+
+  // const tickerEl = document.querySelector(SEL.ticker)
+  // if(!tickerEl || !tickerEl.innerText) {
+  //   throw new Error('There is not symbol element on page. Open correct page please')
+  //   // await ui.showErrorPopup('There is not symbol element on page. Open correct page please')
+  //   // return null
+  // }
+  // testResults.ticker = tickerEl.innerText
+
+  testResults.ticker = await tvChart.getTicker()
+  // let timeFrameEl = document.querySelector(SEL.timeFrameActive)
+  // if(!timeFrameEl)
+  //   timeFrameEl = document.querySelector(SEL.timeFrame)
+  // if(!timeFrameEl || !timeFrameEl.innerText) {
+  //   throw new Error('There is not timeframe element on page. Open correct page please')
+  //   // await ui.showErrorPopup('There is not timeframe element on page. Open correct page please')
+  //   // return null
+  // }
+  // testResults.timeFrame = timeFrameEl.innerText
+  // testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
+
+  testResults.timeFrame = await tvChart.getCurrentTimeFrame()
+
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
-  // strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // TODO 2del 22.05.31
+  strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // From 2022-11-13
   if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
     throw new Error('There is not strategy name element on page. Open correct page please')
     // await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')

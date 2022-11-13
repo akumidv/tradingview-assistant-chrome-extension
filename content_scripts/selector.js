@@ -17,6 +17,7 @@ const SEL = {
     strategyTesterTab: '#footer-chart-panel div[data-name="backtesting"]',
     strategyTesterTabActive: '#footer-chart-panel div[data-name="backtesting"][data-active="true"]',
     strategyCaption: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"] div[data-qa-strategy-title]',
+    strategyCaptionNew: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"]  span[class^="content"]',
     strategyDialogParam: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"]  > div:nth-child(2) > button:nth-child(1)',
     strategySummary: '#bottom-area div[class^="backtesting"] div[class^="tabSwitcher"] > button:nth-child(2)',
     strategySummaryActive: '#bottom-area div[class^="backtesting"] div[class^="tabSwitcher"] > button[class*="activeTab"]:nth-child(2)',
@@ -34,5 +35,22 @@ const SEL = {
     strategyDeepTestStartDate: '#bottom-area div[class^="backtesting"]  [class^="historyParams"]  [class^="container" ]> div:nth-child(1) div[class^="pickerInput"] input',
     strategyDeepTestGenerateBtn: '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"]',
 
-    strategyImportExport: '#iondvImportExport'
+    strategyImportExport: '#iondvImportExport',
+
+    chartTicker: '#header-toolbar-symbol-search > div[class*="text-"]',
+    chartTimeframeFavorite: '#header-toolbar-intervals div[data-role="button"][data-value]',
+    chartTimeframeActive: '#header-toolbar-intervals div[data-role="button"][data-value][class*="isActive"]',
+    chartTimeframeMenuOrSingle: '#header-toolbar-intervals div[data-role="button"][class^="menu"]',
+    chartTimeframeMenuItem: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[data-value]",
+    chartTimeframeMenuInput: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[class^=\"form\"] > input",
+    chartTimeframeMenuType: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[class^=\"form\"] > div[class^=\"menu\"]",
+    chartTimeframeMenuAdd: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[class^=\"form\"] > div[class^=\"add\"]",
+    chartTimeframeMenuTypeItems: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]",
+    chartTimeframeMenuTypeItemsMin: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(1)",
+    chartTimeframeMenuTypeItemsHours: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(2)",
+    chartTimeframeMenuTypeItemsDays: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(3)",
+    chartTimeframeMenuTypeItemsWeeks: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(4)",
+    chartTimeframeMenuTypeItemsMonth: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(5)",
+    chartTimeframeMenuTypeItemsRange: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(6)",
+
 }
