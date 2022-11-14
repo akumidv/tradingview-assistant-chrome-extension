@@ -20,6 +20,8 @@ all risks remain with the users.
 
 The developer of the extension does not response for any possible consequences of its use.
 
+## 
+
 **Recommendation**
 
 If your strategy requires a large amount of testing, it is recommended to order its conversion into python and perform 
@@ -127,3 +129,14 @@ https://linkedin.com/in/akuminov
 https://fb.com/akuminov
 
 Regarding contacts via social networks - they are banned in Russia, so I do not answer quickly. Email is preferred way, but usually I do not have the ability to answer quickly (2-3 days delay).
+
+## Project development donate
+Cryptocurrency transfer information       
+       
+* USDT, TRX (TRC20) network        TFqv5hB3cdVHxkxhL8qjpfRMbeqMcuwzFP
+* USDT, Matic (Poligon) network:        0xe837f97420abba87bee280b6edf319b07289b513
+* USDT, ETH (ERC20) network:        0xe837f97420abba87bee280b6edf319b07289b513
+* USDT, BSC (BEP20) network:        0xe837f97420abba87bee280b6edf319b07289b513
+* USDT, Sol (Solana) network:        CuwuesyM1tyrjyJr9avDrrRqcB4rTbciao5mXYP8HkKo
+       
+Binance Pay ID for USDT, USDC, BUSD or other crypto:        240890941 (akumidv)
