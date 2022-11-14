@@ -20,12 +20,16 @@ all risks remain with the users.
 
 The developer of the extension does not response for any possible consequences of its use.
 
-## 
 
-**Recommendation**
+## Last version changes
+1.16 => 2.0(1.17):
+- deep backtesting - thanks @Murena7 for implementation draft version 
+- fixed for chrome memory error (increased possible cycles for backtesting and speed for settiings of parameters)
+- delay between backtests for reduce TV API load
+- saving in CSV values with more than 2 digits after point
+- fixes for numbers input in nonumbers fields - thanks @TomKaltz for pull request with changes
+- backtesting for timeframes - thanks jarno for suppport this changes in version
 
-If your strategy requires a large amount of testing, it is recommended to order its conversion into python and perform 
-backtesting and hyperoptimization of parameters using resources, such as Google Collab or your computer. In addition, it significantly speeds up the search for parameters.
 
 ## Functionality
 
@@ -119,6 +123,25 @@ Very helpfull will be if you can attach full screenshot with tradingview page an
 ## PS
 ** The field separator for CSV files is a comma.
 
+
+## **Recommendation**
+
+If your strategy requires a large amount of testing, it is recommended to order its conversion into python and perform 
+backtesting and hyperoptimization of parameters using resources, such as Google Collab or your computer. In addition, it significantly speeds up the search for parameters (in 5-10 times per cycle) and history deep. Examples in Jupyter Notebooks in repository [trade-strategies-backtesting-optimization](https://github.com/akumidv/trade-strategies-backtesting-optimization). You can run examples in Google Collab, it's free. You would just upload files  with extension `*.ipynb` to your Google Drive and open these files.
+
+Where transfering from TradingViews scripts usually developer should solve some promblems:
+* Trading view indicators – some of them have different formulas to calculate results, for example supertrend, ta.RMA and more others. They need additional implementation and in results they calculated more slowly than if python script would use `ta-lib`.
+* Implementation of the data parsing. If the data for the crypt is mostly free, but the data of low timeframes is usually paid (for example, eodhistoricaldata). Developer need to implement an interface to them and some process to store and reuse local(cloud) stored data.
+- Difference in data for stock or forex exchanges from Tradingview. Also, for some cryptocurrency exchanges.
+- Adopt framework of backtesting (backtesting, backtrader, vectorbot, etc.) to work with strategy
+- Wrap this code for frameworks of parameter gyperspace optimization (simple example you can see in [trade-strategies-backtesting-optimization](https://github.com/akumidv/trade-strategies-backtesting-optimization)) and increase speed of backtesting with some methods.
+
+
+From my experience it demands 2-3 minutes developer time for each row of tradingview script. For example if you have 200 line strategy it would demand ~6 hours to conversion. For some complicated strategies it can deman much more.
+
+To reduce developing time you can use some my repositories: 
+* [tradingview-ta-lib](https://github.com/akumidv/tradingview-ta-lib) - Tradingview `ta` lib implementation in python (only for indecators that have different caclulatoin results with `ta-lib` or `python-ta` - early developing stage.
+* [catcher-bot]((https://github.com/akumidv/catcher-bot) - Bot for screening all simbols on excahnges/exchanges and cath trade signals - early developing stage.
 
 ## Contacts
 
