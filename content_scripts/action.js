@@ -182,7 +182,6 @@ action._parseTF = (listOfTF) => {
 
 action._getTestParams = async (request, strategyData, allRangeParams, paramRange, cycles) => {
   let testParams = await tv.switchToStrategyTab()
-
   const options = request && request.hasOwnProperty('options') ? request.options : {  }
   const testMethod = options.hasOwnProperty('optMethod') && typeof (options.optMethod) === 'string' ? options.optMethod.toLowerCase() : 'random'
   let paramSpaceNumber = 0

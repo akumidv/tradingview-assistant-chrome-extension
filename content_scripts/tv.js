@@ -377,7 +377,6 @@ tv.switchToStrategyTab = async () => {
   // }
   // testResults.timeFrame = timeFrameEl.innerText
   // testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
-
   testResults.timeFrame = await tvChart.getCurrentTimeFrame()
 
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
@@ -400,9 +399,9 @@ tv.switchToStrategyTab = async () => {
   await page.waitForSelector(SEL.strategySummaryActive, 1000)
   // await page.waitForSelector(SEL.strategySummaryActiveNew, 1000)
 
-  await page.waitForSelector(SEL.strategyReport, 0)
+  await page.waitForSelector(SEL.strategyReport, 10000)
   if(!tv.reportNode) {
-    tv.reportNode = await page.waitForSelector(SEL.strategyReport, 0)
+    tv.reportNode = await page.waitForSelector(SEL.strategyReport, 10000)
     if(tv.reportNode) {
       const reportObserver = new MutationObserver(()=> {
         tv.isReportChanged = true
@@ -413,6 +412,8 @@ tv.switchToStrategyTab = async () => {
         attributes: false,
         characterData: false
       });
+    } else {
+      throw new Error('Possible TV UI changed - the strategy report did not found')
     }
   }
   return testResults
@@ -600,11 +601,11 @@ tv.getPerformance = async (testResults, isIgnoreError=false) => {
     isProcessStart = isProcessEnd
     isProcessError = !isProcessEnd
   } else {
-    isProcessStart = await page.waitForSelector(SEL.strategyReportIsTransition, 5000)
+    isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 5000)//SEL.strategyReportIsTransition, 5000)
     isProcessEnd = tv.isReportChanged
     if (isProcessStart) {
-      isProcessEnd = await page.waitForSelector(SEL.strategyReportTransitionReady, testResults.dataLoadingTime * 1000) // TODO to options
-      isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
+      isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, testResults.dataLoadingTime * 1000) // TODO to options
+      // isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
     } else if (isProcessEnd)
       isProcessStart = true
 

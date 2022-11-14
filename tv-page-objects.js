@@ -1,3 +1,14 @@
+
+waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(resolve, timeout))
+(async function() {
+  for (let i=0;i < 100; i++) {
+    if (document.querySelector('#bottom-area div.backtesting-content-wrapper > div[class^="reportContainer"]') == null) {
+      console.log(document.querySelector('#bottom-area div.backtesting-content-wrapper').innerHTML)
+      break
+    }
+    await waitForTimeout(100)
+  }})();
+
 function loadProps(obj, search, name = '', level = 0) {
   const newLevel = level + 1
   if (newLevel > 5) return
