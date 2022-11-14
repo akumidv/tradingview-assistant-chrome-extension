@@ -615,7 +615,8 @@ tv.getPerformance = async (testResults, isIgnoreError=false) => {
   }
 
   // reportData = await tv.getPerformance() //tv.parseReportTable()
-  reportData = await tv.parseReportTable() //tv.parseReportTable()
+  if (!isProcessError)
+    reportData = await tv.parseReportTable() //tv.parseReportTable()
   if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
