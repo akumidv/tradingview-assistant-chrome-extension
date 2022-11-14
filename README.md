@@ -22,6 +22,8 @@ The developer of the extension does not response for any possible consequences o
 
 
 ## Last version changes
+2.0 => 2.1
+- fixed TV UI changed in performance report table that freeze extension
 1.16 => 2.0(1.17):
 - deep backtesting - thanks @Murena7 for implementation draft version 
 - fixed for chrome memory error (increased possible cycles for backtesting and speed for settiings of parameters)
