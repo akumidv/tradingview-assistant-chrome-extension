@@ -604,8 +604,9 @@ tv.getPerformance = async (testResults, isIgnoreError=false) => {
     isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 5000)//SEL.strategyReportIsTransition, 5000)
     isProcessEnd = tv.isReportChanged
     if (isProcessStart) {
-      isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, testResults.dataLoadingTime * 1000) // TODO to options
-      // isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, 5000) // TODO to options
+      isProcessEnd = await page.waitForSelector(SEL.strategyReportError, 5000)
+      if (isProcessEnd == null)
+        isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, testResults.dataLoadingTime * 1000)
     } else if (isProcessEnd)
       isProcessStart = true
 

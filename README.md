@@ -25,6 +25,7 @@ The developer of the extension does not response for any possible consequences o
 1.16 => 2.0(1.17):
 - deep backtesting - thanks @Murena7 for implementation draft version 
 - fixed for chrome memory error (increased possible cycles for backtesting and speed for settiings of parameters)
+- delay for backtesting results (for deep backtesting x2)
 - delay between backtests for reduce TV API load
 - saving in CSV values with more than 2 digits after point
 - fixes for numbers input in nonumbers fields - thanks @TomKaltz for pull request with changes

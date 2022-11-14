@@ -23,7 +23,7 @@ const SEL = {
     strategySummaryActive: '#bottom-area div[class^="backtesting"] div[class^="tabSwitcher"] > button[class*="activeTab"]:nth-child(2)',
     strategyReport: '#bottom-area div.backtesting-content-wrapper > div[class^="reportContainer"]',
     strategyReportInProcess: '#bottom-area div.backtesting-content-wrapper > [role="progressbar"]',
-    strategyReportIsTransition: '#bottom-area div.backtesting-content-wrapper > [role="progressbar"]',
+    // strategyReportIsTransition: '#bottom-area div.backtesting-content-wrapper > [role="progressbar"]',
     strategyReportReady: '#bottom-area div.backtesting-content-wrapper > div[class^="reportContainer"]',
     // strategyReportTransitionReady: '#bottom-area div.backtesting-content-wrapper > div:not(.opacity-transition).reports-content',
     strategyReportError: '#bottom-area div.backtesting-content-wrapper > [class*=emptyStateIcon]',
