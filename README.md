@@ -140,8 +140,8 @@ Where transfering from TradingViews scripts usually developer should solve some 
 From my experience it demands 2-3 minutes developer time for each row of tradingview script. For example if you have 200 line strategy it would demand ~6 hours to conversion. For some complicated strategies it can deman much more.
 
 To reduce developing time you can use some my repositories: 
-* [tradingview-ta-lib](https://github.com/akumidv/tradingview-ta-lib) - Tradingview `ta` lib implementation in python (only for indecators that have different caclulatoin results with `ta-lib` or `python-ta` - early developing stage.
-* [catcher-bot]((https://github.com/akumidv/catcher-bot) - Bot for screening all simbols on excahnges/exchanges and cath trade signals - early developing stage.
+* [tradingview-ta-lib](https://github.com/akumidv/tradingview-ta-lib) - Tradingview `ta` lib implementation in python (only for tradingview indecators that have different caclulatoin results with `ta-lib` or `python-ta` - early developing stage.
+* [catcher-bot](https://github.com/akumidv/catcher-bot) - Bot for screening all symbols on excahnges/exchanges and cath trade signals - early developing stage.
 
 ## Contacts
 
