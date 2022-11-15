@@ -9,7 +9,7 @@ waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(res
     await waitForTimeout(100)
   }})();
 
-function loadProps(obj, search, name = '', level = 0) {
+function searchProps(obj, search, name = '', level = 0) {
   const newLevel = level + 1
   if (newLevel > 5) return
   for (let p of Object.keys(obj)) {
@@ -20,18 +20,18 @@ function loadProps(obj, search, name = '', level = 0) {
         else if (typeof search === 'number' && obj[p] === search)
           console.log('>>>', `${name}${name ? '.' : ''}${p}`, obj[p])
         if (!['window','parent', 'self','_tv_languages', 'frames', 'top', 'loginStateChange', 'onbeforeunload', '$', '_exposed_chartWidgetCollection'].includes(p) && !p.includes('jQuery') && !p.includes('cache') && !p.includes('Cache') && obj[p])
-          loadProps(obj[p], search,`${name}${name ? '.' : ''}${p}`, newLevel);
+          searchProps(obj[p], search,`${name}${name ? '.' : ''}${p}`, newLevel);
     }
 }
-loadProps(window, 'PUB;')
+searchProps(window, 'PUB;')
 
 
 // KEYS only
 function searchKeys(obj, search, name = '', level = 0) {
-  if (typeof search === 'string')
+  if (typeof search !== 'string')
     return null
   const newLevel = level + 1
-  if (newLevel > 10) return
+  if (newLevel > 7) return
   for (let p of Object.keys(obj)) {
     if (p.toLowerCase().includes(search.toLowerCase()))
       console.log('!!! Found', `${name}${name ? '.' : ''}${p}`, obj[p])
@@ -41,6 +41,7 @@ function searchKeys(obj, search, name = '', level = 0) {
   }
 }
 searchKeys(window, 'netProfit');
+searchKeys(window, '_alertsList');
 
 
 

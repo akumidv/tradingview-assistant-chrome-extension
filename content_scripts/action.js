@@ -76,7 +76,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
     if(allRangeParams !== null) { // click cancel on parameters
       const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles)
       console.log('Test parameters', testParams)
-      action._showStartMsg(testParams.paramSpace, testParams.cycles)
+      action._showStartMsg(testParams.paramSpace, testParams.cycles, testParams.backtestDelay ? ` with delay between tests ${testParams.backtestDelay} sec` : '')
       testParams.isDeepTest = isDeepTest
       await tv.setDeepTest(isDeepTest, testParams.deepStartDate)
 
@@ -242,10 +242,10 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
   return testParams
 }
 
-action._showStartMsg = (paramSpaceNumber, cycles) => {
+action._showStartMsg = (paramSpaceNumber, cycles, addInfo) => {
   let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
   extraHeader += (paramSpaceNumber/cycles) > 10 ? `<br />This is too large for ${cycles} cycles. It is recommended to use up to 3-4 essential parameters, remove the rest from the strategy parameters file.` : ''
-  ui.statusMessage('Started.', extraHeader)
+  ui.statusMessage(`Started${addInfo}.`, extraHeader)
 }
 
 action._saveTestResults = async (testResults, testParams, isFinalTest = true) => {
