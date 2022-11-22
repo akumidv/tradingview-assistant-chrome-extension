@@ -17,7 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function setOptionsEvents() {
-  for(let elId of ['optMinmax', 'optParamName', 'optMethod', 'optFilterOff', 'optFilterMore', 'optFilterLess', 'optFilterValue', 'optFilterParamName', 'randomDelay', 'shouldTestTF']) {
+  for(let elId of ['optMinmax', 'optParamName', 'optMethod', 'optFilterOff', 'optFilterMore', 'optFilterLess',
+    'optFilterValue', 'optFilterParamName', 'randomDelay', 'shouldTestTF', 'shouldSkipInitBestResult']) {
     function saveOptListener() {
       saveOptions(elId)
     }
@@ -117,6 +118,9 @@ function setPopupInputsByOptions(getResults) {
       if(document.getElementById('shouldTestTF') && iondvOptions.hasOwnProperty('shouldTestTF')) {
         document.getElementById('shouldTestTF').checked = Boolean(iondvOptions.shouldTestTF)
       }
+      if(document.getElementById('shouldSkipInitBestResult') && iondvOptions.hasOwnProperty('shouldSkipInitBestResult')) {
+        document.getElementById('shouldSkipInitBestResult').checked = Boolean(iondvOptions.shouldSkipInitBestResult)
+      }
       if(document.getElementById('listOfTF') && iondvOptions.hasOwnProperty('listOfTF')) {
         if (iondvOptions.listOfTF !== null)
           document.getElementById('listOfTF').value = iondvOptions.listOfTF
@@ -161,6 +165,7 @@ function getOptions(signal) {
   }
   iondvOptions.randomDelay = document.getElementById('randomDelay').checked
   iondvOptions.shouldTestTF = document.getElementById('shouldTestTF').checked
+  iondvOptions.shouldSkipInitBestResult = document.getElementById('shouldSkipInitBestResult').checked
 
   if(document.getElementById('listOfTF')) {
     const listOfTF =  document.getElementById('listOfTF').value

@@ -87,6 +87,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
         } else {
           let bestValue = null
           let bestTf = null
+          testParams.shouldSkipInitBestResult = true
           for (const tf of testParams.listOfTF) {
             console.log('\nTest timeframe:', tf)
             await tvChart.changeTimeFrame(tf)
@@ -197,6 +198,7 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
   testParams.shouldTestTF = options.hasOwnProperty('shouldTestTF') ? options.shouldTestTF : false
   testParams.listOfTF = action._parseTF(options.listOfTF)
   testParams.listOfTFSource = options.listOfTF
+  testParams.shouldSkipInitBestResult = false // TODO get from options
 
   testParams.paramSpace = paramSpaceNumber
   let paramPriority = model.getParamPriorityList(paramRange) // Filter by allRangeParams
@@ -208,22 +210,8 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
   console.log('testParams.startParams', testParams.startParams)
   if(!testParams.hasOwnProperty('startParams') || !testParams.startParams.hasOwnProperty('current') || !testParams.startParams.current) {
     throw new Error('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
-    // await ui.showErrorPopup('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
-    // return null
   }
 
-  // if(isSequential) {
-  //   await ui.showPopup(`For ${testMethod} testing, the number of ${paramSpaceNumber} cycles is automatically determined, which is equal to the size of the parameter space.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
-  //   testParams.cycles = paramSpaceNumber
-  // } else {
-  //   const cyclesStr = prompt(`Please enter the number of cycles for optimization for parameters space ${paramSpaceNumber}.\n\nYou can interrupt the search for strategy parameters by just reloading the page and at the same time, you will not lose calculations. All data are stored in the storage after each iteration.\nYou can download last test results by clicking on the "Download results" button until you launch new strategy testing.`, 100)
-  //   if(!cyclesStr)
-  //     return
-  //   let cycles = parseInt(cyclesStr)
-  //   if(!cycles || cycles < 1)
-  //     return
-  //   testParams.cycles = cycles
-  // }
   testParams.cycles = cycles
 
 
@@ -237,6 +225,7 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
     testParams.deepStartDate = !request.options.hasOwnProperty('deepStartDate') || request.options['deepStartDate'] === '' ? null : request.options['deepStartDate']
     testParams.backtestDelay = !request.options.hasOwnProperty('backtestDelay') || !request.options['backtestDelay'] ? 0 : request.options['backtestDelay']
     testParams.randomDelay = request.options.hasOwnProperty('randomDelay') ? Boolean(request.options['randomDelay']) : true
+    testParams.shouldSkipInitBestResult = request.options.hasOwnProperty('shouldSkipInitBestResult') ? Boolean(request.options['shouldSkipInitBestResult']) : false
     testParams.dataLoadingTime = request.options.hasOwnProperty('dataLoadingTime') && !isNaN(parseInt(request.options['dataLoadingTime'])) ? request.options['dataLoadingTime'] :30
   }
   return testParams

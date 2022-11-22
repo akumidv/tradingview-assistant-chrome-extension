@@ -163,7 +163,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
     }
   }
 
-  if(!testResults.isSkipInitBestResult && testResults.startParams.hasOwnProperty('best') && testResults.startParams.best) {
+  if(!testResults.shouldSkipInitBestResult && testResults.startParams.hasOwnProperty('best') && testResults.startParams.best) {
     const isBestIdenticalCurrent = testResults.startParams.current && Object.keys(testResults.startParams.current).some(key => testResults.startParams.current[key] !== testResults.startParams.best[key])
     const isBestIdenticalDefault = testResults.startParams.default && Object.keys(testResults.startParams.default).some(key => testResults.startParams.default[key] !== testResults.startParams.best[key])
     if(resPropVal === null || (!isBestIdenticalCurrent && !isBestIdenticalDefault)) {
