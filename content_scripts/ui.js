@@ -429,12 +429,12 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
 
     function prepareRow(name, param, status) {
       const isBoolean = typeof param[0] === 'boolean'
-      return `<td><input type="checkbox" ${status? 'checked' : ''} style="width:1em" name="iondv-active-check-box"></td><td>${name}</td>
-              <td><input type="text" value="${isBoolean ? 'true' : param[0]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
-              <td><input type="text" value="${isBoolean ? 'false' : param[1]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
-              <td><input type="number"  step="any" value="${param[2]}" style="width:4em" ${isBoolean ? 'disabled' :''}></td>
-              <td><input type="text" value="${param[3]}" style="width:4em" ></td>
-              <td><input type="number" value="${param[4]}" style="width:4em"></td>`
+      return `<td><input type="checkbox" ${status? 'checked' : ''} style="width:1em; background-color : #f1f1f1;" name="iondv-active-check-box"></td><td>${name}</td>
+              <td><input type="text" value="${isBoolean ? 'true' : param[0]}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
+              <td><input type="text" value="${isBoolean ? 'false' : param[1]}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
+              <td><input type="number"  step="any" value="${param[2]}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
+              <td><input type="text" value="${param[3]}" style="width:4em; background-color : #f1f1f1;" ></td>
+              <td><input type="number" value="${param[4]}" style="width:4em; background-color : #f1f1f1;"></td>`
     }
 
     function removeParamWindow() {
@@ -469,7 +469,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       popupEl.innerHTML = `<div style="height: 150px; overflow-y: hidden; vertical-align:top;">
   <h1 style="padding: 25px">Strategy parameters</h1>
   <div style="align-content: center"><span style="padding:5px 15px">
-  Cycles <input id="stratParamCycles" type="number" value="10" style="width:8em"> 
+  Cycles <input id="stratParamCycles" type="number" value="10" style="width:8em; background-color :#f1f1f1;"> 
   <a id="iondvCycleCopy" style="cursor: pointer;padding-right: 5px"><i class="iondv_icon iondv_copy"></i></a>
   from ~<span id="cyclesAll">100</span></span>
   <button id="stratParamSaveRun" class="iondv-button iondv-button-run">Save&Run</button>
@@ -479,7 +479,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
   </div>
   <div style="height: 640px; overflow-y: auto; vertical-align:top;">
   <table class="stratParamTable">
-   <thead><td style="width: 10%"><input type="checkbox" id="iondvCheckAll" style="width:1em">Active</td><td style="width: 40%">Parameter</td><td>From</td><td>To</td><td>Step</td><td>Default</td><td>Priority</td></thead>
+   <thead><td style="width: 10%"><input type="checkbox" id="iondvCheckAll" style="width:1em;background-color :#f1f1f1;">Active</td><td style="width: 40%">Parameter</td><td>From</td><td>To</td><td>Step</td><td>Default</td><td>Priority</td></thead>
    <tbody id="stratParamData"></tbody>
   </table></div>`
       if (!isStratParamElPresent) {

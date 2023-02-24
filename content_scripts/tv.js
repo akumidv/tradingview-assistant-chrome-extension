@@ -60,7 +60,6 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
       indicatorName = strategyCaptionEl.innerText
 
       let stratParamEl = document.querySelector(SEL.strategyDialogParam)
-      // stratParamEl = !stratParamEl ? document.querySelector(SEL.strategyDialogParamNew) : stratParamEl
       if(!stratParamEl) {
         await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
         return null
@@ -217,9 +216,11 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
   const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
   const propKeys = Object.keys(propVal)
   let setResultNumber = 0
+  let setPropertiesNames = {}
   for(let i = 0; i < indicProperties.length; i++) {
     const propText = indicProperties[i].innerText
     if(propText && propKeys.includes(propText)) {
+      setPropertiesNames[propText] = true
       setResultNumber++
       const propClassName = indicProperties[i].getAttribute('class')
       if (propClassName.includes('first-')) {
@@ -237,7 +238,7 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
         }
       } else if (propClassName.includes('fill-')) {
         const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
-        if(checkboxEl) {          
+        if(checkboxEl) {
 			// const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
           const isChecked = Boolean(checkboxEl.checked)
           if(Boolean(propVal[propText]) !== isChecked) {
@@ -246,6 +247,7 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
           }
         }
       }
+      setResultNumber = Object.keys(setPropertiesNames).length
       if(propKeys.length === setResultNumber)
         break
     }
@@ -271,7 +273,6 @@ tv.changeDialogTabToInput = async () => {
 
 tv.openCurrentStrategyParam = async () => {
   let stratParamEl = document.querySelector(SEL.strategyDialogParam)
-  stratParamEl = !stratParamEl ? document.querySelector(SEL.strategyDialogParamNew) : stratParamEl
   if(!stratParamEl) {
     await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
     return null
@@ -323,8 +324,6 @@ tv.checkAndOpenStrategy = async (name) => {
     } catch {
       return null
     }
-    // if(!await tv.switchToStrategyTab())
-    //   return null
     if(!await tv.openCurrentStrategyParam())
       return null
     indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
@@ -344,8 +343,6 @@ tv.openStrategyTab = async () => {
       strategyTabEl.click()
     } else {
       throw new Error('There is not strategy tester tab on the page. Open correct page please')
-      // await ui.showErrorPopup('There is not strategy tester tab on the page. Open correct page please')
-      // return null
     }
   }
   return true
@@ -354,46 +351,25 @@ tv.openStrategyTab = async () => {
 
 tv.switchToStrategyTab = async () => {
   await tv.openStrategyTab()
-  // if(!await tv.openStrategyTab())
-  //   return null
   const testResults = {}
 
-  // const tickerEl = document.querySelector(SEL.ticker)
-  // if(!tickerEl || !tickerEl.innerText) {
-  //   throw new Error('There is not symbol element on page. Open correct page please')
-  //   // await ui.showErrorPopup('There is not symbol element on page. Open correct page please')
-  //   // return null
-  // }
-  // testResults.ticker = tickerEl.innerText
 
   testResults.ticker = await tvChart.getTicker()
-  // let timeFrameEl = document.querySelector(SEL.timeFrameActive)
-  // if(!timeFrameEl)
-  //   timeFrameEl = document.querySelector(SEL.timeFrame)
-  // if(!timeFrameEl || !timeFrameEl.innerText) {
-  //   throw new Error('There is not timeframe element on page. Open correct page please')
-  //   // await ui.showErrorPopup('There is not timeframe element on page. Open correct page please')
-  //   // return null
-  // }
-  // testResults.timeFrame = timeFrameEl.innerText
-  // testResults.timeFrame = testResults.timeFrame.toLowerCase() === 'd' ? '1D' : testResults.timeFrame
   testResults.timeFrame = await tvChart.getCurrentTimeFrame()
 
-  let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
-  strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // From 2022-11-13
-  if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
-    throw new Error('There is not strategy name element on page. Open correct page please')
-    // await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
-    // return null
+  let strategyCaptionEl = document.querySelector(SEL.strategyCaption) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
+  // strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // From 2022-11-13
+  if(!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
+    throw new Error('There is not strategy name element on "Strategy Tester" tab. It is possible TV UI was changed. Create task on' +
+        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it does\'t alredy created)')
   }
-  testResults.name = strategyCaptionEl.innerText
+  testResults.name = strategyCaptionEl.getAttribute('data-strategy-title') //strategyCaptionEl.innerText
+
 
   let stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
-  // stratSummaryEl = !stratSummaryEl ? await page.waitForSelector(SEL.strategySummaryNew, 1000) : stratSummaryEl
   if(!stratSummaryEl) {
-    throw new Error('There is not strategy performance summary tab on the page. Open correct page please')
-    // await ui.showErrorPopup('There is not strategy performance summary tab on the page. Open correct page please')
-    // return null
+    throw new Error('There is not strategy performance summary tab on the page. Open correct page please or create task on' +
+        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> if page is correct (check before if it does\'t alredy created)')
   }
   stratSummaryEl.click()
   await page.waitForSelector(SEL.strategySummaryActive, 1000)
@@ -413,7 +389,8 @@ tv.switchToStrategyTab = async () => {
         characterData: false
       });
     } else {
-      throw new Error('Possible TV UI changed - the strategy report did not found')
+      throw new Error('Possible TV UI changed - the strategy report did not found. Create task on' +
+        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> (check before if it does\'t alredy created)')
     }
   }
   return testResults
