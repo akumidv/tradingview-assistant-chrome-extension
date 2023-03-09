@@ -1,12 +1,12 @@
 # About
 This tool builds upon two existing Chrome Extensions for backtesting in Tradingview:
 
-[The optimizer] https://chrome.google.com/webstore/detail/the-optimiser-tradingview/emcpjechgmpcnjphefjekmdlaljbiegp
+[The optimizer] (https://chrome.google.com/webstore/detail/the-optimiser-tradingview/emcpjechgmpcnjphefjekmdlaljbiegp)
 
 and The
-[Tradingview assistant] https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg
+[Tradingview assistant] (https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg).
 
-I am not certain about their history, but for the most part the codes are identical. Going over their online history, The Tradingview Assistant is older by a couple days, and has made the code open source in Github.
+I am not certain about their history, but for the most part the codes are identical. Going over their online history, The Tradingview Assistant is older by a couple days, and has made the code open source in [Github] (https://github.com/akumidv/tradingview-assistant-chrome-extension).
 
 Unfortuntely, they both lack the functionaility to download the List of Trades of each iteraction of the optimization, which can be used for different reasons. That fucntionaility is created here. To do so, six of the original files from The Tradingview Assistant were created or modified:
 
