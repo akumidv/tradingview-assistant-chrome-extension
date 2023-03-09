@@ -2,9 +2,11 @@ const tv = {
   reportNode: null,
   tickerTextPrev: null,
   timeFrameTextPrev: null,
-  isReportChanged: false
+  isReportChanged: false,
+  csv_download_index: 1,
 }
 
+// var csv_download_index = 1;
 
 // Inject script to get access to TradingView data on page
 const script = document.createElement('script');
@@ -18,8 +20,6 @@ document.documentElement.appendChild(scriptPlot);
 const tvPageMessageData = {}
 
 window.addEventListener('message', messageHandler)
-
-
 async function messageHandler(event) {
   const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
   if (!event.origin.startsWith(url) || !event.data ||
@@ -35,6 +35,56 @@ async function messageHandler(event) {
   }
 }
 
+// DEBUG
+tv.startNewTradesList = async () => {
+  tv.csv_download_index = 1;
+}
+
+tv.saveTradesList = async () => {
+  let csv_download_name = 'A' + tv.csv_download_index.toString().padStart(5, '0');
+
+  let tradesListTabButtonNodes = document.evaluate('//button[.="List of Trades"]', document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+  if (tradesListTabButtonNodes !== null) {
+    let tradesListTabButtonEl = tradesListTabButtonNodes.snapshotItem(0);
+    console.log('List of Trades tab found!');
+    tradesListTabButtonEl.click();
+    console.log('Switched to "List of Trades" tab!');
+
+    // Export data button
+    // while (true) {
+      let exportDataButtonNodes = document.evaluate("//div[@data-strategy-title]/following-sibling::div[1]/button[last()]", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+      if (exportDataButtonNodes !== null) {
+        let exportDataButtonEl = exportDataButtonNodes.snapshotItem(0);
+        if (exportDataButtonEl !== null) {
+          console.log(exportDataButtonEl);
+          console.log('Export data button found!');
+          
+          msg = {message:"donwload_button_clicked_to_background", download_name: csv_download_name};
+          chrome.runtime.sendMessage(msg);
+          tv.csv_download_index += 1;
+
+          exportDataButtonEl.click();
+          console.log('Export data button clicked!');
+        }
+        else {
+          return SomeUndefined;
+          console.log(exportDataButtonNodes);
+          console.log('Could not find Export data button!');
+        }
+      }
+      else {
+        console.log(exportDataButtonNodes);
+          console.log('Could not find Export data button elements!');
+      }
+  
+    // }
+  }
+  else {
+    console.log('Could not find "List of Trades" tab!');
+  }
+
+  return csv_download_name;
+}
 
 tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
   let strategyData = {}

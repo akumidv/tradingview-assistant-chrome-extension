@@ -23,7 +23,10 @@
             "run_at": "document_end"
         }
     ],
-    "permissions": ["storage", "unlimitedStorage", "activeTab"],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "permissions": ["storage", "unlimitedStorage", "activeTab", "downloads"],
     "action": {
           "default_icon": {
             "16": "images/tv_assist_16.png",

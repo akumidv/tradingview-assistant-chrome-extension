@@ -131,6 +131,8 @@ file.convertResultsToCSV = (testResults) => {
       headers = Object.keys(headersAll)
   }
 
+  headers.unshift('ID');
+
   let csv = headers.map(header => JSON.stringify(header)).join(',')
   csv += '\n'
   testResults.perfomanceSummary.forEach(row => {
