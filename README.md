@@ -1,10 +1,5 @@
 # About
-This tool builds upon two existing Chrome Extensions for backtesting in Tradingview:
-
-[The optimizer](https://chrome.google.com/webstore/detail/the-optimiser-tradingview/emcpjechgmpcnjphefjekmdlaljbiegp)
-
-and The
-[Tradingview assistant](https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg).
+This tool builds upon two existing Chrome Extensions for backtesting in Tradingview: [The optimizer](https://chrome.google.com/webstore/detail/the-optimiser-tradingview/emcpjechgmpcnjphefjekmdlaljbiegp),  and The [Tradingview assistant](https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg).
 
 I am not certain about their history, but for the most part the codes are identical. Going over their online history, The Tradingview Assistant is older by a couple days, and has made the code open source in [Github](https://github.com/akumidv/tradingview-assistant-chrome-extension).
 
