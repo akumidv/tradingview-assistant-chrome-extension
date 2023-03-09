@@ -44,6 +44,8 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
   // console.log('bestValue', testResults.bestValue)
   // console.log('bestPropVal', testResults.bestPropVal)
 
+  // await tv.startNewTradesList();
+
   // Test strategy
   const optimizationState = {}
   let isEnd = false
@@ -79,6 +81,12 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
         if(optRes === null)
           isEnd = true
     }
+
+    // DEBUG
+    console.log('Trying to click List of Trades...');
+    let tradesListFileName = await tv.saveTradesList();
+    // console.log("Saved " + tradesListFileName + " as trades list CSV!");
+
     if(isEnd)
       break
     if(optRes.hasOwnProperty('data') && optRes.hasOwnProperty('bestValue') && optRes.bestValue !== null && optRes.hasOwnProperty('bestPropVal')) {
@@ -229,9 +237,15 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
         res.isFiltered = true
       }
     }
+
+    //TODO
+    res.data['ID'] = 'A' + tv.csv_download_index.toString().padStart(5, '0');
     if(isFiltered)
       testResults.filteredSummary.push(res.data)
     else
+    // DEBUG
+      // console.log('perfomanceSummary row:\n');
+      // console.log(res.data);
       testResults.perfomanceSummary.push(res.data)
     await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
 

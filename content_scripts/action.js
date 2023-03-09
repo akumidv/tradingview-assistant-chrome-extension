@@ -12,6 +12,7 @@ action.saveParameters = async () => {
   Object.keys(strategyData.properties).forEach(key => {
     strategyParamsCSV += `${JSON.stringify(key)},${typeof strategyData.properties[key][0] === 'string' ? JSON.stringify(strategyData.properties[key]) : strategyData.properties[key]}\n`
   })
+  console.log('Saving strategy params to ' + strategyData.name + '.csv File!');
   file.saveAs(strategyParamsCSV, `${strategyData.name}.csv`)
 }
 
@@ -245,6 +246,7 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
   }
 
   const CSVResults = file.convertResultsToCSV(testResults)
+
   const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
   const initBestValue = testResults.hasOwnProperty('initBestValue') ? testResults.initBestValue : null
   const propVal = {}
@@ -261,6 +263,10 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
   if (isFinalTest)
     await ui.showPopup(text)
   console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
+  console.log('Final Results are: \n');
+  console.log(CSVResults);
+
+  // TODO
   file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame}${testResults.isDeepTest ? ' deep backtesting' : ''} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
 }
 
