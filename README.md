@@ -23,7 +23,8 @@ The developer of the extension does not response for any possible consequences o
 
 ## Last version changes
 2.1 => 2.2:
-f
+- fix for TV UI changes
+- fix for breaking set of strategy parameters if strategy have parameters with identical names
 
 2.0 => 2.1
 - fixed TV UI changed in performance report table that freeze extension
