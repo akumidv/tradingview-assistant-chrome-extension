@@ -5,7 +5,8 @@ const action = {
 action.saveParameters = async () => {
   const strategyData = await tv.getStrategy(null, true)
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    await ui.showWarningPopup('Please open the indicator (strategy) parameters window before saving them to a file.')
+    await ui.showErrorPopup('The current indicator/strategy do not contain inputs that can be saved.')
+    // await ui.showWarningPopup('Please open the indicator (strategy) parameters window before saving them to a file.')
     return
   }
   let strategyParamsCSV = `Name,Value\n"__indicatorName",${JSON.stringify(strategyData.name)}\n`
@@ -30,7 +31,7 @@ action.uploadStrategyTestParameters = async () => {
 action.getStrategyTemplate = async () => {
   const strategyData = await tv.getStrategy()
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    await ui.showErrorPopup('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+    await ui.showErrorPopup('The current strategy do not contain inputs, than can be saved')
   } else {
     const paramRange = model.getStrategyRange(strategyData)
     console.log(paramRange)
@@ -69,7 +70,6 @@ action.downloadStrategyTestResults = async () => {
 
 
 action.testStrategy = async (request, isDeepTest = false) => {
-  console.log('request', request)
   try {
     const strategyData = await action._getStrategyData()
     const [allRangeParams, paramRange, cycles] = await action._getRangeParams(strategyData)
@@ -133,9 +133,9 @@ action.testStrategy = async (request, isDeepTest = false) => {
 action._getRangeParams = async (strategyData) => {
   let paramRange = await model.getStrategyParameters(strategyData)
   console.log('paramRange', paramRange)
-  if(!paramRange)
-    throw new Error('Error get changed strategy parameters')
-    // return
+  if(paramRange === null)
+    // throw new Error('Error get changed strategy parameters')
+    return [null, null, null]
 
   const initParams = {}
   initParams.paramRange = paramRange
@@ -168,7 +168,7 @@ action._getStrategyData = async () => {
   ui.statusMessage('Get the initial parameters.')
   const strategyData = await tv.getStrategy()
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    throw new Error('Could not find any strategy with parameters among the indicators. Add it to the chart and try again.')
+    throw new Error('The current strategy do not contain inputs, than can be optimized. You can choose another strategy to optimize.')
   }
   return strategyData
 }

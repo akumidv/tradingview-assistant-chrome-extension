@@ -6,7 +6,11 @@ model.getStrategyParameters = async (strategyData) => {
   if(paramRange) {
     const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
     if(mismatched && mismatched.length) {
-      const isDef = confirm(`The data loaded from the storage has parameters that are not present in the current strategy: ${mismatched.join(',')}.\n\nYou need to load the correct strategy in the Tradingview chart or load new parameters for the current one. \nAlternatively, you can use the default strategy optimization parameters.\n\nShould it use the default settings?`)
+      // const isDef = confirm(`The data loaded from the storage has parameters that are not present in the current strategy: ${mismatched.join(',')}.\n\nYou need to load the correct strategy in the Tradingview chart or load new parameters for the current one. \nAlternatively, you can use the default strategy optimization parameters.\n\nShould it use the default settings?`)
+      const isDef = await ui.alertPopup (`The data loaded from the storage has parameters that are not present in the 
+      current strategy: ${mismatched.join(',')}.\n\nYou need to load the correct strategy in the Tradingview chart or 
+      load new parameters for the current one. \nAlternatively, you can use the default strategy optimization parameters.
+      \n\nShould it use the default settings?`, false, true)
       if (!isDef)
         return null
       paramRange = model.getStrategyRange(strategyData)

@@ -36,8 +36,8 @@ async function messageHandler(event) {
 }
 
 
-tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
-  let strategyData = {}
+tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
+  // let strategyData = {}
   let indicatorName = null
   if(strategyName !== null) {
     if (!strategyName) {
@@ -47,39 +47,44 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
         if(strategyTabEl) {
           strategyTabEl.click()
         } else {
-          await ui.showErrorPopup('There is not strategy tester tab on the page. Open correct page please')
-          return null
+          throw new Error('There is not "Strategy tester" tab on the page. Open correct page please or if it is ' +
+              'correct, then it is possible that TV UI changed. Create ' +
+              '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues">issue</a>')
         }
       }
       let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
       // strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // TODO 2del 22.05.31
       if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
-        await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
-        return null
+        throw new Error('There is not strategy name element on "Strategy tester" tab. Please retry. If the problem reproduced then it is possible taht TV UI changed. Check ' +
+              '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues">issues</a>')
+        // await ui.showErrorPopup('There is not strategy name element on page. Open correct page please')
+        // return null
       }
       indicatorName = strategyCaptionEl.innerText
 
       let stratParamEl = document.querySelector(SEL.strategyDialogParam)
       if(!stratParamEl) {
-        await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
-        return null
+        throw new Error('There is not strategy param button on the "Strategy tester" tab. Please retry. If the problem reproduced then it is possible taht TV UI changed. Check ' +
+              '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues">issues</a>')
+        // await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
+        // return null
       }
       stratParamEl.click()
       const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
       if (!dialogTitle || !dialogTitle.innerText) {
-        await ui.showErrorPopup('There is open strategy properties. Open correct page please')
+        // await ui.showErrorPopup('There is open strategy properties. Open correct page please')
         if (document.querySelector(SEL.cancelBtn))
           document.querySelector(SEL.cancelBtn).click()
-        return null
+        throw new Error('The strategy parameter windows is not opened. Please retry. If the problem reproduced then it is possible taht TV UI changed. Check ' +
+              '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues">issues</a>')
+        // return null
       }
 
       let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
       if (isIndicatorSave || isStrategyPropertiesTab) {
         indicatorName = dialogTitle.innerText
-
       }
-    }
-    else {
+    } else {
       const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
       if(!indicatorLegendsEl)
         return null
@@ -105,7 +110,6 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
         }
       }
     }
-
   } else {
     let dialogTitleEl = await page.waitForSelector(SEL.indicatorTitle, 2500)
     if (!dialogTitleEl || !dialogTitleEl.innerText) {
@@ -120,9 +124,29 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
     }
   }
   if(indicatorName === null)
-    return strategyData
-  strategyData = {name: indicatorName, properties: {}}
-  if(await tv.changeDialogTabToInput()) {
+    throw new Error('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+    // return strategyData
+
+  if(!await tv.changeDialogTabToInput())
+    throw new Error(`Can\'t activate input tab in strategy parameters`)
+  // if(await tv.changeDialogTabToInput()) {
+
+  // } else {
+  //   console.error(`Can't set parameters tab to input`)
+  // }
+  const strategyInputs = await tv.getStrategyParams()
+   const strategyData = {name: indicatorName, properties: strategyInputs}
+
+  if (document.querySelector(SEL.cancelBtn)) {
+    document.querySelector(SEL.cancelBtn).click()
+    await page.waitForSelector(SEL.cancelBtn, 1000, true)
+  }
+
+  return strategyData
+}
+
+tv.getStrategyParams = async () => {
+  const strategyInputs = {} // TODO to list of values and set them in the same order
     const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
     for (let i = 0; i < indicProperties.length; i++) {
       const propClassName = indicProperties[i].getAttribute('class')
@@ -138,13 +162,13 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
           let propValue = indicProperties[i].querySelector('input').value
           if(indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric' ||
             (parseFloat(propValue) == propValue || parseInt(propValue) == propValue)) { // not only inputmode==numbers input have digits
-            const digPropValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // TODO how to get float from param or just search point in string
+            const digPropValue = parseFloat(propValue) == parseInt(propValue) ? parseInt(propValue) : parseFloat(propValue)  // Detection if float or int in the string
             if(!isNaN(propValue))
-              strategyData.properties[propText] = digPropValue
+              strategyInputs[propText] = digPropValue
             else
-              strategyData.properties[propText] = propValue
+              strategyInputs[propText] = propValue
           } else {
-            strategyData.properties[propText] = propValue
+            strategyInputs[propText] = propValue
           }
         } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
           const buttonEl = indicProperties[i].querySelector('span[role="button"]')
@@ -153,7 +177,7 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
           const propValue = buttonEl.innerText
           if(propValue) {
             if(isIndicatorSave) {
-              strategyData.properties[propText] = propValue
+              strategyInputs[propText] = propValue
               continue
             }
             buttonEl.scrollIntoView()
@@ -169,10 +193,10 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
                 }
               }
               if(allOptionsList)
-                strategyData.properties[propText] = allOptionsList
+                strategyInputs[propText] = allOptionsList
               page.mouseClick(buttonEl)
             } else {
-              strategyData.properties[propText] = propValue
+              strategyInputs[propText] = propValue
             }
           }
         } else { // Undefined
@@ -181,7 +205,7 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
       } else if (propClassName.includes('fill-')) {
         const element = indicProperties[i].querySelector('input[type="checkbox"]')
         if(element)
-          strategyData.properties[propText] = element.getAttribute('checked') !== null ? element.checked : false
+          strategyInputs[propText] = element.getAttribute('checked') !== null ? element.checked : false
         else { // Undefined type of element
           continue
         }
@@ -191,15 +215,7 @@ tv.getStrategy = async (strategyName = null, isIndicatorSave = false) => {
         continue
       }
     }
-  } else {
-    console.error(`Can't set parameters tab to input`)
-  }
-  if (document.querySelector(SEL.cancelBtn)) {
-    document.querySelector(SEL.cancelBtn).click()
-    await page.waitForSelector(SEL.cancelBtn, 1000, true)
-  }
-
-  return strategyData
+    return strategyInputs
 }
 
 tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
@@ -263,7 +279,7 @@ tv.changeDialogTabToInput = async () => {
   if(isInputTabActive) return true
   const inputTabEl = document.querySelector(SEL.tabInput)
   if (!inputTabEl) {
-    throw new Error('There are no parameters in this strategy that can be optimized (There is no "Inputs" tab with parameters)')
+    throw new Error('There are no parameters in this strategy that can be optimized (There is no "Inputs" tab with input values)')
   }
   inputTabEl.click()
   isInputTabActive = await page.waitForSelector(SEL.tabInputActive, 2000)

@@ -134,7 +134,7 @@ top:0px;
 left:0px;
 z-index:10000;`
 
-async function alertPopup (msgText, isError = null, isConfirm = false) {
+ui.alertPopup =  async (msgText, isError = null, isConfirm = false) => {
   return new Promise(resolve => {
     function removeAlertPopup () {
       const iondvAlertPopupEl = document.getElementById('iondvAlertPopup')
@@ -191,15 +191,15 @@ async function alertPopup (msgText, isError = null, isConfirm = false) {
 }
 
 ui.showPopup = async (msgText) => {
-  return await alertPopup(msgText, null)
+  return await ui.alertPopup(msgText, null)
 }
 
 ui.showErrorPopup = async (msgText) => {
-  return await alertPopup(msgText, true)
+  return await ui.alertPopup(msgText, true)
 }
 
 ui.showWarningPopup = async (msgText) => {
-  return await alertPopup(msgText, false)
+  return await ui.alertPopup(msgText, false)
 }
 
 ui.statusMessageRemove = () => {
