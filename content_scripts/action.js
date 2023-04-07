@@ -62,7 +62,7 @@ action.downloadStrategyTestResults = async () => {
     if(bestResult.hasOwnProperty(`__${paramName}`))
       propVal[paramName] = bestResult[`__${paramName}`]
   })
-  await tv.setStrategyParams(testResults.shortName, propVal)
+  await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
   if(bestResult && bestResult.hasOwnProperty(testResults.optParamName))
     await ui.showPopup(`The best found parameters are set for the strategy\n\nThe best ${testResults.isMaximizing ? '(max) ':'(min)'} ${testResults.optParamName}: ` + bestResult[testResults.optParamName])
   file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
@@ -253,7 +253,7 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
       propVal[paramName] = bestResult[`__${paramName}`]
   })
   if (isFinalTest)
-    await tv.setStrategyParams(testResults.shortName, propVal)
+    await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
   let text = `All done.\n\n`
   text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + backtest.convertValue(bestResult[testParams.optParamName]) : ''
   text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${backtest.convertValue(initBestValue)}` : ''
