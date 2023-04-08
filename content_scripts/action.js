@@ -4,20 +4,16 @@ const action = {
 
 action.saveParameters = async () => {
   const strategyData = await tv.getStrategy(null, true)
-  if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    await ui.showErrorPopup('The current indicator/strategy do not contain inputs that can be saved.')
-    // await ui.showWarningPopup('Please open the indicator (strategy) parameters window before saving them to a file.')
+  if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('inputs') || !strategyData.inputs) {
+    await ui.showWarningPopup('The current indicator/strategy do not contain inputs that can be saved.')
     return
   }
-  let strategyParamsCSV = `Name,Value\n"__indicatorName",${JSON.stringify(strategyData.name)}\n`
-  Object.keys(strategyData.properties).forEach(key => {
-    strategyParamsCSV += `${JSON.stringify(key)},${typeof strategyData.properties[key][0] === 'string' ? JSON.stringify(strategyData.properties[key]) : strategyData.properties[key]}\n`
-  })
-  file.saveAs(strategyParamsCSV, `${strategyData.name}.csv`)
+  const strategyParamsCSV = file.convertInputs(strategyData)
+  file.saveAs(strategyParamsCSV, `${strategyData.name}_inputs.csv`)
 }
 
 action.loadParameters = async () => {
-  await file.upload(file.uploadHandler, '', false)
+  await file.upload(file.uploadInputsHandler, '', false)
 }
 
 action.uploadSignals = async () => {
@@ -62,7 +58,7 @@ action.downloadStrategyTestResults = async () => {
     if(bestResult.hasOwnProperty(`__${paramName}`))
       propVal[paramName] = bestResult[`__${paramName}`]
   })
-  await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
+  const errMsg = await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
   if(bestResult && bestResult.hasOwnProperty(testResults.optParamName))
     await ui.showPopup(`The best found parameters are set for the strategy\n\nThe best ${testResults.isMaximizing ? '(max) ':'(min)'} ${testResults.optParamName}: ` + bestResult[testResults.optParamName])
   file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
@@ -252,8 +248,9 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
     if(bestResult.hasOwnProperty(`__${paramName}`))
       propVal[paramName] = bestResult[`__${paramName}`]
   })
+  let errMsg
   if (isFinalTest)
-    await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
+    errMsg = await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
   let text = `All done.\n\n`
   text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + backtest.convertValue(bestResult[testParams.optParamName]) : ''
   text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${backtest.convertValue(initBestValue)}` : ''

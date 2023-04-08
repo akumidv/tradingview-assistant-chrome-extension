@@ -38,7 +38,7 @@ async function messageHandler(event) {
 }
 
 
-tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
+tv.getStrategy = async (strategyName = '', isIndicatorSaving = false) => {
   // let strategyData = {}
   let indicatorName = null
   if(strategyName !== null) {
@@ -83,7 +83,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
       }
 
       let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-      if (isIndicatorSave || isStrategyPropertiesTab) {
+      if (isIndicatorSaving || isStrategyPropertiesTab) {
         indicatorName = dialogTitle.innerText
       }
     } else {
@@ -106,7 +106,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
           continue
         }
         let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-        if (isIndicatorSave || isStrategyPropertiesTab) {
+        if (isIndicatorSaving || isStrategyPropertiesTab) {
           indicatorName = dialogTitle.innerText
           break
         }
@@ -121,7 +121,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
       dialogTitleEl = await page.$(SEL.indicatorTitle)
     }
     let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-    if (isIndicatorSave || isStrategyPropertiesTab) {
+    if (isIndicatorSaving || isStrategyPropertiesTab) {
       indicatorName = dialogTitleEl.innerText
     }
   }
@@ -130,16 +130,19 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
     // return strategyData
 
   if(!await tv.changeDialogTabToInput())
-    throw new Error(`Can\'t activate input tab in strategy parameters`)
-  // if(await tv.changeDialogTabToInput()) {
+    throw new Error(`Can\'t activate input tab in strategy`)
+  const strategyInputs = await tvIndicator.getStrategyInputs(isIndicatorSaving)
+  let strategyProperties = null
+  if(await tv.changeDialogTabToProperties()) {
+    strategyProperties = await tvIndicator.getStrategyProperties(isIndicatorSaving)
+    // strategyProperties = await tvIndicator.getStrategyProperties(isIndicatorSaving)
+    if(!await tv.changeDialogTabToInput())
+      throw new Error(`Can\'t activate input tab in strategy`)
 
-  // } else {
-  //   console.error(`Can't set parameters tab to input`)
-  // }
-  const strategyInputs = await tvIndicator.getStrategyInputs()
-   const strategyData = {name: indicatorName, properties: strategyInputs}
+  }
+  const strategyData = {name: indicatorName, inputs: strategyInputs, strategyProperties: strategyProperties}
 
-  if (document.querySelector(SEL.cancelBtn)) {
+  if (!isIndicatorSaving && document.querySelector(SEL.cancelBtn)) {
     document.querySelector(SEL.cancelBtn).click()
     await page.waitForSelector(SEL.cancelBtn, 1000, true)
   }
@@ -148,12 +151,25 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
 }
 
 
+tv.changeDialogTabToProperties = async () => {
+  let isInputTabActive = document.querySelector(SEL.tabPropertiesActive)
+  if(isInputTabActive) return true
+  const inputTabEl = document.querySelector(SEL.tabProperties)
+  if (!inputTabEl) {
+    return false
+  }
+  inputTabEl.click()
+  isInputTabActive = await page.waitForSelector(SEL.tabPropertiesActive, 2000)
+  return isInputTabActive ? true : false
+}
+
 tv.changeDialogTabToInput = async () => {
   let isInputTabActive = document.querySelector(SEL.tabInputActive)
   if(isInputTabActive) return true
   const inputTabEl = document.querySelector(SEL.tabInput)
   if (!inputTabEl) {
-    throw new Error('There are no parameters in this strategy that can be optimized (There is no "Inputs" tab with input values)')
+    return false
+    // throw new Error('There are no parameters in this strategy that can be optimized (There is no "Inputs" tab with input values)')
   }
   inputTabEl.click()
   isInputTabActive = await page.waitForSelector(SEL.tabInputActive, 2000)

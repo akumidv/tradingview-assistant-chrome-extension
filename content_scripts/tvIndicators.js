@@ -1,7 +1,188 @@
 const tvIndicator = {}
 
 
-tvIndicator.getStrategyInputs = async () => {
+tvIndicator.getStrategyProperties = async (isIndicatorSaving) => {
+  return await tvIndicator.getStrategyInputs(isIndicatorSaving)
+}
+
+tvIndicator.getStrategyInputs = async (isIndicatorSaving=false) => {
+  const strategyInputs = [] // TODO to list of values and set them in the same order
+    const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+    let idx = 0
+    for (let i = 0; i < indicProperties.length; i++) {
+      const propClassName = indicProperties[i].getAttribute('class')
+      const propText = indicProperties[i].innerText.trim()
+      if(!propClassName || !propText) // Undefined type of element
+        continue
+      if (propClassName.includes('first-') && indicProperties[i].innerText) {
+        i++
+        if (indicProperties[i] && indicProperties[i].querySelector('input')) {
+          try {
+            if (indicProperties[i].querySelector('[class^="datePickerWrapper"] input') && indicProperties[i].querySelector('[class^="timePickerWrapper"] input')) {
+              const dateValue= indicProperties[i].querySelector('[class^="datePickerWrapper"] input').value
+              const timeValue= indicProperties[i].querySelector('[class^="timePickerWrapper"] input').value
+              const inpValue = `${dateValue}T${timeValue}` //(new Date(`${dateValue}T${timeValue}`)).toISOString().substring(0, 16)
+               strategyInputs.push({idx: idx, name: propText, value: inpValue, type: 'datetime'})
+               idx++
+            } else {
+              if ( indicProperties[i].querySelector('input[type="checkbox"]')) {// Strategy properties checkbox
+                strategyInputs.push({idx: idx, name: propText, value: indicProperties[i].querySelector('input[type="checkbox"]').getAttribute('checked') !== null ? true : false, type: 'boolean'})
+                idx++
+              } else {
+                let inpValue = indicProperties[i].querySelector('input').value
+                const inptValeWoSpace = inpValue.replace(' ', '')
+                const isNumber = parseFloat(inptValeWoSpace) == inptValeWoSpace || parseInt(inptValeWoSpace) == inptValeWoSpace
+                const isNumeric = indicProperties[i].querySelector('input').getAttribute('inputmode') === 'numeric'
+                if(isNumeric || isNumber) { // not only inputmode==numbers input have digits
+                  const isInt = parseFloat(inptValeWoSpace) == parseInt(inptValeWoSpace)
+                  const digPropValue = isInt ? parseInt(inptValeWoSpace) : parseFloat(inptValeWoSpace)  // Detection if float or int in the string
+                  if(isNaN(inpValue))
+                    strategyInputs.push({idx: idx, name: propText, value: inpValue, type: 'string'})
+                  else
+                    strategyInputs.push({idx: idx, name: propText, value: digPropValue, type: isInt ? 'int' : 'float'})
+                  idx++
+                } else {
+                  strategyInputs.push({idx: idx, name: propText, value: inpValue, type: 'string'})
+                  idx++
+                }
+              }
+            }
+          } catch {}
+        } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
+          const buttonEl = indicProperties[i].querySelector('span[role="button"]')
+          if(!buttonEl)
+            continue
+          const inpValue = buttonEl.innerText
+          if(inpValue) {
+            buttonEl.scrollIntoView()
+            await page.waitForTimeout(100)
+            page.mouseClick(buttonEl)
+            const isOptions = await page.waitForSelector(SEL.strategyListOptions, 1000)
+            if(!isOptions) {
+              strategyInputs.push({idx: idx, name: propText, value: inpValue, type: 'string'})
+            } else {
+              const ddListInput = {idx: idx, name: propText, value: inpValue, type: 'list', options: []}
+              const allOptionsEl = document.querySelectorAll(SEL.strategyListOptions)
+              for(let optionEl of allOptionsEl) {
+                if(optionEl && optionEl.innerText) { //  && optionEl.innerText !== inpValue
+                  ddListInput['options'].push(optionEl.innerText)
+                }
+              }
+              strategyInputs.push(ddListInput)
+              page.mouseClick(buttonEl)
+            }
+            idx++
+          }
+        } else { // Undefined
+          continue
+        }
+      } else if (propClassName.includes('fill-') && !indicProperties[i].getAttribute('data-section-name') ) {
+        const element = indicProperties[i].querySelector('input[type="checkbox"]')
+        if(element) {
+          strategyInputs.push({idx: idx, name: propText, value: element.getAttribute('checked') !== null ? true : false, type: 'boolean'})
+          idx++
+        } else { // Undefined type of element
+          continue
+        }
+      } else if (indicProperties[i].getAttribute('data-section-name') || propClassName.includes('titleWrap-')) { // Titles bwtwen parameters
+        strategyInputs.push({idx: idx, name: propText, value: null, type: 'group'})
+        continue
+      } else { // Undefined type of element
+        continue
+      }
+    }
+    return strategyInputs
+}
+
+tvIndicator.setStrategyProperties = async (name, propVal, shouldCheckOpenedWindow) => {
+  if(await tv.changeDialogTabToProperties()) {
+      return await tvIndicator.setStrategyInputs(name, propVal, shouldCheckOpenedWindow)
+  }
+}
+
+
+tvIndicator.setStrategyInputs = async (name, propVal, shouldCheckOpenedWindow = false) => {
+  if(shouldCheckOpenedWindow) {
+    const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
+    if(!indicatorTitleEl) {
+      return 'The strategy title element do not found'
+    }
+    else if (indicatorTitleEl.innerText !== name) {
+      return `The strategy title ${indicatorTitleEl.innerText} do not match ${name}`
+    }
+  } else {
+    const indicatorTitleEl = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+    if(!indicatorTitleEl)
+      return 'The strategy inputs window did not open'
+  }
+  const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+  let idx = 0
+  let errMsg = null
+  for(let i = 0; i < indicProperties.length; i++) {
+    const stratInputName = indicProperties[i].innerText.trim()
+    if (idx >= propVal.length) {
+      errMsg = 'There are more strategy inputs than in prepared parameters. You can try to reload strategy parameters.'
+      break
+    }
+    const inputName = propVal[idx]['name']
+    if (stratInputName !== inputName) {
+      errMsg = `The ordr of strategy inputs are incorrect, current input name ${stratInputName}, but from parameters ${inputName}. You can try to reload strategy parameters.`
+      break
+    }
+    if (propVal[idx]['shouldSkip'] || propVal[idx]['value'] === null || propVal[idx]['type'] === 'group') { // Skip parameter to set
+      idx++
+      continue
+    }
+    const propClassName = indicProperties[i].getAttribute('class')
+    if (propClassName.includes('first-')) {
+      i++
+      if(indicProperties[i].querySelector('input')) {
+        try {
+            if (indicProperties[i].querySelector('[class^="datePickerWrapper"] input') && indicProperties[i].querySelector('[class^="timePickerWrapper"] input')) {
+              // page.mouseClick(indicProperties[i].querySelector('[class^="datePickerWrapper"] input'))
+              page.setInputElementValue(indicProperties[i].querySelector('[class^="datePickerWrapper"] input'), propVal[idx]['value'].substring(0, 10))
+              // page.mouseClick(indicProperties[i].querySelector('[class^="timePickerWrapper"] input'))
+              page.setInputElementValue(indicProperties[i].querySelector('[class^="timePickerWrapper"] input'), propVal[idx]['value'].substring(11, 16))
+               idx++
+            } else {
+             page.setInputElementValue(indicProperties[i].querySelector('input'), propVal[idx]['value'])
+            idx ++
+          }
+        } catch {}
+
+      } else if(indicProperties[i].querySelector('span[role="button"]')) { // List
+        const buttonEl = indicProperties[i].querySelector('span[role="button"]')
+        if(!buttonEl || !buttonEl.innerText)
+          continue
+        buttonEl.scrollIntoView()
+            await page.waitForTimeout(100)
+        page.mouseClick(buttonEl)
+        page.setSelByText(SEL.strategyListOptions, propVal[idx]['value'])
+        idx ++
+      }
+    } else if (propClassName.includes('fill-')) {
+      const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
+      if(checkboxEl) {
+          // const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
+        // const isChecked = Boolean(checkboxEl.checked)
+        const isChecked = checkboxEl.getAttribute('checked') !== null
+        if(Boolean(propVal[idx]['value']) !== isChecked) {
+          page.mouseClick(checkboxEl)
+          idx ++
+        }
+      }
+    }
+  }
+  if(!shouldCheckOpenedWindow && document.querySelector(SEL.okBtn)) {
+    console.log('###shouldCheckOpenedWindow', shouldCheckOpenedWindow)
+    document.querySelector(SEL.okBtn).click()
+  }
+
+  return errMsg
+}
+
+
+tvIndicator.getStrategyInputsPREV = async () => {
   const strategyInputs = {} // TODO to list of values and set them in the same order
     const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
     for (let i = 0; i < indicProperties.length; i++) {
@@ -74,7 +255,7 @@ tvIndicator.getStrategyInputs = async () => {
     return strategyInputs
 }
 
-tvIndicator.setStrategyInputs = async (name, propVal, isCheckOpenedWindow = false) => {
+tvIndicator.setStrategyInputsPrev = async (name, propVal, isCheckOpenedWindow = false) => {
   if(isCheckOpenedWindow) {
     const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
     if(!indicatorTitleEl || indicatorTitleEl.innerText !== name) {

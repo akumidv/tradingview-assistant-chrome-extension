@@ -20,10 +20,9 @@ page.waitForSelector = async function (selector, timeout = 5000, isHide = false,
 const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
 page._inputEvent = new Event('input', { bubbles: true});
 page._changeEvent = new Event('change', { bubbles: true});
-
 page._mouseEvents ={};
 ["mouseover", "mousedown", "mouseup", "click",
-  "dblclick", "contextmenu"].forEach(eventType => {
+  "dblclick", "contextmenu", "focusout", "focusin"].forEach(eventType => {
   page._mouseEvents[eventType] = document.createEvent('MouseEvents')
   page._mouseEvents[eventType].initEvent (eventType, true, true)
 })
@@ -58,7 +57,7 @@ page.setInputElementValue = function  (element, value, isChange = false) {
 
 
 page.mouseClick = function (el) {
-  ["mouseover", "mousedown", "mouseup", "click"].forEach((eventType) =>
+  ["mouseover", "mousedown", "focusin", "mouseup", "click", "focusout"].forEach((eventType) =>
     el.dispatchEvent(page._mouseEvents[eventType])
   )
   // mouseTrigger (el, "mouseover");

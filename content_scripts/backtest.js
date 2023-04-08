@@ -193,9 +193,9 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 
   tv.isReportChanged = false // Global value
   if (!isIgnoreSetParam) {
-    const isParamsSet = await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
-    if(!isParamsSet)
-      return {error: 1, errMessage: 'The strategy parameters cannot be set', data: null}
+    const errMsg = await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
+    if(errMsg)
+      return {error: 1, errMessage: `The strategy parameters cannot be set: ${errMsg}`, data: null}
   }
   const res = await tv.getPerformance(testResults, isIgnoreError)
 

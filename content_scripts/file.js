@@ -26,6 +26,57 @@ file.upload = async (handler, endOfMsg, isMultiple = false) => {
   fileUploadEl.click();
 }
 
+file.convertInputs = (strategyData) => {
+  let strategyParamsCSV = `Idx,Name,Value,Type\n,"__indicatorName",${JSON.stringify(strategyData.name)},\n`
+  for (const propInput of strategyData['inputs']) {
+    strategyParamsCSV += `${propInput['idx']},${JSON.stringify(propInput['name'])},${['int', 'float', 'boolean'].includes(propInput['type']) ? propInput['value'] : JSON.stringify(propInput['value'])},"${propInput['type']}"\n`
+  }
+  if (strategyData.hasOwnProperty('strategyProperties') && strategyData['strategyProperties']) {
+    for (const propInput of strategyData['strategyProperties']) {
+      strategyParamsCSV += `${propInput['idx']},${JSON.stringify('__' + propInput['name'])},${propInput['value'] === null ? '' : ['int', 'float', 'boolean'].includes(propInput['type']) ? propInput['value'] : JSON.stringify(propInput['value'])},"${propInput['type']}"\n`
+    }
+  }
+  // Object.keys(strategyData.properties).forEach(key => {
+  //   strategyParamsCSV += `${JSON.stringify(key)},${typeof strategyData.properties[key][0] === 'string' ? JSON.stringify(strategyData.properties[key]) : strategyData.properties[key]}\n`
+  // })
+  return strategyParamsCSV
+}
+
+
+
+file.uploadInputsHandler = async (fileData) => {
+  let strategyName = null
+  const csvData = await file.parseCSV(fileData)
+  const headers = Object.keys(csvData[0])
+  const missColumns = ['idx', 'Name','Value','Type'].filter(columnName => !headers.includes(columnName.toLowerCase()))
+  console.log('missColumns', missColumns)
+  if(missColumns && missColumns.length)
+    return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nSet parameters canceled.\n`
+  const strategyInputs = []
+  const strategyProperties = []
+  csvData.forEach(row => {
+    console.log(row)
+    if(row['name'] === '__indicatorName')
+      strategyName = row['value']
+    else if (row['name'].startsWith('__'))
+        strategyProperties.push({idx: row['idx'], name: row['name'], value: row['value'], type: row['type']})
+    else
+      strategyInputs.push({idx: row['idx'], name: row['name'], value: row['value'], type: row['type']})
+  })
+  console.log('###strategyInputs', strategyInputs)
+  console.log('!!!strategyProperties', strategyProperties)
+  if(!strategyName)
+    return 'The name for indicator in row with name ""__indicatorName"" is missed in CSV file'
+  const errMsg = await tvIndicator.setStrategyInputs(strategyName, strategyInputs, true)
+  // const errMsg = await tvIndicator.setStrategyInputs(strategyName, propVal, true)
+  if(!errMsg) {
+    if (strategyProperties.length) {
+      await tvIndicator.setStrategyProperties(strategyName, strategyProperties, true)
+    }
+    return `Parameters are set`
+  }
+  return `The "${strategyName}" inputs do not set: ${errMsg}`
+}
 
 file.parseCSV = async (fileData) => {
   return new Promise((resolve, reject) => {
@@ -50,29 +101,6 @@ file.parseCSV = async (fileData) => {
   });
 }
 
-
-file.uploadHandler = async (fileData) => {
-  const propVal = {}
-  let strategyName = null
-  const csvData = await file.parseCSV(fileData)
-  const headers = Object.keys(csvData[0])
-  const missColumns = ['Name','Value'].filter(columnName => !headers.includes(columnName.toLowerCase()))
-  if(missColumns && missColumns.length)
-    return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nSet parameters canceled.\n`
-  csvData.forEach(row => {
-    if(row['name'] === '__indicatorName')
-      strategyName = row['value']
-    else
-      propVal[row['name']] = row['value']
-  })
-  if(!strategyName)
-    return 'The name for indicator in row with name ""__indicatorName"" is missed in CSV file'
-  const res = await tvIndicator.setStrategyInputs(strategyName, propVal, true)
-  if(res) {
-    return `Parameters are set`
-  }
-  return `The name "${strategyName}" of the indicator from the file does not match the name in the open window`
-}
 
 function parseCSV2JSON(s, sep= ',') {
   const csv = s.split(/\r\n|\r|\n/g).filter(item => item).map(line => parseCSVLine(line))
