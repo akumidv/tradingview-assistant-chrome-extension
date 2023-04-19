@@ -2,7 +2,7 @@ const page = {}
 
 page.waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(resolve, timeout))
 
-page.waitForSelector = async function (selector, timeout = 5000, isHide = false, parentEl) {
+page.waitForSelectorOld2del = async function (selector, timeout = 5000, isHide = false, parentEl) { //2023-04-18
   parentEl = parentEl ? parentEl : document
   return new Promise(async (resolve) => {
     let iter = 0
@@ -15,6 +15,25 @@ page.waitForSelector = async function (selector, timeout = 5000, isHide = false,
     } while ((timeout === 0 ? true : (tikTime * iter) < timeout) && (isHide ? !!elem : !elem))
     resolve(elem)
   });
+}
+
+
+page.waitForSelector = async (selector, timeout = 5000, isHide = false, parentEl = null) => {
+  return new Promise(async (resolve) => {
+    parentEl = parentEl ? parentEl : document
+    let iter = 0
+    let elem = parentEl.querySelector(selector)
+    const tikTime = timeout === 0 ? 1000 : 50
+    while (timeout === 0 || (!isHide && !elem) || (isHide && !!elem)) {
+      await page.waitForTimeout(tikTime)
+      elem = parentEl.querySelector(selector)
+      iter += 1
+      if(timeout !== 0 && tikTime * iter >= timeout)
+        break
+        // throw new Error(`Timeout ${timeout} waiting for ${isHide ? 'hide ' : '' } ${selector}`) // break
+    }
+    return resolve(elem ? elem : null)
+  })
 }
 
 const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
