@@ -37,9 +37,9 @@ const SEL = {
     strategyImportExport: '#iondvImportExport',
 
     chartTicker: '#header-toolbar-symbol-search > div[class*="text-"]',
-    chartTimeframeFavorite: '#header-toolbar-intervals button[role="radio"]',
-    chartTimeframeActive: '#header-toolbar-intervals button[role="radio"][data-value][aria-checked="true"]',
-    chartTimeframeMenuOrSingle: '#header-toolbar-intervals button[class^="menu"]',
+    chartTimeframeFavorite: '#header-toolbar-intervals div[data-role="button"][data-value]',
+    chartTimeframeActive: '#header-toolbar-intervals div[data-role="button"][data-value][aria-checked="true"]',
+    chartTimeframeMenuOrSingle: '#header-toolbar-intervals div[data-role="button"][class^="menu"]',
 
 
     // chartTimeframeFavorite: '#header-toolbar-intervals div[data-role="button"][data-value]',
