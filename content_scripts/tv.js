@@ -334,9 +334,11 @@ tv.checkAndOpenStrategy = async (name) => {
 }
 
 tv.openStrategyTab = async () => {
-  let isStrategyActiveEl = document.querySelector(SEL.strategyTesterTabActive)
+  // let isStrategyActiveEl = document.querySelector(SEL.strategyTesterTabActive)
+  let isStrategyActiveEl = await page.waitForSelector(SEL.strategyTesterTabActive)
   if(!isStrategyActiveEl) {
-    const strategyTabEl = document.querySelector(SEL.strategyTesterTab)
+    // const strategyTabEl = document.querySelector(SEL.strategyTesterTab)
+    const strategyTabEl = await page.waitForSelector(SEL.strategyTesterTab)
     if(strategyTabEl) {
       strategyTabEl.click()
     } else {
