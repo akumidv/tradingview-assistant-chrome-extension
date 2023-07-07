@@ -121,6 +121,9 @@ function setPopupInputsByOptions(getResults) {
       if(document.getElementById('shouldSkipInitBestResult') && iondvOptions.hasOwnProperty('shouldSkipInitBestResult')) {
         document.getElementById('shouldSkipInitBestResult').checked = Boolean(iondvOptions.shouldSkipInitBestResult)
       }
+      if(document.getElementById('shouldSkipWaitingForDownload') && iondvOptions.hasOwnProperty('shouldSkipWaitingForDownload')) {
+        document.getElementById('shouldSkipWaitingForDownload').checked = Boolean(iondvOptions.shouldSkipWaitingForDownload)
+      }
       if(document.getElementById('listOfTF') && iondvOptions.hasOwnProperty('listOfTF')) {
         if (iondvOptions.listOfTF !== null)
           document.getElementById('listOfTF').value = iondvOptions.listOfTF
@@ -166,6 +169,7 @@ function getOptions(signal) {
   iondvOptions.randomDelay = document.getElementById('randomDelay').checked
   iondvOptions.shouldTestTF = document.getElementById('shouldTestTF').checked
   iondvOptions.shouldSkipInitBestResult = document.getElementById('shouldSkipInitBestResult').checked
+  iondvOptions.shouldSkipWaitingForDownload = document.getElementById('shouldSkipWaitingForDownload').checked
 
   if(document.getElementById('listOfTF')) {
     const listOfTF =  document.getElementById('listOfTF').value
