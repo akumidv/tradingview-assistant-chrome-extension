@@ -561,6 +561,8 @@ tv.generateDeepTestReport = async (loadingTime = 60000) => {
     }
   } else if (tv.isParsed) {
     return false
+  } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
+    return false
   } else {
     throw new Error('Error for generate deep backtesting report due the button is not exist. Possible changes in TV UI?')
   }
