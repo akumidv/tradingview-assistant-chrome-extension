@@ -83,7 +83,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
       let testResults = {}
       if (testParams.shouldTestTF) {
         if (!testParams.listOfTF || testParams.listOfTF.length === 0) {
-          await ui.showWarningPopup(`Empty timeframes list after correction values: ${testParams.listOfTFSource}`)
+          await ui.showWarningPopup(`You set to test timeframes in options, but timeframes list after correction values is empty: ${testParams.listOfTFSource}\nPlease set correct one with separation by comma. \nFor example: 1m,4h`)
         } else {
           let bestValue = null
           let bestTf = null

@@ -157,11 +157,11 @@ function getOptions(signal) {
   }
   if(document.getElementById('dataLoadingTime')) {
     const dataLoadingTime =  document.getElementById('dataLoadingTime').value
-    iondvOptions.dataLoadingTime = dataLoadingTime === '' ? null : isNaN(parseInt(dataLoadingTime)) ? 30 : Math.abs(parseInt(dataLoadingTime))
+    iondvOptions.dataLoadingTime = dataLoadingTime === '' ? null : isNaN(parseInt(dataLoadingTime)) ? 45 : Math.abs(parseInt(dataLoadingTime))
   }
   if(document.getElementById('backtestDelay')) {
     const delayValue =  document.getElementById('backtestDelay').value
-    iondvOptions.backtestDelay = delayValue === '' ? null : isNaN(parseFloat(delayValue)) ? null : Math.abs(parseFloat(delayValue))
+    iondvOptions.backtestDelay = delayValue === '' ? null : isNaN(parseFloat(delayValue)) ? 0.5 : Math.abs(parseFloat(delayValue))
   }
   iondvOptions.randomDelay = document.getElementById('randomDelay').checked
   iondvOptions.shouldTestTF = document.getElementById('shouldTestTF').checked
