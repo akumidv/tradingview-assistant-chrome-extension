@@ -551,7 +551,7 @@ tv.parseReportTable = async () => {
 tv.generateDeepTestReport = async (loadingTime = 60000) => {
   const generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
   if (generateBtnEl) {
-    generateBtnEl.click()
+    page.mouseClick(generateBtnEl) // // generateBtnEl.click()
     const reportHeader = await page.waitForSelector(SEL.strategyReportHeader, loadingTime)
     if (!reportHeader) {
       if (tv.isParsed)
