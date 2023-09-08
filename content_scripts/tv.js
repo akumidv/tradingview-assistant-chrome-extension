@@ -6,6 +6,9 @@ const tv = {
 }
 
 
+const SUPPORT_TEXT = 'Please retry. <br />If the problem reproduced then it is possible that TV UI changed. Create task on' +
+        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it does\'t alredy created)'
+
 // Inject script to get access to TradingView data on page
 const script = document.createElement('script');
 script.src = chrome.runtime.getURL('page-context.js');
@@ -43,23 +46,20 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
       await tv.openStrategyTab()
       let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
       if(!strategyCaptionEl || !strategyCaptionEl.innerText) {
-        throw new Error('There is not strategy name element on "Strategy tester" tab. Please retry. If the problem reproduced then it is possible taht TV UI changed. Check ' +
-              '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues">issues</a>')
+        throw new Error('There is not strategy name element on "Strategy tester" tab.' + SUPPORT_TEXT)
       }
       indicatorName = strategyCaptionEl.innerText
 
       let stratParamEl = document.querySelector(SEL.strategyDialogParam)
       if(!stratParamEl) {
-        throw new Error('There is not strategy param button on the "Strategy tester" tab. Please retry. If the problem reproduced then it is possible taht TV UI changed. Check ' +
-              '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues">issues</a>')
+        throw new Error('There is not strategy param button on the "Strategy tester" tab.' + SUPPORT_TEXT)
       }
       stratParamEl.click()
       const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
       if (!dialogTitle || !dialogTitle.innerText) {
         if (document.querySelector(SEL.cancelBtn))
           document.querySelector(SEL.cancelBtn).click()
-        throw new Error('The strategy parameter windows is not opened. Please retry. If the problem reproduced then it is possible taht TV UI changed. Check ' +
-              '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues">issues</a>')
+        throw new Error('The strategy parameter windows is not opened.' +  SUPPORT_TEXT)
       }
 
       let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
@@ -110,7 +110,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
     // return strategyData
 
   if(!await tv.changeDialogTabToInput())
-    throw new Error(`Can\'t activate input tab in strategy parameters`)
+    throw new Error(`Can\'t activate input tab in strategy parameters`  +  SUPPORT_TEXT)
   // if(await tv.changeDialogTabToInput()) {
 
   // } else {
@@ -342,9 +342,7 @@ tv.openStrategyTab = async () => {
     if(strategyTabEl) {
       strategyTabEl.click()
     } else {
-      throw new Error('There is not "Strategy Tester" tab on the page. Open correct page please or if it is ' +
-              'correct, then it is possible that TV UI changed. Create ' +
-              '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues">issue</a>')
+      throw new Error('There is not "Strategy Tester" tab on the page. Open correct page.' + SUPPORT_TEXT)
     }
   }
   return true
@@ -362,20 +360,21 @@ tv.switchToStrategyTab = async () => {
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
   // strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // From 2022-11-13
   if(!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
-    throw new Error('There is not strategy name element on "Strategy Tester" tab. It is possible TV UI was changed. Create task on' +
-        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it does\'t alredy created)')
+    throw new Error('There is not strategy name element on "Strategy Tester" tab.' + SUPPORT_TEXT)
   }
   testResults.name = strategyCaptionEl.getAttribute('data-strategy-title') //strategyCaptionEl.innerText
 
 
   let stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
   if(!stratSummaryEl) {
-    throw new Error('There is not strategy performance summary tab on the page. Open correct page please or create task on' +
-        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> if page is correct (check before if it does\'t alredy created)')
+    throw new Error('There is not "Performance summary" tab on the page. Open correct page.' + SUPPORT_TEXT)
   }
-  stratSummaryEl.click()
-  await page.waitForSelector(SEL.strategySummaryActive, 1000)
-  // await page.waitForSelector(SEL.strategySummaryActiveNew, 1000)
+  if (!page.$(SEL.strategySummaryActive))
+    stratSummaryEl.click()
+  const isActive = await page.waitForSelector(SEL.strategySummaryActive, 1000)
+  if (!isActive) {
+    console.error('The "Performance summary" tab is not active after click')
+  }
 
   await page.waitForSelector(SEL.strategyReport, 10000)
   if(!tv.reportNode) {
@@ -391,8 +390,7 @@ tv.switchToStrategyTab = async () => {
         characterData: false
       });
     } else {
-      throw new Error('Possible TV UI changed - the strategy report did not found. Create task on' +
-        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> (check before if it does\'t alredy created)')
+      throw new Error('The strategy report did not found.' + SUPPORT_TEXT)
     }
   }
   return testResults
@@ -476,7 +474,7 @@ tv.parseReportTable = async () => {
   let allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
   if (!allHeadersEl || !(allHeadersEl.length === 4 || allHeadersEl.length === 5)) { // 5 - Extra column for full screen
     if (!tv.isParsed)
-      throw new Error('Tradingview UI changed. Can\'t get performance headers. Please contact support')
+      throw new Error('Can\'t get performance headers.' +  SUPPORT_TEXT)
     else
       return {}
   }
@@ -490,7 +488,7 @@ tv.parseReportTable = async () => {
   let allReportRowsEl = document.querySelectorAll(SEL.strategyReportRow)
   if (!allReportRowsEl || allReportRowsEl.length === 0) {
     if (!tv.isParsed)
-      throw new Error('Tradingview UI changed. Can\'t get performance rows. Please contact support')
+      throw new Error('Can\'t get performance rows.'  +  SUPPORT_TEXT)
   } else {
     tv.isParsed = true
   }
@@ -557,14 +555,14 @@ tv.generateDeepTestReport = async (loadingTime = 60000) => {
       if (tv.isParsed)
         return false
       else
-        throw new Error('Error waiting Performance summary table for deep backtesting. Possible changes in TV UI?')
+        throw new Error('Error waiting Performance summary table for deep backtesting.' + SUPPORT_TEXT)
     }
   } else if (tv.isParsed) {
     return false
   } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
     return false
   } else {
-    throw new Error('Error for generate deep backtesting report due the button is not exist. Possible changes in TV UI?')
+    throw new Error('Error for generate deep backtesting report due the button is not exist.'  + SUPPORT_TEXT)
   }
   return true
 
