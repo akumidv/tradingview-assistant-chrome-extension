@@ -117,7 +117,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
   //   console.error(`Can't set parameters tab to input`)
   // }
   const strategyInputs = await tv.getStrategyParams(isIndicatorSave)
-   const strategyData = {name: indicatorName, properties: strategyInputs}
+  const strategyData = {name: indicatorName, properties: strategyInputs}
 
   if (document.querySelector(SEL.cancelBtn)) {
     document.querySelector(SEL.cancelBtn).click()
@@ -598,9 +598,9 @@ tv.getPerformance = async (testResults, isIgnoreError=false) => {
     await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
   }
 
-  // reportData = await tv.getPerformance() //tv.parseReportTable()
+  // reportData = await tv.getPerformance()
   if (!isProcessError)
-    reportData = await tv.parseReportTable() //tv.parseReportTable()
+    reportData = await tv.parseReportTable()
   if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&

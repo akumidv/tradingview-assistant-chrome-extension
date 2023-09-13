@@ -109,10 +109,7 @@ backtest.convertValue = (value) => {
 }
 
 
-async function getInitBestValues(testResults) { // TODO Add get current values(!) to startParams
-  if(!testResults.hasOwnProperty('startParams') || !testResults.startParams.hasOwnProperty('current') || !testResults.startParams.current)
-    return null
-
+async function getInitBestValues(testResults) {
   let resVal =  null
   let resPropVal = testResults.startParams.current
   let resData = {}
@@ -133,18 +130,18 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
     }
   }
   await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
-  const isReady = testResults.isDeepTest ? await tv.generateDeepTestReport(testResults.dataLoadingTime * 2000) : true
-  if (isReady) {
-    const res  = await tv.getPerformance(testResults)//tv.parseReportTable()
-    resData = res['data']
-    if (res['error'] === null)
-      resData = calculateAdditionValuesToReport(resData)
-  }
+  const res  = await tv.getPerformance(testResults)//tv.parseReportTable()
+  resData = res['data']
+  if (res['error'] === null)
+    resData = calculateAdditionValuesToReport(resData)
+
   if (resData && resData.hasOwnProperty(testResults.optParamName)) {
-    console.log(`Current "${testResults.optParamName}":`,  resData[testResults.optParamName])
-    resVal = resData[testResults.optParamName]
+    console.log(`Init from current "${testResults.optParamName}":`,  resData[testResults.optParamName])
+    // resVal = resData[testResults.optParamName]
     resData['comment'] = resData['comment'] ? `Current parameters. ${resData['comment']}` : 'Current parameters.'
     Object.keys(resPropVal).forEach(key => resData[`__${key}`] = resPropVal[key])
+    const curPropVal = expandPropVal(testResults.startParams.current, resPropVal)
+    setBestVal(res.data[testResults.optParamName], curPropVal, res.data)
   }
 
   if(testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
@@ -153,7 +150,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
       await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
       const res = await backtest.getTestIterationResult(testResults, defPropVal, true) // Ignore error because propValues can be the same
       if(res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
-        console.log(`Default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
+        console.log(`Init from default "${testResults.optParamName}":`,  res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
         Object.keys(defPropVal).forEach(key => res.data[`__${key}`] = defPropVal[key])
         setBestVal(res.data[testResults.optParamName], defPropVal, res.data)
@@ -171,7 +168,7 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
       await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
       const res = await backtest.getTestIterationResult(testResults, bestPropVal, true)  // Ignore error because propValues can be the same
       if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
-        console.log(`Best "${testResults.optParamName}":`, res.data[testResults.optParamName])
+        console.log(`Init from best "${testResults.optParamName}":`, res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
         Object.keys(bestPropVal).forEach(key => res.data[`__${key}`] = bestPropVal[key])
         setBestVal(res.data[testResults.optParamName], bestPropVal, res.data)
@@ -190,7 +187,6 @@ async function getInitBestValues(testResults) { // TODO Add get current values(!
 
 
 backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = false, isIgnoreSetParam = false) => {
-
   tv.isReportChanged = false // Global value
   if (!isIgnoreSetParam) {
     const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal)
