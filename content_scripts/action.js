@@ -4,8 +4,10 @@ const action = {
 
 action.saveParameters = async () => {
   const strategyData = await tv.getStrategy(null, true)
-  if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('inputs') || !strategyData.inputs) {
-    await ui.showWarningPopup('The current indicator/strategy do not contain inputs that can be saved.')
+  //if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
+ if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('inputs') || !strategyData.inputs) {
+   await ui.showErrorPopup('The current indicator/strategy do not contain inputs that can be saved.')
+   // await ui.showWarningPopup('Please open the indicator (strategy) parameters window before saving them to a file.')
     return
   }
   const strategyParamsCSV = file.convertInputs(strategyData)
@@ -27,7 +29,7 @@ action.uploadStrategyTestParameters = async () => {
 action.getStrategyTemplate = async () => {
   const strategyData = await tv.getStrategy()
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    await ui.showErrorPopup('The current strategy do not contain inputs, than can be saved')
+    await ui.showErrorPopup('The current strategy do not contain inputs, that can be saved')
   } else {
     const paramRange = model.getStrategyRange(strategyData)
     console.log(paramRange)
@@ -79,7 +81,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
       let testResults = {}
       if (testParams.shouldTestTF) {
         if (!testParams.listOfTF || testParams.listOfTF.length === 0) {
-          await ui.showWarningPopup(`Empty timeframes list after correction values: ${testParams.listOfTFSource}`)
+          await ui.showWarningPopup(`You set to test timeframes in options, but timeframes list after correction values is empty: ${testParams.listOfTFSource}\nPlease set correct one with separation by comma. \nFor example: 1m,4h`)
         } else {
           let bestValue = null
           let bestTf = null
@@ -222,6 +224,7 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
     testParams.backtestDelay = !request.options.hasOwnProperty('backtestDelay') || !request.options['backtestDelay'] ? 0 : request.options['backtestDelay']
     testParams.randomDelay = request.options.hasOwnProperty('randomDelay') ? Boolean(request.options['randomDelay']) : true
     testParams.shouldSkipInitBestResult = request.options.hasOwnProperty('shouldSkipInitBestResult') ? Boolean(request.options['shouldSkipInitBestResult']) : false
+    testParams.shouldSkipWaitingForDownload = request.options.hasOwnProperty('shouldSkipWaitingForDownload') ? Boolean(request.options['shouldSkipWaitingForDownload']) : false
     testParams.dataLoadingTime = request.options.hasOwnProperty('dataLoadingTime') && !isNaN(parseInt(request.options['dataLoadingTime'])) ? request.options['dataLoadingTime'] :30
   }
   return testParams
@@ -255,10 +258,14 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
   text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best '+ (testResults.isMaximizing ? '(max) ':'(min) ') + testParams.optParamName + ': ' + backtest.convertValue(bestResult[testParams.optParamName]) : ''
   text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${backtest.convertValue(initBestValue)}` : ''
   ui.statusMessage(text)
-  if (isFinalTest)
-    await ui.showPopup(text)
   console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ':'(min) ')  + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
-  file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame}${testResults.isDeepTest ? ' deep backtesting' : ''} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
+  if(testParams.shouldSkipWaitingForDownload || !isFinalTest)
+    file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame}${testResults.isDeepTest ? ' deep backtesting' : ''} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
+  if (isFinalTest) {
+    await ui.showPopup(text)
+    if(!testParams.shouldSkipWaitingForDownload)
+       file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame}${testResults.isDeepTest ? ' deep backtesting' : ''} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
+  }
 }
 
 

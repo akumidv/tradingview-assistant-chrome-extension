@@ -165,9 +165,9 @@ Regarding contacts via social networks - they are banned in Russia, so I do not 
 Cryptocurrency transfer information       
        
 * USDT, TRX (TRC20) network        TFqv5hB3cdVHxkxhL8qjpfRMbeqMcuwzFP
-* USDT, Matic (Poligon) network:        0xe837f97420abba87bee280b6edf319b07289b513
-* USDT, ETH (ERC20) network:        0xe837f97420abba87bee280b6edf319b07289b513
-* USDT, BSC (BEP20) network:        0xe837f97420abba87bee280b6edf319b07289b513
+* USDT, Matic (Poligon) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
+* USDT, ETH (ERC20) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
+* USDT, BSC (BEP20) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
 * USDT, Sol (Solana) network:        CuwuesyM1tyrjyJr9avDrrRqcB4rTbciao5mXYP8HkKo
-       
+
 Binance Pay ID for USDT, USDC, BUSD or other crypto:        240890941 (akumidv)

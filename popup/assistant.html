@@ -602,7 +602,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                     </div>
                     <div class="column right">
                         <input id="backtestDelay" type="number"
-                               placeholder="1.5" value="0.25" style="width: 5em"/>
+                               placeholder="1.5" value="0.75" style="width: 5em"/>
                         <label for="backtestDelay">sec.</label>
                     </div>
                 </div>
@@ -613,7 +613,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                     </div>
                     <div class="column right">
                         <input id="dataLoadingTime" type="number"
-                               placeholder="30" value="30" style="width: 5em"/>
+                               placeholder="45" value="45" style="width: 5em"/>
                         <label for="dataLoadingTime">sec.</label>
                     </div>
                 </div>
@@ -625,6 +625,16 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                     <div class="column right">
                         <label></label>
                         <input id="shouldSkipInitBestResult" type="checkbox"/>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>Download results without waiting for click on ok button.</p>
+                        <p></p>
+                    </div>
+                    <div class="column right">
+                        <label></label>
+                        <input id="shouldSkipWaitingForDownload" type="checkbox" checked />
                     </div>
                 </div>
                 <div class="row">

@@ -121,6 +121,9 @@ function setPopupInputsByOptions(getResults) {
       if(document.getElementById('shouldSkipInitBestResult') && iondvOptions.hasOwnProperty('shouldSkipInitBestResult')) {
         document.getElementById('shouldSkipInitBestResult').checked = Boolean(iondvOptions.shouldSkipInitBestResult)
       }
+      if(document.getElementById('shouldSkipWaitingForDownload') && iondvOptions.hasOwnProperty('shouldSkipWaitingForDownload')) {
+        document.getElementById('shouldSkipWaitingForDownload').checked = Boolean(iondvOptions.shouldSkipWaitingForDownload)
+      }
       if(document.getElementById('listOfTF') && iondvOptions.hasOwnProperty('listOfTF')) {
         if (iondvOptions.listOfTF !== null)
           document.getElementById('listOfTF').value = iondvOptions.listOfTF
@@ -157,15 +160,16 @@ function getOptions(signal) {
   }
   if(document.getElementById('dataLoadingTime')) {
     const dataLoadingTime =  document.getElementById('dataLoadingTime').value
-    iondvOptions.dataLoadingTime = dataLoadingTime === '' ? null : isNaN(parseInt(dataLoadingTime)) ? 30 : Math.abs(parseInt(dataLoadingTime))
+    iondvOptions.dataLoadingTime = dataLoadingTime === '' ? null : isNaN(parseInt(dataLoadingTime)) ? 45 : Math.abs(parseInt(dataLoadingTime))
   }
   if(document.getElementById('backtestDelay')) {
     const delayValue =  document.getElementById('backtestDelay').value
-    iondvOptions.backtestDelay = delayValue === '' ? null : isNaN(parseFloat(delayValue)) ? null : Math.abs(parseFloat(delayValue))
+    iondvOptions.backtestDelay = delayValue === '' ? null : isNaN(parseFloat(delayValue)) ? 0.5 : Math.abs(parseFloat(delayValue))
   }
   iondvOptions.randomDelay = document.getElementById('randomDelay').checked
   iondvOptions.shouldTestTF = document.getElementById('shouldTestTF').checked
   iondvOptions.shouldSkipInitBestResult = document.getElementById('shouldSkipInitBestResult').checked
+  iondvOptions.shouldSkipWaitingForDownload = document.getElementById('shouldSkipWaitingForDownload').checked
 
   if(document.getElementById('listOfTF')) {
     const listOfTF =  document.getElementById('listOfTF').value
