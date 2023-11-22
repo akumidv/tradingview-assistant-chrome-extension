@@ -166,7 +166,7 @@ action._getStrategyData = async () => {
   ui.statusMessage('Get the initial parameters.')
   const strategyData = await tv.getStrategy()
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    throw new Error('The current strategy do not contain inputs, than can be optimized. You can choose another strategy to optimize.')
+    throw new Error('The current strategy do not contain inputs, that can be optimized. You can choose another strategy to optimize.')
   }
   return strategyData
 }

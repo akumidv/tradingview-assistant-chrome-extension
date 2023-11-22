@@ -17,7 +17,7 @@
             "matches": ["https://*.tradingview.com/chart/*"],
             "js": [  "content_scripts/selector.js",
               "content_scripts/page.js", "content_scripts/ui.js", "content_scripts/tv.js", "content_scripts/tvChart.js",
-              "content_scripts/tvIndicators.js",
+              "content_scripts/tvIndicatorProperty.js", "content_scripts/tvIndicators.js",
               "content_scripts/file.js", "content_scripts/storage.js", "content_scripts/signal.js",
               "content_scripts/model.js","content_scripts/backtest.js",
               "content_scripts/action.js", "content_scripts/controller.js"],
