@@ -13,6 +13,7 @@ const SEL = {
     indicatorScroll: 'div[data-name="indicator-properties-dialog"] div[class^="scrollable-"]',
     indicatorProperty: 'div[data-name="indicator-properties-dialog"] div[class^="content-"] div[class^="cell-"]',
     indicatorPropertyRow: 'div[data-name="indicator-properties-dialog"] div[class^="content-"] > div',
+    indicatorInlineCell: 'div[class^="cell-"]',
     okBtn: 'div[data-name="indicator-properties-dialog"] div[class^="footer-"] button[name="submit"]',
     cancelBtn: 'div[data-name="indicator-properties-dialog"] span[data-name="close"][data-role="button"]',
     strategyTesterTab: '[data-name="backtesting"]', // 2023-10-19 #footer-chart-panel  or #bottom-area

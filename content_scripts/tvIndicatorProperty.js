@@ -1,9 +1,45 @@
 const tvIndicatorProperty = {}
 
+const tvIndicatorRowAction = {   // Rows
+  groupName: (rowEl) => {
+    return rowEl.innerText.trim()
+  },
+  groupFooter: (_) => {
+    return null
+  },
+  inputName: (rowEl) => {
+    return rowEl.innerText.trim()
+  },
+}
+const tvIndicatorFieldAction = {}
+
+tvIndicatorFieldAction.getter = {
+  checkbox: () => {
+    return {'value': false, type: 'boolean'}
+  },
+  textarea: () => {
+    return {'value': 'text', type: 'text'}
+  }
+}
+
+tvIndicatorFieldAction.setter = {
+  checkbox: () => {
+    return null
+  },
+  textarea: () => {
+    return null
+  }
+}
+
 tvIndicatorProperty.detectRowType = (propClassName) => {
-  if (propClassName.startsWith('cell-'))
-    return 'field'
-  else if (propClassName.startsWith('titleWrap-'))
+  if (propClassName.startsWith('cell-')) {
+    if (propClassName.includes('first-')) {
+      return 'inputName'
+    } else if (propClassName.includes('fill-')) {
+      return 'name&value'
+    }
+    return 'value'
+  } else if (propClassName.startsWith('titleWrap-'))
     return 'group'
   else if (propClassName.startsWith('groupFooter-'))
     return 'groupFooter'
@@ -13,26 +49,15 @@ tvIndicatorProperty.detectRowType = (propClassName) => {
     return 'unknown'
 }
 
-tvIndicatorProperty.getGroupName = (rowEl) => {
-  return rowEl.innerText.trim()
-}
 
-tvIndicatorProperty.detectFieldType = (rowEl, propClassName) => {
-  if (propClassName.includes('first-') && rowEl.innerText) {
-    return 'field'
-  } else if (propClassName.includes('fill-') && !rowEl.getAttribute('data-section-name')) {
-    if (rowEl.querySelector('input[type="checkbox"]'))
-      return 'checkbox'
-    else if (rowEl.querySelector('textarea'))
-      return 'textarea'
-    else
-      return 'unknown field'
-  } else if (rowEl.getAttribute('data-section-name') || propClassName.includes('titleWrap-')) { // Titles bwtwen parameters
-      // strategyInputs.push({idx: idx, name: propText, value: null, type: 'group'})
-      return 'group'
-  } else { // Undefined type of element
-      return 'unknown'
-  }
+tvIndicatorProperty.detectFieldType = (rowEl) => {
+  if (rowEl.querySelector('input[type="checkbox"]'))
+    return 'checkbox'
+  else if (rowEl.querySelector('textarea'))
+    return 'textarea'
+  else
+    return 'unknown input'
+
 }
 
 
