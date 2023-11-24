@@ -2,21 +2,6 @@ const action = {
   workerStatus: null
 }
 
-action.saveParameters = async () => {
-  const strategyData = await tv.getStrategy(null, true)
-  //if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
- if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('inputs') || !strategyData.inputs) {
-   await ui.showErrorPopup('The current indicator/strategy do not contain inputs that can be saved.')
-   // await ui.showWarningPopup('Please open the indicator (strategy) parameters window before saving them to a file.')
-    return
-  }
-  const strategyParamsCSV = file.convertInputs(strategyData)
-  file.saveAs(strategyParamsCSV, `${strategyData.name}_inputs.csv`)
-}
-
-action.loadParameters = async () => {
-  await file.upload(file.uploadInputsHandler, '', false)
-}
 
 action.uploadSignals = async () => {
   await file.upload(signal.parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)

@@ -2,15 +2,15 @@ const tvIndicator = {}
 
 
 tvIndicator.getStrategyProperties = async (isIndicatorSaving) => { // Properties
-  return await tvIndicator._processInputs(tvIndicatorFieldAction.getter, null, null) //isIndicatorSaving
+  return await tvIndicator._processInputs(null, null, null) //isIndicatorSaving
 }
 
 // TODO The main block should e the same as for set. So only action is changed. Should use the same logic - fox example processInputs and parameter setValues or getValues
 tvIndicator.getStrategyInputs = async (isIndicatorSaving = false) => {
-  return await tvIndicator._processInputs(tvIndicatorRowAction.getter, null)
+  return await tvIndicator._processInputs(null, null)
 }
 
-tvIndicator._processInputs = async (fieldAction, strategyRow = null, parentEl = null, rowCellSelector = null) => {
+tvIndicator._processInputs = async (setData = null, parentEl = null, rowCellSelector = null) => {
   const strategyInputResult = []
   if (parentEl === null)
     parentEl = document
@@ -24,13 +24,13 @@ tvIndicator._processInputs = async (fieldAction, strategyRow = null, parentEl = 
   let fieldName = null
   for (let rowEl of indicRowEls) {
     const rowClassName = rowEl.getAttribute('class')
-    const rowType = tvIndicatorProperty.detectRowType(rowClassName)
+    const rowType = tvIndicatorInputs.detectRowType(rowClassName)
     console.log('> rowType', rowType)
-    let rowSrcData = tvIndicator._getRowData(strategyRow, rowIdx)
+    let fieldSetData = tvIndicator._getRowData(setData, rowIdx)
     let rowValue = null
     switch (rowType) {
       case 'group': {
-        groupName = tvIndicatorRowAction.groupName(rowEl)
+        groupName = tvIndicatorRow.groupName(rowEl)
         continue;
       }
       case 'groupFooter': {
@@ -38,88 +38,92 @@ tvIndicator._processInputs = async (fieldAction, strategyRow = null, parentEl = 
         continue;
       }
       case 'name&value': {
-        fieldName = tvIndicatorRowAction.inputName(rowEl)
-        rowValue = tvIndicator._processFieldValue(rowEl, fieldAction, rowSrcData, fieldName, groupName)
+        fieldName = tvIndicatorRow.inputName(rowEl)
+        rowValue = await tvIndicator._processFieldValue(rowEl, fieldSetData, fieldName, groupName)
         break;
       }
       case 'inputName': {
-        fieldName = tvIndicatorRowAction.inputName(rowEl)
+        fieldName = tvIndicatorRow.inputName(rowEl)
         continue
       }
       case 'value': {
-        rowValue = tvIndicator._processFieldValue(rowEl, fieldAction, rowSrcData, fieldName, groupName)
+        rowValue = await tvIndicator._processFieldValue(rowEl, fieldSetData, fieldName, groupName)
         break;
       }
       case 'inlineRow': {
-        rowValue = await tvIndicator._processInlineRow(fieldAction, rowSrcData, rowEl, groupName)
+        rowValue = await tvIndicator._processInlineRow(fieldSetData, rowEl, groupName)
         break;
       }
       default:
         console.warn(`Unknown row type ${rowType}`)
         continue
     }
-    if (Array.isArray(rowValue)) {
-      for(let row of rowValue) {
-        const rowData  = tvIndicator._prepareRowData(row, idx, rowIdx, groupName)
-        strategyInputResult.push(rowData)
-        console.log('Inline field', groupName, rowData)
+    if (rowValue) {
+      if (Array.isArray(rowValue)) {
+        for(let row of rowValue) {
+          const rowData  = tvIndicator._prepareRowData(row, idx, rowIdx, groupName)
+          strategyInputResult.push(rowData)
+          console.log('Inline field', groupName, rowData)
+          idx++
+        }
+      } else  {
+        if (typeof (rowValue) !== 'string') {
+          rowValue = tvIndicator._prepareRowData(rowValue, idx, rowIdx, groupName, fieldName)
+        } else {
+          rowValue = `${fieldName}/${groupName ? '/' + groupName : ''}: ${rowValue}`
+        }
+        fieldName = null
+        strategyInputResult.push(rowValue)
+        console.log('  field val:', groupName, rowValue)
         idx++
       }
-    } else {
-      const rowData = tvIndicator._prepareRowData(rowValue, idx, rowIdx, groupName, fieldName)
-      fieldName = null
-      strategyInputResult.push(rowData)
-      console.log('  field val:', groupName, rowData)
-      idx++
     }
+
     rowIdx++
   }
   console.log('###strategyInputResult', strategyInputResult)
   return strategyInputResult
 }
 
-tvIndicator._processInlineRow = async (rowAction, rowSrcData, rowEl, groupName) => {
-  if (rowSrcData !== null) {
-    if (!Array.isArray(rowSrcData))
+tvIndicator._processInlineRow = async (fieldSetData, rowEl, groupName) => {
+  if (fieldSetData !== null) {
+    if (!Array.isArray(fieldSetData))
         throw (`Incorrect type of input field values for inplace row`)
-    if(rowSrcData.length === 0)
-      throw (`Field inplace values have incorrect number of values ${rowSrcData.length}`)
-    if(rowSrcData[0]['group'] !== groupName)
-      throw (`The group "${rowSrcData[0]['group']}" of inline values is incorrect - expected "${groupName}"`)
+    if(fieldSetData.length === 0)
+      throw (`Field inplace values have incorrect number of values ${fieldSetData.length}`)
+    if(fieldSetData[0]['group'] !== groupName)
+      throw (`The group "${fieldSetData[0]['group']}" of inline values is incorrect - expected "${groupName}"`)
   }
-  return await tvIndicator._processInputs(rowAction, rowSrcData, rowEl, SEL.indicatorInlineCell)
+  return await tvIndicator._processInputs(fieldSetData, rowEl, SEL.indicatorInlineCell)
 }
 
-tvIndicator._processFieldValue = (rowEl, rowAction, rowSrcData, fieldName, groupName) => {
-  const fieldType = tvIndicatorProperty.detectFieldType(rowEl)
-  if (Array.isArray(rowSrcData)) {
-    if(rowSrcData.length !== 1)
-      throw (`Field value have incorrect number of values ${rowSrcData.length}`)
-    rowSrcData= rowSrcData[0]
-    if(groupName!== null && rowSrcData['group'] !== groupName)
-      throw (`The group "${rowSrcData['group']}" of value is incorrect - expected "${groupName}"`)
-    if(rowSrcData['name'] !== fieldName)
-      throw (`The name "${rowSrcData['name']}" of value is incorrect - expected "${fieldName}"`)
-  } else if (rowSrcData !== null) {
-    throw (`Incorrect type of input field value`)
-  }
-  let rowData = null
-  if (rowSrcData !== null && rowSrcData.hasOwnProperty('_changed') && !rowSrcData['_changed']) {
-    return null // if setting value and parameter do not changed - skip setting
-  }
-  switch (fieldType) {
-    case 'checkbox': {
-      rowData = rowAction.checkbox(rowEl, rowSrcData)
-      break;
+tvIndicator._processFieldValue = async (rowEl, fieldSetData, fieldName, groupName) => {
+  if (fieldSetData !== null) { // setting mode
+    if (Array.isArray(fieldSetData)) {
+      if(fieldSetData.length !== 1)
+        throw (`Field value have incorrect number of values ${fieldSetData.length}`)
+      fieldSetData = fieldSetData[0]
+      if(groupName!== null && fieldSetData['group'] !== groupName)
+        throw (`The group "${fieldSetData['group']}" of value is incorrect - expected "${groupName}"`)
+      if(fieldSetData['name'] !== fieldName)
+        throw (`The name "${fieldSetData['name']}" of value is incorrect - expected "${fieldName}"`)
+    } else {
+      throw (`Incorrect type of input field value`)
     }
-    case 'textarea': {
-      rowData = rowAction.checkbox(rowEl, rowSrcData)
-      break;
+    if (fieldSetData.hasOwnProperty('_changed') && !fieldSetData['_changed']) {
+      return null // if setting value and parameter do not changed - skip setting
     }
-    default:
-      console.warn(`Unknown field type ${fieldType}`)
   }
-  return rowData
+
+  const fieldActionObj = tvIndicatorInputs.getFieldActionObj(rowEl)
+  if (fieldActionObj === null) {
+    console.warn(`Unknown type for field ${fieldName}${groupName? ' group ' + groupName: ''}`)
+    return null
+  }
+  if (fieldSetData === null) {
+    return await fieldActionObj.getValue()
+  }
+  return await fieldActionObj.setValue(fieldSetData)
 }
 
 
@@ -135,12 +139,39 @@ tvIndicator._prepareRowData = (rowValue, idx, rowIdx, groupName, fieldName = nul
 }
 
 tvIndicator._getRowData = (strategyRows, rowIdx) => {
-  if (!Array.isArray(strategyRows)) {
+  if (strategyRows == null || !Array.isArray(strategyRows))
     return null
-  }
   return strategyRows.filter(row => row['rowIdx'] === rowIdx).sort((row0, row1) => row0['idx'] - row1['idx'])
 }
 
+
+tvIndicator.setStrategyProperties = async (name, propVal, shouldCheckOpenedWindow) => {
+  if (await tv.changeDialogTabToProperties()) {
+    return await tvIndicator.setStrategyInputs(name, propVal, shouldCheckOpenedWindow)
+  }
+}
+
+
+tvIndicator.setStrategyInputs = async (name, propVal, shouldCheckOpenedWindow = false) => {
+  if (shouldCheckOpenedWindow) {
+    const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
+    if (!indicatorTitleEl) {
+      return 'The strategy title element do not found'
+    } else if (indicatorTitleEl.innerText !== name) {
+      return `The strategy title ${indicatorTitleEl.innerText} do not match ${name}`
+    }
+  } else {
+    const indicatorTitleEl = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+    if (!indicatorTitleEl)
+      return 'The strategy inputs window did not open'
+  }
+  const errMsg = await tvIndicator._processInputs(propVal)
+  if (!shouldCheckOpenedWindow && document.querySelector(SEL.okBtn)) {
+    document.querySelector(SEL.okBtn).click()
+  }
+
+  return errMsg.length ? errMsg.join('\n') : null
+}
 
 tvIndicator.getStrategyInputsOld = async (isIndicatorSaving = false) => {
   const strategyInputs = [] // TODO to list of values and set them in the same order
@@ -151,7 +182,7 @@ tvIndicator.getStrategyInputsOld = async (isIndicatorSaving = false) => {
     const propClassName = indicProperties[i].getAttribute('class')
     const propText = indicProperties[i].innerText.trim()
 
-    const propertyType = tvIndicatorProperty.detectType(indicProperties[i], propClassName)
+    const propertyType = tvIndicatorInputs.detectType(indicProperties[i], propClassName)
     console.log('###propClassName, propText', propText, propertyType)
     if (!propClassName || !propText) // Undefined type of element
       continue
@@ -246,14 +277,8 @@ tvIndicator.getStrategyInputsOld = async (isIndicatorSaving = false) => {
   return strategyInputs
 }
 
-tvIndicator.setStrategyProperties = async (name, propVal, shouldCheckOpenedWindow) => {
-  if (await tv.changeDialogTabToProperties()) {
-    return await tvIndicator.setStrategyInputs(name, propVal, shouldCheckOpenedWindow)
-  }
-}
 
-
-tvIndicator.setStrategyInputs = async (name, propVal, shouldCheckOpenedWindow = false) => {
+tvIndicator.setStrategyInputsOld = async (name, propVal, shouldCheckOpenedWindow = false) => {
   if (shouldCheckOpenedWindow) {
     const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
     if (!indicatorTitleEl) {

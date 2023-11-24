@@ -7,6 +7,7 @@ const SEL = {
     tabInput: '#overlap-manager-root div[data-name="indicator-properties-dialog"] [class^="tab"] button#inputs',
     tabInputActive: '#overlap-manager-root div[data-name="indicator-properties-dialog"] [class^="tab"] button#inputs[class*="selected"]',
     tabProperties: '#overlap-manager-root div[data-name="indicator-properties-dialog"] [class^="tab"] button#properties',
+    tabPropertiesActive: '#overlap-manager-root div[data-name="indicator-properties-dialog"] [class^="tab"] button#properties[class*="selected"]',
     ticker: '#header-toolbar-symbol-search > div[class*="text-"]',
     timeFrame: '#header-toolbar-intervals div[data-role^="button"]',
     timeFrameActive: '#header-toolbar-intervals div[data-role^="button"][class*="isActive"]',
