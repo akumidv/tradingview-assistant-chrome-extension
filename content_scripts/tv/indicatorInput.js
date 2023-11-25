@@ -1,4 +1,4 @@
-const tvIndicatorInputs = {}
+const tvIndicatorInput = {}
 
 const tvIndicatorRow = {
   groupName: (rowEl) => {
@@ -12,7 +12,7 @@ const tvIndicatorRow = {
   },
 }
 
-tvIndicatorInputs.detectRowType = (propClassName) => {
+tvIndicatorInput.detectRowType = (propClassName) => {
   if (propClassName.startsWith('cell-')) {
     if (propClassName.includes('first-')) {
       return 'inputName'
@@ -123,7 +123,7 @@ class _tvIndicatorInputField extends _tvIndicatorField {
   }
 }
 
-tvIndicatorInputs.getFieldActionObj = (rowEl) => {
+tvIndicatorInput.getFieldActionObj = (rowEl) => {
   let element = rowEl.querySelector('input[type="checkbox"]')
   if (element)
     return new _tvIndicatorCheckBoxField(element)

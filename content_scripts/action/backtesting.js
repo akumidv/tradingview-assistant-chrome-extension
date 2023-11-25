@@ -1,56 +1,3 @@
-const action = {
-  workerStatus: null
-}
-
-
-action.uploadSignals = async () => {
-  await file.upload(signal.parseTSSignalsAndGetMsg, `Please check if the ticker and timeframe are set like in the downloaded data and click on the parameters of the "iondvSignals" script to automatically enter new data on the chart.`, true)
-}
-
-action.uploadStrategyTestParameters = async () => {
-  await file.upload(model.parseStrategyParamsAndGetMsg, '', false)
-}
-
-action.getStrategyTemplate = async () => {
-  const strategyData = await tv.getStrategy()
-  if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    await ui.showErrorPopup('The current strategy do not contain inputs, that can be saved')
-  } else {
-    const paramRange = model.getStrategyRange(strategyData)
-    console.log(paramRange)
-    // await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
-    const strategyRangeParamsCSV = model.convertStrategyRangeToTemplate(paramRange)
-    await ui.showPopup('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
-    file.saveAs(strategyRangeParamsCSV, `${strategyData.name}.csv`)
-  }
-}
-
-action.clearAll = async () => {
-  const clearRes = await storage.clearAll()
-  await ui.showPopup(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
-}
-
-action.downloadStrategyTestResults = async () => {
-  const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
-  if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
-    await ui.showWarningPopup('There is no data for conversion. Try to do test again')
-    return
-  }
-  testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
-  console.log('testResults', testResults)
-  const CSVResults = file.convertResultsToCSV(testResults)
-  const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
-  const propVal = {}
-  testResults.paramsNames.forEach(paramName => {
-    if(bestResult.hasOwnProperty(`__${paramName}`))
-      propVal[paramName] = bestResult[`__${paramName}`]
-  })
-  const errMsg = await tvIndicator.setStrategyInputs(testResults.shortName, propVal)
-  if(bestResult && bestResult.hasOwnProperty(testResults.optParamName))
-    await ui.showPopup(`The best found parameters are set for the strategy\n\nThe best ${testResults.isMaximizing ? '(max) ':'(min)'} ${testResults.optParamName}: ` + bestResult[testResults.optParamName])
-  file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max':'min'}_${testResults.optParamName}_${testResults.method}.csv`)
-}
-
 
 action.testStrategy = async (request, isDeepTest = false) => {
   try {
@@ -79,7 +26,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
               delete testParams.bestPropVal
             if(testParams.hasOwnProperty('bestValue'))
               delete testParams.bestValue
-            testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams) // TODO think about not save, but store them from  testResults.perfomanceSummary, testResults.filteredSummary = [], testResults.timeFrame to list
+            testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams) // TODO think about not save, but store them from  testResults.performanceSummary, testResults.filteredSummary = [], testResults.timeFrame to list
             await action._saveTestResults(testResults, testParams, false)
             if (bestTf === null) {
               bestValue = testResults.bestValue
@@ -123,7 +70,7 @@ action._getRangeParams = async (strategyData) => {
   const initParams = {}
   initParams.paramRange = paramRange
   initParams.paramRangeSrc = model.getStrategyRange(strategyData)
-  const changedStrategyParams = await ui.showAndUpdateStrategyParameters(initParams)
+  const changedStrategyParams = await backtest.showAndUpdateStrategyParameters(initParams)
   if(changedStrategyParams === null) {
     return [null, null, null]
   }
@@ -223,13 +170,13 @@ action._showStartMsg = (paramSpaceNumber, cycles, addInfo) => {
 
 action._saveTestResults = async (testResults, testParams, isFinalTest = true) => {
   console.log('testResults', testResults)
-  if(!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
+  if(!testResults.performanceSummary && !testResults.performanceSummary.length) {
     await ui.showWarningPopup('There is no testing data for saving. Try to do test again')
     return
   }
 
   const CSVResults = file.convertResultsToCSV(testResults)
-  const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
+  const bestResult = testResults.performanceSummary ? model.getBestResult(testResults) : {}
   const initBestValue = testResults.hasOwnProperty('initBestValue') ? testResults.initBestValue : null
   const propVal = {}
   testResults.paramsNames.forEach(paramName => {
@@ -253,23 +200,3 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
   }
 }
 
-
-action.show3DChart= async () => {
-  const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
-  if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
-    await ui.showPopup('There is no results data for to show. Try to backtest again')
-    return
-  }
-  testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
-  const eventData = await send3dChartMessage(testResults)
-  if (eventData.hasOwnProperty('message'))
-    await ui.showPopup(eventData.message)
-}
-
-async function send3dChartMessage (testResults) {
-  return new Promise(resolve => {
-    const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
-    tvPageMessageData['show3DChart'] = resolve
-    window.postMessage({name: 'iondvScript', action: 'show3DChart', data: testResults}, url) // TODO wait for data
-  })
-}

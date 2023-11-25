@@ -7,7 +7,7 @@
 
 (async function() {
 
-  setInterval(ui.checkInjectedElements, 1000); // Add action to set strategy parameters window
+  setInterval(action.attachActionElementsToTVUI, 1000); // Add action to set strategy parameters window
 
   chrome.runtime.onMessage.addListener(
     async function(request, sender, sendResponse) {
@@ -73,14 +73,15 @@
 
   const dialogWindowNode = await page.waitForSelector(SEL.tvDialogRoot, 0)
   if(dialogWindowNode) {
-    const tvObserver = new MutationObserver(tv.dialogHandler);
+    const tvObserver = new MutationObserver(actionSignal.dialogHandler);
     tvObserver.observe(dialogWindowNode, {
       childList: true,
       subtree: true,
       attributes: false,
       characterData: false
     });
-    await tv.dialogHandler() // First run
+    await actionSignal.dialogHandler() // First run
   }
+
 
 })();

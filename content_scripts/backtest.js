@@ -15,7 +15,7 @@ backtest.delay = async (backtestDelay = 0, isRandom = true) => {
 }
 
 backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
-  testResults.perfomanceSummary = []
+  testResults.performanceSummary = []
   testResults.filteredSummary = []
   testResults.shortName = strategyData.name
   console.log('testStrategy', testResults.shortName, testResults.isMaximizing ? 'max' : 'min', 'value of', testResults.optParamName,
@@ -34,11 +34,11 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     testResults.initBestValue = initRes.bestValue
     testResults.bestValue = initRes.bestValue
     testResults.bestPropVal = initRes.bestPropVal
-    testResults.perfomanceSummary.push(initRes.data)
+    testResults.performanceSummary.push(initRes.data)
     try {
       ui.statusMessage(`<p>From default and previus test. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`)
       console.log('Init best value', testResults.bestValue)
-      // console.log(testResults.perfomanceSummary)
+      // console.log(testResults.performanceSummary)
     } catch {}
   }
   // console.log('bestValue', testResults.bestValue)
@@ -232,7 +232,7 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
     if(isFiltered)
       testResults.filteredSummary.push(res.data)
     else
-      testResults.perfomanceSummary.push(res.data)
+      testResults.performanceSummary.push(res.data)
     await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
 
     res.currentValue = res.data[testResults.optParamName]
@@ -405,7 +405,7 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
 
     optimizationState.isInit = true
   }
-  const iteration = testResults.perfomanceSummary.length
+  const iteration = testResults.performanceSummary.length
 
 
   let propData = optAnnealingNewState(allRangeParams, optimizationState.currentTemp, optimizationState.lastState)
@@ -520,7 +520,7 @@ function optAnnealingNewState(allRangeParams, temperature, curState) {
 
 async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del test function annealing
   const allDimensionVal = Object.keys(propVal).map(name => Math.abs(propVal[name] * propVal[name] - 16))
-  testResults.perfomanceSummary.push(allDimensionVal)
+  testResults.performanceSummary.push(allDimensionVal)
   const resData = {}
   resData[testResults.optParamName] = allDimensionVal.reduce((sum, item) => item + sum, 0)
   return {error: 0, data: resData};

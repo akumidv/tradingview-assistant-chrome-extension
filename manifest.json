@@ -15,12 +15,26 @@
     "content_scripts": [
         {
             "matches": ["https://*.tradingview.com/chart/*"],
-            "js": [  "content_scripts/selector.js",
-              "content_scripts/page.js", "content_scripts/ui.js", "content_scripts/tv.js", "content_scripts/tvChart.js",
-              "content_scripts/tvIndicatorInputs.js", "content_scripts/tvIndicators.js",
-              "content_scripts/file.js", "content_scripts/storage.js", "content_scripts/signal.js",
+            "js": [ "lib/plotly.min.js",
+              "content_scripts/selector.js",
+              "content_scripts/page.js", "content_scripts/file.js",
+              "content_scripts/storage.js",
+
+              "content_scripts/tv/tv.js",
+              "content_scripts/tv/chart.js",
+              "content_scripts/tv/indicatorInput.js", "content_scripts/tv/indicators.js",
+
+              "content_scripts/ui/ui.js",
+              "content_scripts/ui/3DChart.js",
+              "content_scripts/ui/action.js","content_scripts/ui/backtest.js",
+
               "content_scripts/model.js","content_scripts/backtest.js",
-              "content_scripts/action.js", "content_scripts/actionParameters.js", "content_scripts/controller.js"],
+
+              "content_scripts/action/action.js",
+              "content_scripts/action/uploadSignals.js", "content_scripts/action/parameters.js",
+
+              "content_scripts/controller.js"
+              ],
             "run_at": "document_end"
         }
     ],

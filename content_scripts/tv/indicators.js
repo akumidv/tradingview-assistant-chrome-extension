@@ -24,7 +24,7 @@ tvIndicator._processInputs = async (setData = null, parentEl = null, rowCellSele
   let fieldName = null
   for (let rowEl of indicRowEls) {
     const rowClassName = rowEl.getAttribute('class')
-    const rowType = tvIndicatorInputs.detectRowType(rowClassName)
+    const rowType = tvIndicatorInput.detectRowType(rowClassName)
     console.log('> rowType', rowType)
     let fieldSetData = tvIndicator._getRowData(setData, rowIdx)
     let rowValue = null
@@ -115,7 +115,7 @@ tvIndicator._processFieldValue = async (rowEl, fieldSetData, fieldName, groupNam
     }
   }
 
-  const fieldActionObj = tvIndicatorInputs.getFieldActionObj(rowEl)
+  const fieldActionObj = tvIndicatorInput.getFieldActionObj(rowEl)
   if (fieldActionObj === null) {
     console.warn(`Unknown type for field ${fieldName}${groupName? ' group ' + groupName: ''}`)
     return null
@@ -182,7 +182,7 @@ tvIndicator.getStrategyInputsOld = async (isIndicatorSaving = false) => {
     const propClassName = indicProperties[i].getAttribute('class')
     const propText = indicProperties[i].innerText.trim()
 
-    const propertyType = tvIndicatorInputs.detectType(indicProperties[i], propClassName)
+    const propertyType = tvIndicatorInput.detectType(indicProperties[i], propClassName)
     console.log('###propClassName, propText', propText, propertyType)
     if (!propClassName || !propText) // Undefined type of element
       continue

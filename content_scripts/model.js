@@ -77,12 +77,12 @@ model.convertStrategyRangeToTemplate = (paramRange) => {
 }
 
 model.getBestResult = (testResults) => {
-  const perfomanceSummary = testResults.perfomanceSummary
+  const performanceSummary = testResults.performanceSummary
   const checkField = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
   const isMaximizing = testResults.hasOwnProperty('isMaximizing') ?  testResults.isMaximizing : true
-  if(!perfomanceSummary || !perfomanceSummary.length)
+  if(!performanceSummary || !performanceSummary.length)
     return ''
-  const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
+  const bestResult = performanceSummary.reduce((curBestRes, curResult) => {
     if(curResult.hasOwnProperty(checkField)) {
       if(isMaximizing && (!curBestRes || !curBestRes[checkField] || curBestRes[checkField] < curResult[checkField]))
         return curResult
@@ -165,8 +165,8 @@ model.getStartParamValues = async (paramRange, strategyData) => {
   })
 
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
-  if(testResults && testResults.perfomanceSummary && testResults.perfomanceSummary.length) {
-    const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
+  if(testResults && testResults.performanceSummary && testResults.performanceSummary.length) {
+    const bestResult = testResults.performanceSummary ? model.getBestResult(testResults) : {}
     const allParamsName = Object.keys(startValues.default)
     if(bestResult) {
       const propVal = {}

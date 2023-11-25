@@ -1,4 +1,12 @@
 
+const SEL_CONST = {
+    elPrefix: `akumidv-${Math.random().toString(36).substring(2)}`,
+    importExportId: `${this.elPrefix}-ImportExport`,
+    strategyParamId: `${this.elPrefix}-strategyParam`,
+    strategyParamDataId: `${this.elPrefix}-strategyParamData`,
+    tvUIPopupRootId: 'overlap-manager-root'
+}
+
 const SEL = {
     tvLegendIndicatorItem: 'div[data-name="legend"] div[class^="sourcesWrapper"] div[class^="sources"] div[data-name="legend-source-item"]',
     tvLegendIndicatorItemTitle: 'div[data-name="legend-source-title"]',
@@ -40,7 +48,7 @@ const SEL = {
     strategyDeepTestGenerateBtn: '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"]:not([disabled])',
     strategyDeepTestGenerateBtnDisabled: '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"][disabled]',
 
-    strategyImportExport: '#iondvImportExport',
+    strategyImportExport: `#${SEL_CONST.importExportId}`,
 
     chartTicker: '#header-toolbar-symbol-search > div[class*="text-"]',
     chartTimeframeFavorite: '#header-toolbar-intervals button[data-value]',
