@@ -5,11 +5,7 @@ const action = {
 action.attachActionElementsToTVUI = () => {
   if (action.workerStatus) // If there is not running process
     return
-
-  const strategyDefaultEl = document.querySelector(SEL.strategyDefaultElement)
-  if (strategyDefaultEl) {
-    uiAttached.attachToIndicatorWindow()
-  }
+  uiAttaching.injectIndicator()
 }
 
 

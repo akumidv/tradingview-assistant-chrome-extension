@@ -25,13 +25,13 @@
               "content_scripts/tv/indicatorInput.js", "content_scripts/tv/indicators.js",
 
               "content_scripts/ui/ui.js",
-              "content_scripts/ui/3DChart.js",
-              "content_scripts/ui/action.js","content_scripts/ui/backtest.js",
+              "content_scripts/ui/3DChart.js", "content_scripts/ui/uploadingSignals.js",
+              "content_scripts/ui/attaching.js","content_scripts/ui/backtestParameters.js",
 
               "content_scripts/model.js","content_scripts/backtest.js",
 
               "content_scripts/action/action.js",
-              "content_scripts/action/uploadSignals.js", "content_scripts/action/parameters.js",
+              "content_scripts/action/uploadingSignals.js", "content_scripts/action/parameters.js",
 
               "content_scripts/controller.js"
               ],

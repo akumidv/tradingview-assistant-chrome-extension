@@ -14,7 +14,7 @@ action.loadParameters = async () => {
 }
 
 
-const _convertInputs = (strategyData) => {
+function _convertInputs (strategyData) {
   let strategyParamsCSV = `Idx,Name,Value,Type\n,"__indicatorName",${JSON.stringify(strategyData.name)},\n`
   for (const propInput of strategyData['inputs']) {
     strategyParamsCSV += `${propInput['idx']},${JSON.stringify(propInput['name'])},${['int', 'float', 'boolean'].includes(propInput['type']) ? propInput['value'] : JSON.stringify(propInput['value'])},"${propInput['type']}"\n`
@@ -28,7 +28,7 @@ const _convertInputs = (strategyData) => {
 }
 
 
-_loadParametersHandler = async (fileData) => {
+async function _loadParametersHandler (fileData) {
   let strategyName = null
   const csvData = await file.parseCSV(fileData)
   const headers = Object.keys(csvData[0])

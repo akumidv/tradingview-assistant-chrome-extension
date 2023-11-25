@@ -73,14 +73,14 @@
 
   const dialogWindowNode = await page.waitForSelector(SEL.tvDialogRoot, 0)
   if(dialogWindowNode) {
-    const tvObserver = new MutationObserver(actionSignal.dialogHandler);
+    const tvObserver = new MutationObserver(uiSignal.signalIndicatorDialogHandler);
     tvObserver.observe(dialogWindowNode, {
       childList: true,
       subtree: true,
       attributes: false,
       characterData: false
     });
-    await actionSignal.dialogHandler() // First run
+    await uiSignal.signalIndicatorDialogHandler() // First run
   }
 
 

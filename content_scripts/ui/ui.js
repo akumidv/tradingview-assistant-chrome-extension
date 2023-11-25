@@ -123,7 +123,6 @@ ui.autoCloseAlert = (msg, duration = 3000) => {
   document.body.appendChild(altEl)
 }
 
-
 ui.styleValStausMessage = `
 .button {
     background-color: white;

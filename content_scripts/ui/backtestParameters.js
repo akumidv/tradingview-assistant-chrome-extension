@@ -1,7 +1,6 @@
-const backtest = {}
+const backtestParameters = {}
 
-
-backtest.showAndUpdateStrategyParameters = async (testParams) => {
+backtestParameters.showAndUpdateStrategyParameters = async (testParams) => {
   return new Promise(resolve => {
     try{
       const isStratParamElPresent = document.getElementById(SEL_CONST.strategyParamId)

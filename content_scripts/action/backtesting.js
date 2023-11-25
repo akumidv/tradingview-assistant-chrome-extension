@@ -70,7 +70,7 @@ action._getRangeParams = async (strategyData) => {
   const initParams = {}
   initParams.paramRange = paramRange
   initParams.paramRangeSrc = model.getStrategyRange(strategyData)
-  const changedStrategyParams = await backtest.showAndUpdateStrategyParameters(initParams)
+  const changedStrategyParams = await backtestParameters.showAndUpdateStrategyParameters(initParams)
   if(changedStrategyParams === null) {
     return [null, null, null]
   }

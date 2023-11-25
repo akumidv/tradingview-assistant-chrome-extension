@@ -1,13 +1,21 @@
-uiAttached = {}
+uiAttaching = {}
 
-uiAttached.attachToIndicatorWindow = () => {
+
+uiAttaching.injectIndicator = () => {
+    const strategyDefaultEl = document.querySelector(SEL.strategyDefaultElement)
+    if (strategyDefaultEl) {
+      _attachToIndicatorWindow()
+    }
+}
+
+function _attachToIndicatorWindow () {
   const strategyDefaultEl = document.querySelector(SEL.strategyDefaultElement)
   if (!strategyDefaultEl)
     return
   _attachToIndicatorWindowImportExportElements(strategyDefaultEl)
 }
 
-_attachToIndicatorWindowImportExportElements = (strategyDefaultEl) => {
+function _attachToIndicatorWindowImportExportElements (strategyDefaultEl) {
   if (document.querySelector(SEL.strategyImportExport))
     return
   const importExportEl = document.createElement('div')
@@ -20,12 +28,12 @@ _attachToIndicatorWindowImportExportElements = (strategyDefaultEl) => {
   const exportBtn = document.getElementById(`${SEL_CONST.elPrefix}-Export`)
   if (exportBtn) {
     exportBtn.onclick = async () => {
-      await action.saveParameters()
+      await action.saveParameters() // TODO unattach ui from direct request action to signals
     }
   }
   if (importBtn) {
     importBtn.onclick = async () => {
-      await action.loadParameters()
+      await action.loadParameters() // TODO unattach ui from direct request action to signals
     }
   }
 }
