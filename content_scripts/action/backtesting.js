@@ -1,4 +1,3 @@
-
 action.testStrategy = async (request, isDeepTest = false) => {
   try {
     const strategyData = await action._getStrategyData()

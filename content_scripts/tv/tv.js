@@ -40,7 +40,12 @@ async function _messageHandler(event) {
   }
 }
 
-
+/**
+ *
+ * @param {string|null} strategyName
+ * @param {boolean} isIndicatorSaving
+ * @return {Promise<StrategyData|null>}
+ */
 tv.getStrategy = async (strategyName = '', isIndicatorSaving = false) => {
   let indicatorName = null
   if(strategyName !== null) {
@@ -123,7 +128,8 @@ tv.getStrategy = async (strategyName = '', isIndicatorSaving = false) => {
       throw new Error(`Can\'t activate input tab in strategy`)
 
   }
-  const strategyData = {name: indicatorName, inputs: strategyInputs, strategyProperties: strategyProperties}
+  // const strategyData = {name: indicatorName, inputs: strategyInputs, strategyProperties: strategyProperties}
+  const strategyData = new StrategyData(indicatorName, strategyInputs, strategyProperties)
 
   if (!isIndicatorSaving && document.querySelector(SEL.cancelBtn)) {
     document.querySelector(SEL.cancelBtn).click()

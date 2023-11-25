@@ -17,6 +17,7 @@
             "matches": ["https://*.tradingview.com/chart/*"],
             "js": [ "lib/plotly.min.js",
               "content_scripts/selector.js",
+              "content_scripts/namespace.js",
               "content_scripts/page.js", "content_scripts/file.js",
               "content_scripts/storage.js",
 
@@ -32,6 +33,7 @@
 
               "content_scripts/action/action.js",
               "content_scripts/action/uploadingSignals.js", "content_scripts/action/parameters.js",
+              "content_scripts/action/backtesting.js",
 
               "content_scripts/controller.js"
               ],

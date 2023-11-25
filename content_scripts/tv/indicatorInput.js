@@ -36,41 +36,46 @@ class _tvIndicatorField {
   constructor(element) {
     this.element = element;
   }
+  /**
+    @returns: {IndicatorParameter} param
+  */
   async getValue() {
-    return {value: this.element.value, type: 'unknown'};
+    return new IndicatorParameter(null, this.element.value, 'unknown') //{value: this.element.value, type: 'unknown'};
   }
-  async setValue(val) {
-    page.setInputElementValue(this.element, val['value']);
+  /**
+    @param: {IndicatorParameter} param
+  */
+  async setValue(param) {
+    page.setInputElementValue(this.element, param['value']);
   }
 }
 
 class _tvIndicatorCheckBoxField extends _tvIndicatorField {
   async getValue() {
-    return {value: this.element.getAttribute('checked') !== null, type: 'boolean'};
+    return new IndicatorParameter(null, this.element.getAttribute('checked') !== null, 'boolean')  //{value: this.element.getAttribute('checked') !== null, type: 'boolean'};
   }
-  async setValue(val) {
-    if (Boolean(val['value']) !== this.value)
+  async setValue(param) {
+    if (Boolean(param['value']) !== this.value)
       page.mouseClick(this.element)
   }
 }
 
 class _tvIndicatorTexAreaField extends _tvIndicatorField {
   async getValue() {
-    return {value: this.element.value, type: 'textarea', options: []};
+    return new IndicatorParameter(null, this.element.value, 'textarea') //{value: this.element.value, type: 'textarea', options: []};
   }
-  async setValue(val) {
-    page.setInputElementValue(this.element, val['value']);
+  async setValue(param) {
+    page.setInputElementValue(this.element, param['value']);
   }
 }
 
 
 class _tvIndicatorListField extends _tvIndicatorField {
-  async getValue() {
-    return {value: this.element.value, type: 'list', options: []};
+  async getValue() { // TODO
+    return new IndicatorParameter(null, this.element.value, 'list', []) //{value: this.element.value, type: 'list', options: []};
   }
-  async setValue(val) {
-    const value = val['value']
-    page.setInputElementValue(this.element, value);
+  async setValue(param) {
+    page.setInputElementValue(this.element, param['value']);
   }
 }
 
@@ -78,14 +83,13 @@ class _tvIndicatorDateTimeField extends _tvIndicatorField {
   async getValue() {
     const dateEl = this.element.querySelector('[class^="datePickerWrapper"] input')
     const timeEl = this.element.querySelector('[class^="timePickerWrapper"] input')
-    return {value: `${dateEl.value}T${timeEl.value}`, type: 'datetime', options: []};
+    return new IndicatorParameter(null, `${dateEl.value}T${timeEl.value}`, 'datetime') //{value: `${dateEl.value}T${timeEl.value}`, type: 'datetime', options: []};
   }
-  async setValue(val) {
+  async setValue(param) {
     const dateEl = this.element.querySelector('[class^="datePickerWrapper"] input')
     const timeEl = this.element.querySelector('[class^="timePickerWrapper"] input')
-    const value = val['value']
-    page.setInputElementValue(dateEl, value.substring(0, 10));
-    page.setInputElementValue(timeEl, value.substring(11, 16));
+    page.setInputElementValue(dateEl, param['value'].substring(0, 10));
+    page.setInputElementValue(timeEl, param['value'].substring(11, 16));
   }
 }
 
@@ -96,16 +100,17 @@ class _tvIndicatorColorField extends _tvIndicatorField {
     const colorVal = colorEl === null ? null :  colorEl.getAttribute('style')
                                                        .replace('background-color:', '')
                                                        .replace(';','').trim()
+    console.log('####', colorEl, colorVal)
     if (colorEl === null || colorVal) {
       if(!this.warning) {
         this.warning = true
          console.error('TV UI changed. Color element not have subclass swatch')
       }
-      return null
+      // return null
     }
-    return {value: colorVal, type: 'color'};
+    return new IndicatorParameter(null, colorVal, 'color') //{value: colorVal, type: 'color'};
   }
-  async setValue(val) {
+  async setValue(param) {
     if(!this.warning) {
         this.warning = true
         console.error('The color field setting is not implemented. Skipped')
@@ -115,11 +120,11 @@ class _tvIndicatorColorField extends _tvIndicatorField {
 
 class _tvIndicatorInputField extends _tvIndicatorField {
   async getValue() {
-    return {value: this.element.value, type: 'input'};
+    return new IndicatorParameter(null, this.element.value, 'input') //{value: this.element.value, type: 'input'};
   }
-  async setValue(val) {
-    const value = val['value']
-    page.setInputElementValue(this.element, value);
+
+  async setValue(param) {
+    page.setInputElementValue(this.element, param['value']);
   }
 }
 

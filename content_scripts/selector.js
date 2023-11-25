@@ -1,9 +1,10 @@
+const _elPrefix = `akumidv-${Math.random().toString(36).substring(2)}`
 
 const SEL_CONST = {
-    elPrefix: `akumidv-${Math.random().toString(36).substring(2)}`,
-    importExportId: `${this.elPrefix}-ImportExport`,
-    strategyParamId: `${this.elPrefix}-strategyParam`,
-    strategyParamDataId: `${this.elPrefix}-strategyParamData`,
+    elPrefix: _elPrefix,
+    importExportId: `${_elPrefix}-ImportExport`,
+    strategyParamId: `${_elPrefix}-strategyParam`,
+    strategyParamDataId: `${_elPrefix}-strategyParamData`,
     tvUIPopupRootId: 'overlap-manager-root'
 }
 
