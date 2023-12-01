@@ -1,4 +1,6 @@
 .idea
 *.mp4
+node_modules/
+package-lock.json
 assistnat-ext.zip
 tv-page-objects.js

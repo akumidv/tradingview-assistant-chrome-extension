@@ -1,4 +1,3 @@
-
 /**
  * @type {IndicatorParameter}
  * @param {string|null} name
@@ -9,10 +8,8 @@
  * @param {number|null} idx
  * @param {number|null} rowIdx
  */
-IndicatorParameter = class {
-
-  constructor(name, value, type,  group  = null, idx  = null, rowIdx  = null,
-              options  = null) {
+const IndicatorParameter = class {
+  constructor (name, value, type, group = null, idx = null, rowIdx = null, options = null) {
     this.name = name
     this.value = value
     this.type = type
@@ -29,10 +26,14 @@ IndicatorParameter = class {
  * @param {Array} inputs
  * @param {Array|null} properties
  */
-StrategyData = class {
-  constructor(name, inputs, properties = null) {
+const StrategyData = class {
+  constructor (name, inputs, properties = null) {
     this.name = name
     this.inputs = inputs
     this.properties = properties
   }
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { IndicatorParameter, StrategyData }
 }

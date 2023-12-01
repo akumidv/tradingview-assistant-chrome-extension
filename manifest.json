@@ -15,7 +15,8 @@
     "content_scripts": [
         {
             "matches": ["https://*.tradingview.com/chart/*"],
-            "js": [ "lib/plotly.min.js",
+            "js": [ "lib/plotly.min.js", "lib/csv.js",
+              "content_scripts/config.js",
               "content_scripts/selector.js",
               "content_scripts/namespace.js",
               "content_scripts/page.js", "content_scripts/file.js",

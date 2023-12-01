@@ -20,7 +20,7 @@ action.loadParameters = async () => {
 function _convertInputsAndProperties (strategyData) {
   // TODO
   // 2,"Signal","9","input",TODO "null","2"
-  // 3,"Timeframe inp",TODOundefined,"list","null","3"
+  // 3,"Timeframe inp",TODO undefined,"list","null","3"
   // 4,"Source inp",undefined,"list","null","4"
   // 5,"Group string inp",undefined,"list","📈 TRADE TYPE 📉","5"
   // 6,"Float inp","0.002","input","null","6"
@@ -28,10 +28,19 @@ function _convertInputsAndProperties (strategyData) {
 
   let strategyParamsCSV = `Idx,Name,Value,Type,Group,RowIdx\n,"__indicatorName",${JSON.stringify(strategyData.name)},\n`
   for (const param of strategyData['inputs']) {
-    strategyParamsCSV += `${param['idx']},${JSON.stringify(param['name'])},` +
-      `${['int', 'float', 'boolean'].includes(param['type']) ? param['value'] : JSON.stringify(param['value'])},` +
-      `"${param['type']}","${param['group']}","${param['rowIdx']}"\n`
+    let row = [file.toCSVCell(param['idx'])]
+    row.push(file.toCSVCell(param['name']))
+    row.push(file.toCSVCell(param['value']))
+    row.push(file.toCSVCell(param['type']))
+    row.push(file.toCSVCell(param['group']))
+    row.push(file.toCSVCell(param['rowIdx']))
+    // strategyParamsCSV += `${param['idx']},${JSON.stringify(param['name'])},` +
+    //   `${['int', 'float', 'boolean'].includes(param['type']) ? param['value'] : JSON.stringify(param['value'])},` +
+    //   `"${param['type']}","${param['group']}","${param['rowIdx']}"\n`
+    // strategyParamsCSV += row
+    strategyParamsCSV += row.join(config.sep) + '\n'
   }
+
   if (strategyData.hasOwnProperty('strategyProperties') && strategyData['strategyProperties']) {
     for (const param of strategyData['strategyProperties']) {
       strategyParamsCSV += `${param['idx']},${JSON.stringify('__' + param['name'])},` +

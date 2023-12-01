@@ -49,16 +49,20 @@ file.uploadCSV = async (endOfMsg, isMultiple = false) => {
 
 
 file.parseCSV = async (fileData) => {
+
+  // Change to https://github.com/onyxfish/csvkit.js/blob/master/lib/csvkit.js toClass
+  // Examples https://github.com/onyxfish/csvkit.js/blob/master/test/object_reader.js
+  // https://github.com/onyxfish/csvkit.js/blob/master/test/object_writer.js
   return new Promise((resolve, reject) => {
-    const CSV_FILENAME = fileData.name
-    const isCSV = CSV_FILENAME.toLowerCase().endsWith('.csv')
+    const csvFilename = fileData.name
+    const isCSV = csvFilename.toLowerCase().endsWith('.csv')
     if (!isCSV) return reject(`please upload correct file.`)
     const reader = new FileReader();
     reader.addEventListener('load', async (event) => {
-      if (!event.target.result) return reject(`there error when loading content from the file ${CSV_FILENAME}`)
-      const CSV_VALUE = event.target.result
+      if (!event.target.result) return reject(`there error when loading content from the file ${csvFilename}`)
+      const csvValue = event.target.result
       try {
-        const csvData = _parseCSV2JSON(CSV_VALUE)
+        const csvData = _parseCSV2JSON(csvValue)
         if (csvData && csvData.length)
           return resolve(csvData)
       } catch (err) {
@@ -86,37 +90,70 @@ function _parseCSV2JSON(s, sep = ',') {
 
 
 function _parseCSVLine(text) {
+
   function replaceEscapedSymbols(textVal) {
-    return textVal.replaceAll('\\"', '"')
+    console.log('  >:', typeof (textVal), textVal, textVal.hasOwnProperty('replaceAll'))
+    if(typeof textVal === 'string')
+      return textVal.replaceAll('\\"', '"')
+    return textVal
   }
 
-  return text.match(/\s*(".*?"|'.*?'|[^,]+|)\s*(,(?!\s*\\")|$)/g).map(function (subText) { // \s*(\".*?\"|'.*?'|[^,]+|)\s*(,|$)
+  // return text.match(/\s*(".*?"|'.*?'|[^,]+|)\s*(,(?!\s*\\")|$)/g).map(function (subText) { // \s*(\".*?\"|'.*?'|[^,]+|)\s*(,|$) // \s*(\".*?\"|'.*?'|[^,]+|)\s*(,|$)
+  // const cellSpitRegExp = new RegExp(`\s*(".*?"|'.*?'|[^${config.sep}]+|)\s*(${config.sep}(?!\s*")|$)`, 'g')
+  const cellSpitRegExp = new RegExp(`\s*(".*?"|'.*?'|[^,]+|)\s*(,(?!\s*\\")|$)`, 'g')
+  const doubleQuotedTextRegExp = new RegExp(`^\s*\"(.*?)\"\s*${config.sep}?(?!\s*\\")$`)
+  const singleQuotedTextRegExp = new RegExp(`^\s*'(.*?)'\s*${config.sep}?$`)
+  const booleanRegExp = new RegExp(`^\s*(true|false)\s*${config.sep}?$`, 'i')
+  const integerNumberRegExp = new RegExp(`^\s*((?:\\+|\-)?\d+)\s*${config.sep}?$`)
+  const floatingNumberRegExp = new RegExp(`^\s*((?:\\+|\-)?\d*\.\d*)\s*${config.sep}?$`)
+  const unquotedTextRegExp = new RegExp(`^\s*(.*?)\s*${config.sep}?$`)
+  console.log('!', text, text.match(cellSpitRegExp).length)
+  return text.match(cellSpitRegExp).map(function (subText) {
     let m;
-    if (m = subText.match(/^\s*\"(.*?)\"\s*,?(?!\s*\\")$/))
+    console.log('  -', subText)
+    // if (m = subText.match(/^\s*\"(.*?)\"\s*,?(?!\s*\\")$/))
+    if (m = subText.match(doubleQuotedTextRegExp))
       return replaceEscapedSymbols(m[1])//m[1] // Double Quoted Text // /^\s*\"(.*?)\"\s*,?$/
-    if (m = subText.match(/^\s*'(.*?)'\s*,?$/))
+    // if (m = subText.match(/^\s*'(.*?)'\s*,?$/))
+    if (m = subText.match(singleQuotedTextRegExp))
       return replaceEscapedSymbols(m[1]); // Single Quoted Text
-    if (m = subText.match(/^\s*(true|false)\s*,?$/i))
+    // if (m = subText.match(/^\s*(true|false)\s*,?$/i))
+    if (m = subText.match(booleanRegExp))
       return m[1].toLowerCase() === 'true'; // Boolean
-    if (m = subText.match(/^\s*((?:\+|\-)?\d+)\s*,?$/))
+    // if (m = subText.match(/^\s*((?:\+|\-)?\d+)\s*,?$/))
+    if (m = subText.match(integerNumberRegExp))
       return parseInt(m[1]); // Integer Number
-    if (m = subText.match(/^\s*((?:\+|\-)?\d*\.\d*)\s*,?$/))
+    // if (m = subText.match(/^\s*((?:\+|\-)?\d*\.\d*)\s*,?$/))
+    if (m = subText.match(floatingNumberRegExp))
       return parseFloat(m[1]); // Floating Number
-    if (m = subText.match(/^\s*(.*?)\s*,?$/))
-      return replaceEscapedSymbols(m[1]); // Unquoted Text
+    // if (m = subText.match(/^\s*(.*?)\s*,?$/))
+    if (m = subText.match(unquotedTextRegExp))
+      return subText === '' ? null : m[1] //replaceEscapedSymbols(m[1]); // Unquoted Text
     return subText;
   });
 }
 
+file.toCSVCell = (value) => {
+  if (typeof (value) === 'undefined')
+    return ''
+  if (value === null)
+    return ''
+  if (typeof value === 'boolean')
+    return value.toString()
+
+  if (typeof value !== 'number')
+      return JSON.stringify(value.toString().replaceAll('\\"', '""'))
+  return (parseFloat(value) === parseInt(value) ? parseInt(value) : parseFloat(value)).toString()
+}
 
 file.convertResultsToCSV = (testResults) => {
-  function prepareValToCSV(value) {
-    if (!value)
-      return 0
-    if (typeof value !== 'number')
-      return JSON.stringify(value)
-    return parseFloat(value) === parseInt(value) ? parseInt(value) : parseFloat(value)
-  }
+  // function prepareValToCSV(value) {
+  //   if (!value)
+  //     return 0
+  //   if (typeof value !== 'number')
+  //     return JSON.stringify(value)
+  //   return parseFloat(value) === parseInt(value) ? parseInt(value) : parseFloat(value)
+  // }
 
   if (!testResults || !testResults.performanceSummary || !testResults.performanceSummary.length)
     return 'There is no data for conversion'
@@ -127,19 +164,23 @@ file.convertResultsToCSV = (testResults) => {
       headers = Object.keys(headersAll)
   }
 
-  let csv = headers.map(header => JSON.stringify(header)).join(',')
+  let csv = headers.map(header => JSON.stringify(header)).join(config.sep)
   csv += '\n'
   testResults.performanceSummary.forEach(row => {
-    const rowData = headers.map(key => typeof row[key] === 'undefined' ? '' : prepareValToCSV(row[key]))
-    csv += rowData.join(',').replaceAll('\\"', '""')
+    // const rowData = headers.map(key => typeof row[key] === 'undefined' ? '' : prepareValToCSV(row[key]))
+    const rowData = headers.map(key => file.toCSVCell(row[key]))
+    // csv += rowData.join(',').replaceAll('\\"', '""')
+    csv += rowData.join(config.sep)
     csv += '\n'
   })
   if (testResults.filteredSummary && testResults.filteredSummary.length) {
     csv += headers.map(key => key !== 'comment' ? '' : 'Bellow filtered results of tests') // Empty line
     csv += '\n'
     testResults.filteredSummary.forEach(row => {
-      const rowData = headers.map(key => typeof row[key] === 'undefined' ? '' : prepareValToCSV(row[key]))
-      csv += rowData.join(',').replaceAll('\\"', '""')
+      // const rowData = headers.map(key => typeof row[key] === 'undefined' ? '' : prepareValToCSV(row[key]))
+      const rowData = headers.map(key => file.toCSVCell(row[key]))
+      // csv += rowData.join(',').replaceAll('\\"', '""')
+      csv += rowData.join(config.sep)
       csv += '\n'
     })
   }
