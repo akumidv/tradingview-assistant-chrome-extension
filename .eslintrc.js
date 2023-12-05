@@ -1,6 +1,7 @@
 module.exports = {
   env: {
     browser: true,
+    webextensions: true,
     es2021: true
   },
   extends: 'standard',
@@ -8,10 +9,10 @@ module.exports = {
   overrides: [
     {
       env: {
-        node: true,
+        node: true
       },
       files: [
-        '.eslintrc.{js,cjs}',
+        '.eslintrc.{js,cjs}'
       ],
       parserOptions: {
         sourceType: 'script'
@@ -32,5 +33,7 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module'
   },
-  rules: {}
+  rules: {
+    'space-before-function-paren': ['error', 'never']
+  }
 }
