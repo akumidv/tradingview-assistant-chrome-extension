@@ -2,19 +2,21 @@
 let isBaseTradingView = true
 
 window.addEventListener('message', async function (event) {
-  const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+  const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
   if (!event.origin.startsWith(url) || !event.data ||
     !event.data.hasOwnProperty('name') || event.data.name !== 'iondvScript' ||
-    !event.data.hasOwnProperty('action'))
+    !event.data.hasOwnProperty('action')) {
     return
+  }
   switch (event.data.action) {
     case 'getPerformance': {
       let tvData = {}
       try {
-        if(isBaseTradingView)
+        if (isBaseTradingView) {
           tvData = window.TradingView.bottomWidgetBar._widgets.backtesting._reportWidgetsSet.reportWidget._data.performance
-        else if (isBaseTradingView === false)
-          tvData = window.TradingView.bottomWidgetBar._options.backtestingStrategyDispatcher._modelStrategies[0]._reportData.performance // First strategy, for new TV (deep history)
+        } else if (isBaseTradingView === false) {
+          tvData = window.TradingView.bottomWidgetBar._options.backtestingStrategyDispatcher._modelStrategies[0]._reportData.performance
+        } // First strategy, for new TV (deep history)
       } catch (err) {
         if (isBaseTradingView !== false) {
           try {
@@ -27,7 +29,9 @@ window.addEventListener('message', async function (event) {
           }
         }
       }
-      window.postMessage({name: 'iondvPage', action: event.data.action, data: tvData}, event.origin)
+      window.postMessage({
+        name: 'iondvPage', action: event.data.action, data: tvData
+      }, event.origin)
       break
     }
     // case 'show3DChart': { // TODO move to ui
@@ -42,8 +46,12 @@ window.addEventListener('message', async function (event) {
     //   }
     //   break
     // }
-    default:
-      console.error(`[error] Unknown action for get data from page"${event.data.action}". Skip processing`)
-      window.postMessage({name: 'iondvPage', action: event.data.action, data: null, message: `${err}`}, event.origin)
+    default: {
+      const errMsg = `[error] Unknown action for get data from page"${event.data.action}". Skip processing`
+      console.error(errMsg)
+      window.postMessage({
+        name: 'iondvPage', action: event.data.action, data: null, message: errMsg
+      }, event.origin)
+    }
   }
 })

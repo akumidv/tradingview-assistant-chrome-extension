@@ -1,4 +1,12 @@
-action.saveParameters = async () => {
+
+const actionParameters = {}
+if (typeof module !== 'undefined') {
+  module.exports = {
+    actionParameters
+  }
+}
+
+actionParameters.saveParameters = async () => {
   const strategyData = await tv.getStrategy(null, true)
   if (!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('inputs') || !strategyData.inputs) {
     await ui.showErrorPopup('The current indicator/strategy is not contains inputs that can be saved.')
@@ -8,8 +16,7 @@ action.saveParameters = async () => {
   file.saveAs(strategyParamsCSV, `${strategyData.name}_inputs.csv`)
 }
 
-
-action.loadParameters = async () => {
+actionParameters.loadParameters = async () => {
   await file.upload(_loadParametersHandler, '', false)
 }
 

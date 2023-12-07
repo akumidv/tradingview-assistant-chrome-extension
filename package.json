@@ -2,11 +2,10 @@
   "name": "tradingview-assistant-chrome-extension",
   "version": "3.0.0",
   "description": "An assistant for backtesting trading strategies and showing external signals in Tradingview\"",
-  "main": "NONE",
+  "main": "./src/content_scripts/controller.js",
   "directories": {
     "test": "test"
   },
-  "dependencies": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/akumidv/tradingview-assistant-chrome-extension.git"
@@ -16,19 +15,29 @@
   "bugs": {
     "url": "https://github.com/akumidv/tradingview-assistant-chrome-extension/issues"
   },
+
   "homepage": "https://github.com/akumidv/tradingview-assistant-chrome-extension",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "build": "webpack --progress --display-error-details"
   },
   "devDependencies": {
+    "copy-webpack-plugin": "^11.0.0",
     "eslint": "^8.54.0",
     "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-jest": "^27.6.0",
     "eslint-plugin-n": "^16.3.1",
     "eslint-plugin-promise": "^6.1.1",
-    "eslint-plugin-jest": "^27.6.0",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "transform-json-webpack-plugin": "^0.0.2",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
   },
   "jest": {
     "verbose": true
+  },
+  "dependencies": {
+    "plotly.js-gl3d-dist": "^2.27.1",
+    "plotly.js-gl3d-dist-min": "^2.27.1"
   }
 }

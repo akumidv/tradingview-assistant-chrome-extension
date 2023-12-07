@@ -1,4 +1,4 @@
-const csv = require('../../lib/csv')
+const csv = require('../../src/lib/csv')
 
 const CSV_EXAMPLE = 'headerN,headerS,headerB\n1,"String",false\n4.23,"",\n,"String\tval",'
 const OBJ_RECORDS_EXAMPLE = [

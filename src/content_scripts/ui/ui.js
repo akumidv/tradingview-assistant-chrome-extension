@@ -8,7 +8,7 @@ scriptFonts.innerHTML = '@font-face {' +
   '    font-style: normal;\n' +
   '    font-weight: 900;' +
   '    font-display: block;' +
-  `    src: url(${chrome.runtime.getURL('fonts/fa-solid-900.woff2')}) format('woff2');` +
+  `    src: url(${chrome.runtime.getURL('src/fonts/fa-solid-900.woff2')}) format('woff2');` +
   '}\n' +
   '.iondv_icon::before {\n' +
   '    display: inline-block;\n' +
@@ -27,7 +27,6 @@ scriptFonts.innerHTML = '@font-face {' +
   '    font-family: "Font Awesome 5 Free"; font-weight: 900; font-size: 1.25em; content: "\\f0c5";\n' +
   '  }\n'
 document.documentElement.appendChild(scriptFonts)
-
 
 
 ui.styleValWindowShadow = `background-color:rgba(0, 0, 0, 0.2);

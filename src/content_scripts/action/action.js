@@ -1,21 +1,40 @@
+if (typeof exports === 'object' && typeof module === 'object') {
+  // eslint no-var: "ignore"
+  var _ = require('./backtesting')
+
+  actionSignal = require('./uploadingSignals')
+}
+
+
 const action = {
   workerStatus: null
 }
 
+if (typeof module !== 'undefined') {
+  module.exports = {
+    action
+  }
+}
+
+
 action.attachActionElementsToTVUI = () => {
-  if (action.workerStatus) // If there is not running process
+  if (action.workerStatus) // If there is running process - just return
     return
   uiAttaching.injectIndicator()
 }
 
 
-action.show3DChart= async () => {
-  const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
-  testResults.performanceSummary = testResults.perfomanceSummary
-  if(!testResults || !testResults.performanceSummary || !testResults.performanceSummary.length) {
-    await ui.showPopup('There is no results data for to show. Try to backtest again')
-    return
+action.show3DChart = async () => {
+  let testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
+  testResults = {} // TODO remove
+  if (!('perfomanceSummary' in testResults)) {  // TODO remove
+    testResults.perfomanceSummary = []
   }
+  // if(!testResults || !testResults.perfomanceSummary || !testResults.perfomanceSummary.length) {
+  //   await ui.showPopup('There is no results data for to show. Try to backtest again')
+  //   return
+  // }
+  testResults.performanceSummary = testResults.perfomanceSummary
   testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
   await ui3DChart.show3DChart(testResults)
 }

@@ -1,13 +1,17 @@
 /*
  @license Copyright 2021 akumidv (https://github.com/akumidv/)
- SPDX-License-Identifier: Apache-2.0
+ SPDX-License-Identifier: GPLv3.0
 */
+'use strict'
 
-'use strict';
+if (typeof exports === 'object' && typeof module === 'object') {
+  // eslint no-var: "ignore"
+  var action = require('./action/action')
+  var actionParameters = require('./action/parameters')
+}
 
 (async function() {
-
-  setInterval(action.attachActionElementsToTVUI, 1000); // Add action to set strategy parameters window
+  setInterval(action.attachActionElementsToTVUI, 1000) // Add action to set strategy parameters window
 
   chrome.runtime.onMessage.addListener(
     async function(request, sender, sendResponse) {
@@ -27,12 +31,12 @@
         sendResponse()
         switch (request.action) {
           case 'saveParameters': {
-            await action.saveParameters()
-            break;
+            await actionParameters.saveParameters()
+            break
           }
           case 'loadParameters': {
-            await action.loadParameters()
-            break;
+            await actionParameters.loadParameters()
+            break
           }
           case 'uploadSignals':
             await action.uploadSignals()

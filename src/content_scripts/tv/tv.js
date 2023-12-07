@@ -12,13 +12,10 @@ const SUPPORT_TEXT = 'Please retry. <br />If the problem reproduced then it is p
         '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it does\'t alredy created)'
 
 // Inject script to get access to TradingView data on page
-const script = document.createElement('script');
-script.src = chrome.runtime.getURL('page-context.js');
-document.documentElement.appendChild(script);
+const script = document.createElement('script')
+script.src = chrome.runtime.getURL('src/page/page-context.js')
+document.documentElement.appendChild(script)
 
-const scriptPlot = document.createElement('script');
-scriptPlot.src = chrome.runtime.getURL('lib/plotly.min.js')
-document.documentElement.appendChild(scriptPlot);
 
 const tvPageMessageData = {}
 

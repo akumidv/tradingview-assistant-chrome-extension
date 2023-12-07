@@ -6,37 +6,40 @@
 
     "version": "3.0.0",
     "icons": {
-            "16": "images/tv_assist_16.png",
-            "32": "images/tv_assist_32.png",
-            "48": "images/tv_assist_48.png",
-            "64": "images/tv_assist_64.png",
-            "128": "images/tv_assist_128.png"
+            "16": "src/images/tv_assist_16.png",
+            "32": "src/images/tv_assist_32.png",
+            "48": "src/images/tv_assist_48.png",
+            "64": "src/images/tv_assist_64.png",
+            "128": "src/images/tv_assist_128.png"
     },
     "content_scripts": [
         {
             "matches": ["https://*.tradingview.com/chart/*"],
-            "js": [ "lib/plotly.min.js", "lib/csv.js",
-              "content_scripts/config.js",
-              "content_scripts/selector.js",
-              "content_scripts/namespace.js",
-              "content_scripts/page.js", "content_scripts/file.js",
-              "content_scripts/storage.js",
+            "js": [
+              "node_modules/plotly.js-gl3d-dist-min/plotly-gl3d.min.js",
 
-              "content_scripts/tv/tv.js",
-              "content_scripts/tv/chart.js",
-              "content_scripts/tv/indicatorInput.js", "content_scripts/tv/indicators.js",
+              "src/lib/csv.js",
+              "src/content_scripts/config.js",
+              "src/content_scripts/selector.js",
+              "src/content_scripts/namespace.js",
+              "src/content_scripts/page.js", "src/content_scripts/file.js",
+              "src/content_scripts/storage.js",
 
-              "content_scripts/ui/ui.js",
-              "content_scripts/ui/3DChart.js", "content_scripts/ui/uploadingSignals.js",
-              "content_scripts/ui/attaching.js","content_scripts/ui/backtestParameters.js",
+              "src/content_scripts/tv/tv.js",
+              "src/content_scripts/tv/chart.js",
+              "src/content_scripts/tv/indicatorInput.js", "src/content_scripts/tv/indicators.js",
 
-              "content_scripts/model.js","content_scripts/backtest.js",
+              "src/content_scripts/ui/ui.js",
+              "src/content_scripts/ui/3DChart.js", "src/content_scripts/ui/uploadingSignals.js",
+              "src/content_scripts/ui/attaching.js","src/content_scripts/ui/backtestParameters.js",
 
-              "content_scripts/action/action.js",
-              "content_scripts/action/uploadingSignals.js", "content_scripts/action/parameters.js",
-              "content_scripts/action/backtesting.js",
+              "src/content_scripts/model.js","src/content_scripts/backtest.js",
 
-              "content_scripts/controller.js"
+              "src/content_scripts/action/action.js",
+              "src/content_scripts/action/uploadingSignals.js", "src/content_scripts/action/parameters.js",
+              "src/content_scripts/action/backtesting.js",
+
+              "src/content_scripts/controller.js"
               ],
             "run_at": "document_end"
         }
@@ -44,17 +47,17 @@
     "permissions": ["storage", "unlimitedStorage", "activeTab"],
     "action": {
           "default_icon": {
-            "16": "images/tv_assist_16.png",
-            "32": "images/tv_assist_32.png",
-            "48": "images/tv_assist_48.png",
-            "64": "images/tv_assist_64.png",
-            "128": "images/tv_assist_128.png"
+            "16": "src/images/tv_assist_16.png",
+            "32": "src/images/tv_assist_32.png",
+            "48": "src/images/tv_assist_48.png",
+            "64": "src/images/tv_assist_64.png",
+            "128": "src/images/tv_assist_128.png"
           },
           "default_title": "TV",
-          "default_popup": "popup/assistant.html"
+          "default_popup": "src/popup/assistant.html"
     },
     "web_accessible_resources": [{
-      "resources": ["page-context.js", "fonts/fa-solid-900.woff2"],
+      "resources": ["src/page/page-context.js", "src/fonts/fa-solid-900.woff2"],
       "matches": ["<all_urls>"]
     }]
 }

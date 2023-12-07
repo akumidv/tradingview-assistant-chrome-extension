@@ -1,10 +1,29 @@
+if (typeof exports === 'object' && typeof module === 'object') {
+  // eslint no-var: "ignore"
+  var Plotly = require('plotly.js-gl3d-dist-min')
+}
+
 const ui3DChart = {}
 
 ui3DChart.show3DChart = async (testResults) => {
-  if (typeof testResults === 'undefined' || !testResults.hasOwnProperty('performanceSummary') || testResults.performanceSummary.length === 0)
-    throw ('Do not exist backtesting results, please try backtest again')
-  if (typeof Plotly === 'undefined')
-    throw ("3D Chart library hadn't loaded. Please wait and try again")
+  testResults.ticker ='123'  // TODO remove
+  testResults.timeFrame = '1h'
+  testResults.method = 'a'
+  testResults.filteredSummary = []
+  testResults.cycles= 3
+  testResults.paramSpace= 'paramSpace'
+  testResults.filterAscending = null
+  _create3DPopup(testResults)
+  const iondv3DChartEl1 = document.getElementById('iondv3DChart')
+  _showPlotlyData(iondv3DChartEl1, [1,20, 30], [2,30, 40], [3,40, 50])
+  return
+
+  if (typeof testResults === 'undefined' || !testResults.hasOwnProperty('performanceSummary') || testResults.performanceSummary.length === 0) {
+    throw new Error('Do not exist backtesting results, please try backtest again')
+  }
+  if (typeof Plotly === 'undefined') {
+    throw new Error("3D Chart library hadn't loaded. Please wait and try again")
+  }
 
   return new Promise(resolve => {
     _create3DPopup(testResults)
@@ -12,8 +31,9 @@ ui3DChart.show3DChart = async (testResults) => {
     if (btnClose) {
       btnClose.onclick = () => {
         const iondv3DChartEl = document.getElementById('iondv3DChart')
-        if (iondv3DChartEl)
+        if (iondv3DChartEl) {
           iondv3DChartEl.parentNode.removeChild(iondv3DChartEl)
+        }
         return resolve()
       }
     }
@@ -63,11 +83,11 @@ ui3DChart.show3DChart = async (testResults) => {
 }
 
 function _create3DPopup(testResults) {
-  const chart3d = document.createElement("div")
+  const chart3d = document.createElement('div')
   chart3d.id = 'iondv3DChart'
-  chart3d.setAttribute("style", `background-color:rgba(0, 0, 0, 0.4);
-    position:absolute; width:100%; height:100%; top:0px; left:0px; z-index:10000;`);
-  chart3d.style.height = document.documentElement.scrollHeight + "px";
+  chart3d.setAttribute('style', `background-color:rgba(0, 0, 0, 0.4);
+    position:absolute; width:100%; height:100%; top:0px; left:0px; z-index:10000;`)
+  chart3d.style.height = document.documentElement.scrollHeight + 'px'
 
   chart3d.innerHTML = `<button id="iondvBoxClose" style="position: absolute;left: 50%;top: 50%;margin-top: -325px;margin-left: 465px;">Close</button>
     <div style="position: absolute; left: 50%;top: 50%; padding: 5px;
@@ -78,13 +98,13 @@ function _create3DPopup(testResults) {
     <div style="margin:0;padding: 0px;clear: both;width: 100%;">
       <div style="display:inline-block;vertical-align: middle;padding: 0px;width: 175px;">
         <h3 style="padding-bottom: 10px">Backtesting Results</h3>
-        <p>Strategy name: ${testResults['name']}<br>
-        Symbol: ${testResults['ticker']}<br>
-        Timeframe: ${testResults['timeFrame']}<br>
-        Backtest method: ${testResults['method']}<br>
-        Backtest cycles: ${testResults['performanceSummary'].length + testResults['filteredSummary'].length}(${testResults['cycles']})<br>
-        Parameter space: ${testResults['paramSpace']}<br>
-        ${testResults['filterAscending'] !== null ? 'Filter by "' + testResults['filterParamName'] + '", value ' + testResults['filterValue']: ''}<br>
+        <p>Strategy name: ${testResults.name}<br>
+        Symbol: ${testResults.ticker}<br>
+        Timeframe: ${testResults.timeFrame}<br>
+        Backtest method: ${testResults.method}<br>
+        Backtest cycles: ${testResults.performanceSummary.length + testResults.filteredSummary.length}(${testResults.cycles})<br>
+        Parameter space: ${testResults.paramSpace}<br>
+        ${testResults.filterAscending !== null ? 'Filter by "' + testResults.filterParamName + '", value ' + testResults.filterValue : ''}<br>
         </p>
         <div>Parameter on the x-axis <br><select id="iondvX" name="x" style="width: 170px"></select></div>
         <div>Parameter on the y-axis <br><select id="iondvY" name="t" style="width: 170px"></select></div>
@@ -99,51 +119,51 @@ function _create3DPopup(testResults) {
   document.getElementsByTagName('body')[0].appendChild(chart3d)
 }
 
-
-function _generateOptionsHtml (values, defVal = null) {
+function _generateOptionsHtml(values, defVal = null) {
   defVal = defVal === null ? values[0] : defVal
-  return  values.reduce((text, item) => `${text}<option value="${item}"${item === defVal ? ' selected="selected"' : ''}>${item}</option>`, '')
+  return values.reduce((text, item) => `${text}<option value="${item}"${item === defVal ? ' selected="selected"' : ''}>${item}</option>`, '')
 }
-
 
 function _setAxisOptions(elId, values, defVal, excludedVal = null) {
   const filteredValues = excludedVal !== null ? values.filter(item => item !== excludedVal) : values
-  let optionsHtml = _generateOptionsHtml(filteredValues, defVal)
+  const optionsHtml = _generateOptionsHtml(filteredValues, defVal)
   const axis = document.getElementById(elId)
   axis.value = defVal
   axis.innerHTML = optionsHtml
 }
 
-
 function _prepareAxisList(testResults) {
   const paramNames = []
   Object.keys(testResults.performanceSummary[0]).forEach(item => {
-    if(item.startsWith('__'))
+    if (item.startsWith('__')) {
       paramNames.push(item.substring(2))
+    }
   })
-  if (paramNames.length === 0)
-    throw('None of parameters present in data')
-  else if (paramNames.length === 1)
+  if (paramNames.length === 0) {
+    throw new Error('None of parameters present in data')
+  } else if (paramNames.length === 1) {
     paramNames.push('none')
+  }
   const resultsNames = Object.keys(testResults.performanceSummary[0]).filter(item => !item.startsWith('__') && item !== 'comment')
-  if (resultsNames.length === 0)
-    throw('None of results present in data')
-  return [paramNames,resultsNames]
+  if (resultsNames.length === 0) {
+    throw new Error('None of results present in data')
+  }
+  return [paramNames, resultsNames]
 }
-
 
 function _updateParamList(elId, paramNames, excludedVal) {
   const curVal = document.getElementById(elId).value
   _setAxisOptions(elId, paramNames, curVal, excludedVal)
 }
 
-
-function _showPlotlyData(chartPlotlyEl, xData, yData, zData){//rawData) {
+function _showPlotlyData(chartPlotlyEl, xData, yData, zData) {
   const data = [{
-    x: xData, y: yData, z: zData,
+    x: xData,
+    y: yData,
+    z: zData,
     type: 'surface',
-    contours: {z: {show:true}}
-  }];
+    contours: {z: {show: true}}
+  }]
   const layout = {
     // xaxis: {title: {text: 'x Axis'}},
     // yaxis: {title: {text: 't Axis'}},
@@ -153,35 +173,37 @@ function _showPlotlyData(chartPlotlyEl, xData, yData, zData){//rawData) {
     height: 600,
     // highlightcolor: "limegreen",
     showlegend: false,
-    margin: { l: 65, r: 50, b: 65, t: 90 }
-  };
-  Plotly.newPlot(chartPlotlyEl, data, layout);
+    margin: {l: 65, r: 50, b: 65, t: 90}
+  }
+  Plotly.newPlot(chartPlotlyEl, data, layout)
 }
-
 
 function _updateChart(performanceSummary, xSelVal, ySelVal, zName, aproxType) {
   const xName = `__${xSelVal}`
   const yName = `__${ySelVal}`
-  const chartPlotly = document.getElementById('iondvPlotly');
+  const chartPlotly = document.getElementById('iondvPlotly')
   const yAxisDict = {}
   const zAxisDict = {}
   performanceSummary.forEach(item => {
     if (item.hasOwnProperty(xName) && item.hasOwnProperty(yName) && item.hasOwnProperty(zName)) {
-      if(!yAxisDict.hasOwnProperty(item[yName]))
+      if (!yAxisDict.hasOwnProperty(item[yName])) {
         yAxisDict[item[yName]] = null
-      if (!zAxisDict.hasOwnProperty(item[xName]))
+      }
+      if (!zAxisDict.hasOwnProperty(item[xName])) {
         zAxisDict[item[xName]] = {}
-      if (!zAxisDict[item[xName]].hasOwnProperty(item[yName]))
+      }
+      if (!zAxisDict[item[xName]].hasOwnProperty(item[yName])) {
         zAxisDict[item[xName]][item[yName]] = []
+      }
       zAxisDict[item[xName]][item[yName]].push(item[zName])
       // zAxisDict[item[xName]][item[yName]] = item[zName]
     } else {
-      console.log('MISSED ONE OF KEYS',  xSelVal, ySelVal, zSelVal, item)
+      console.log('MISSED ONE OF KEYS', xSelVal, ySelVal, item)
     }
   })
 
-  const xAxis = Object.keys(zAxisDict).sort((a,b) => a - b)
-  const yAxis = Object.keys(yAxisDict).sort((a,b) => a - b)
+  const xAxis = Object.keys(zAxisDict).sort((a, b) => a - b)
+  const yAxis = Object.keys(yAxisDict).sort((a, b) => a - b)
   const zAxis = []
   yAxis.forEach(y => {
     const row = []
@@ -189,11 +211,11 @@ function _updateChart(performanceSummary, xSelVal, ySelVal, zName, aproxType) {
       if (zAxisDict.hasOwnProperty(x) && zAxisDict[x].hasOwnProperty(y)) {
         if (!zAxisDict[x][y]) {
           row.push(0)
-        }  else if (zAxisDict[x][y].length === 1) {
+        } else if (zAxisDict[x][y].length === 1) {
           row.push(zAxisDict[x][y][0])
         } else {
           let val
-          switch (aproxType){
+          switch (aproxType) {
             case 'max':
               val = Math.max(...zAxisDict[x][y])
               break
@@ -201,7 +223,7 @@ function _updateChart(performanceSummary, xSelVal, ySelVal, zName, aproxType) {
               val = Math.min(...zAxisDict[x][y])
               break
             case 'avg':
-              val = zAxisDict[x][y].reduce((acc,v,i,a)=>(acc+v/a.length),0)
+              val = zAxisDict[x][y].reduce((acc, v, i, a) => (acc + v / a.length), 0)
               break
             case 'minmax':
             default:
@@ -216,5 +238,5 @@ function _updateChart(performanceSummary, xSelVal, ySelVal, zName, aproxType) {
     zAxis.push(row)
   })
 
-  _showPlotlyData(chartPlotly,  xAxis, yAxis, zAxis)
+  _showPlotlyData(chartPlotly, xAxis, yAxis, zAxis)
 }
