@@ -29,23 +29,23 @@ file.upload = async (handler, endOfMsg, isMultiple = false) => {
 }
 
 
-file.uploadCSV = async (endOfMsg, isMultiple = false) => {
-  let fileUploadEl = document.createElement('input');
-  fileUploadEl.type = 'file';
-  if (isMultiple)
-    fileUploadEl.multiple = isMultiple;
-  fileUploadEl.addEventListener('change', async () => {
-    let message = isMultiple ? 'File upload results:\n' : 'File upload result:\n'
-
-    for (let file of fileUploadEl.files) {
-      message += await handler(file)
-    }
-    message += endOfMsg ? '\n' + endOfMsg : ''
-    await ui.showPopup(message)
-    ui.isMsgShown = false
-  });
-  fileUploadEl.click();
-}
+// file.uploadCSV = async (endOfMsg, isMultiple = false) => {
+//   let fileUploadEl = document.createElement('input');
+//   fileUploadEl.type = 'file';
+//   if (isMultiple)
+//     fileUploadEl.multiple = isMultiple;
+//   fileUploadEl.addEventListener('change', async () => {
+//     let message = isMultiple ? 'File upload results:\n' : 'File upload result:\n'
+//
+//     for (let file of fileUploadEl.files) {
+//       message += await handler(file)
+//     }
+//     message += endOfMsg ? '\n' + endOfMsg : ''
+//     await ui.showPopup(message)
+//     ui.isMsgShown = false
+//   });
+//   fileUploadEl.click();
+// }
 
 
 file.parseCSV = async (fileData) => {
