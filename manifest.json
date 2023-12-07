@@ -54,7 +54,7 @@
           "default_popup": "popup/assistant.html"
     },
     "web_accessible_resources": [{
-      "resources": ["page-context.js", "fonts/fa-solid-900.woff2", "lib/plotly.min.js"],
+      "resources": ["page-context.js", "fonts/fa-solid-900.woff2"],
       "matches": ["<all_urls>"]
     }]
 }
