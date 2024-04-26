@@ -7,7 +7,7 @@ const tv = {
 
 
 const SUPPORT_TEXT = 'Please retry. <br />If the problem reproduced then it is possible that TV UI changed. Create task on' +
-        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it does\'t alredy created)'
+        '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it isn\'t alredy created)'
 
 // Inject script to get access to TradingView data on page
 const script = document.createElement('script');
@@ -54,7 +54,8 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
       if(!stratParamEl) {
         throw new Error('There is not strategy param button on the "Strategy tester" tab.' + SUPPORT_TEXT)
       }
-      stratParamEl.click()
+      page.mouseClick(stratParamEl)
+      // stratParamEl.click()
       const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
       if (!dialogTitle || !dialogTitle.innerText) {
         if (document.querySelector(SEL.cancelBtn))
