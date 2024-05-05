@@ -7,7 +7,7 @@ Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingv
 
 Video [how to install extension](https://www.youtube.com/watch?v=FH7dI4K8w5k)
 
-## Declaimer
+## Disclaimer
 **Attention!** 
 
 Active use of the extension can cause detection by the TradingView as using a bot for backtesting and lead to the ban of the user's account.
@@ -107,7 +107,7 @@ The signals are stored in the browser, to activate them, open the properties of 
 
 ## Setup
 
-Install from [Chrome webstroe](https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg)
+Install from [Chrome webstore](https://chromewebstore.google.com/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg)
 
 Or manually add the latest version to chrome based browser from this repository by following the instruction below.
 
@@ -165,7 +165,7 @@ Regarding contacts via social networks - they are banned in Russia, so I do not 
 Cryptocurrency transfer information       
        
 * USDT, TRX (TRC20) network        TFqv5hB3cdVHxkxhL8qjpfRMbeqMcuwzFP
-* USDT, Matic (Poligon) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
+* USDT, Matic (Polygon) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
 * USDT, ETH (ERC20) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
 * USDT, BSC (BEP20) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
 * USDT, Sol (Solana) network:        CuwuesyM1tyrjyJr9avDrrRqcB4rTbciao5mXYP8HkKo

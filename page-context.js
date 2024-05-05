@@ -1,6 +1,11 @@
 // TradingView page injection script for get data from window.TradingView object
 let isBaseTradingView = true
 
+const message = {
+  errorsNoBacktest: 'There is no backtest data. Try to do a new backtest',
+  errorNoDataMessage: 'Can\'t get test results data'
+}
+
 window.addEventListener('message', async function (event) {
   const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
   if (!event.origin.startsWith(url) || !event.data ||
@@ -30,14 +35,26 @@ window.addEventListener('message', async function (event) {
       window.postMessage({name: 'iondvPage', action: event.data.action, data: tvData}, event.origin)
       break
     }
+    case 'previewStrategyTestResults': {
+      try {
+        if (!event.data.hasOwnProperty('data'))
+          window.postMessage({name: 'iondvPage', action: event.data.action, message: message.errorNoDataMessage }, event.origin)
+        await previewStrategyTestResults(event.data.data)
+        window.postMessage({name: 'iondvPage', action: event.data.action}, event.origin)
+      } catch (err) {
+        console.error(`[error] previewStrategyTestResults`, err)
+        window.postMessage({name: 'iondvPage', action: event.data.action, data: null, message: `${err}`}, event.origin)
+      }
+      break
+    }
     case 'show3DChart': {
       try {
         if (!event.data.hasOwnProperty('data'))
-          window.postMessage({name: 'iondvPage', action: event.data.action, message: "Can't get test results data"}, event.origin)
+          window.postMessage({name: 'iondvPage', action: event.data.action, message: message.errorNoDataMessage }, event.origin)
         await show3DChart(event.data.data)
         window.postMessage({name: 'iondvPage', action: event.data.action}, event.origin)
       } catch (err) {
-        console.error(`[error] shor 3d chart.`, err)
+        console.error(`[error] show3DChart`, err)
         window.postMessage({name: 'iondvPage', action: event.data.action, data: null, message: `${err}`}, event.origin)
       }
       break
@@ -48,10 +65,28 @@ window.addEventListener('message', async function (event) {
   }
 })
 
-
-async function show3DChart (testResults) {
+async function previewStrategyTestResults(testResults) {
   if (typeof testResults === 'undefined' || !testResults.hasOwnProperty('perfomanceSummary') || testResults.perfomanceSummary.length === 0)
-    throw ('Do not exist backtesting results, please try backtest again')
+    throw (message.errorsNoBacktest)
+
+  return new Promise(resolve => {
+    createPreviewTestResultsPopup(testResults)
+    const btnClose = document.getElementById('iondvBoxClose')
+    if (btnClose) {
+      btnClose.onclick = () => {
+        const iondvPreviewResultsEl = document.getElementById('iondvPreviewResults')
+        if (iondvPreviewResultsEl)
+        iondvPreviewResultsEl.parentNode.removeChild(iondvPreviewResultsEl)
+        return resolve()
+      }
+    }
+
+  })
+}
+
+async function show3DChart(testResults) {
+  if (typeof testResults === 'undefined' || !testResults.hasOwnProperty('perfomanceSummary') || testResults.perfomanceSummary.length === 0)
+    throw (message.errorsNoBacktest)
   if (typeof Plotly === 'undefined')
     throw ("3D Chart library hadn't loaded. Please wait and try again")
 
@@ -111,9 +146,71 @@ async function show3DChart (testResults) {
 
   })
 }
+function createPreviewTestResultsPopup(testResults) {
+  function paramRowContent(row, paramsNames) {
+    return paramsNames.map((param) => `<td style="text-align: right; padding: 4px;">${row['__' + param]}</td>`)
+  }
+  function getId(col) {
+    return col.replaceAll(' ', '_')
+  }
+  const preview = document.createElement('div')
+  preview.id = 'iondvPreviewResults'
+  preview.setAttribute("style", `background-color:rgba(0, 0, 0, 0.4); position:absolute; width:100%; height:100%; top:0px; left:0px; z-index:10000;`);
+  preview.style.height = document.documentElement.scrollHeight + "px";
+  const col1 = 'Net Profit %: All', col2 = 'Max Drawdown %', col3 = 'Avg # Bars in Trades: All',
+  col4 = 'Total Closed Trades: All', col5 = 'Sharpe Ratio', col6 = 'Sortino Ratio', col7 = 'Profit Factor: All'
+  const col1Id = getId(col1), col2Id = getId(col2), col3Id = getId(col3),
+  col4Id = getId(col4), col5Id = getId(col5), col6Id = getId(col6), col7Id = getId(col7)
+  const arraySummary = testResults.filteredSummary.length ? testResults.filteredSummary : testResults.perfomanceSummary
+  const style = 'style="text-align: right; padding: 4px;"'
+  const styleHeader = 'style="text-align: right; padding: 4px; cursor: pointer;"'
+  const styleParam = 'style="text-align: right; padding: 4px; color: gray;"'
+  const title = `Preview ${arraySummary.length} results`
+  const subtitle = `${testResults.name} ${testResults.ticker} ${testResults.timeFrame}`
+  const headerParams = testResults.paramsNames.map((param) => `<th ${styleParam}>${param}</th>`)
+  const tableContent = arraySummary.map((row) => `<tr><td ${style}>${row[col1]}</td>
+    <td ${style}>${row[col2]}</td><td ${style}>${row[col3]}</td><td ${style}>${row[col4]}</td>
+    <td ${style}>${row[col5]}</td><td ${style}>${row[col6]}</td><td ${style}>${row[col7]}</td>
+    ${paramRowContent(row, testResults.paramsNames)}</tr>`)
+    preview.innerHTML = `<button id="iondvBoxClose" style="position: absolute;left: 50%;top: 50%;
+    margin-top: -325px;margin-left: 465px;">Close</button>
+    <div style="position: absolute; left: 50%;top: 50%; padding: 5px;
+        width: 900px;height:600px; margin-top: -300px; margin-left: -400px;
+        background: #fff; border: 1px solid #ccc; box-shadow: 3px 3px 7px #777;
+        -webkit-box-shadow: 3px 3px 7px #777;-moz-border-radius: 22px; -webkit-border-radius: 22px;
+        z-index: 999; overflow-y: auto">
+      <div style="margin:0;padding: 0px;clear: both;width: 100%;">
+        <div style="display:inline-block;vertical-align: middle;padding: 0px;width: 100%;">
+          <h3 style="padding-bottom: 10px">${title}</h3>
+          <h2 style="padding-bottom: 10px">${subtitle}</h2>
+          <table id="tablePreviewResults" style="width: 100%;">
+            <tr>
+              <th id="${col1Id}" ${styleHeader}>${col1}</th>
+              <th id="${col2Id}" ${styleHeader}>${col2}</th>
+              <th id="${col3Id}" ${styleHeader}>${col3}</th>
+              <th id="${col4Id}" ${styleHeader}>${col4}</th>
+              <th id="${col5Id}" ${styleHeader}>${col5}</th>
+              <th id="${col6Id}" ${styleHeader}>${col6}</th>
+              <th id="${col7Id}" ${styleHeader}>${col7}</th>
+              ${headerParams.join(' ')}
+            </tr>
+            ${tableContent.join(' ')}
+          </table>
+        </div>
+      </div>
+    </div>`
+  document.getElementsByTagName('body')[0].appendChild(preview)
+  document.getElementById(col1Id).onclick = () => sortTable(0)
+  document.getElementById(col2Id).onclick = () => sortTable(1)
+  document.getElementById(col3Id).onclick = () => sortTable(2)
+  document.getElementById(col4Id).onclick = () => sortTable(3)
+  document.getElementById(col5Id).onclick = () => sortTable(4)
+  document.getElementById(col6Id).onclick = () => sortTable(5)
+  document.getElementById(col7Id).onclick = () => sortTable(6)
+}
 
 function create3DPopup(testResults) {
-  const chart3d = document.createElement("div")
+  const chart3d = document.createElement('div')
   chart3d.id = 'iondv3DChart'
   chart3d.setAttribute("style", `background-color:rgba(0, 0, 0, 0.4);
     position:absolute; width:100%; height:100%; top:0px; left:0px; z-index:10000;`);
@@ -267,4 +364,41 @@ function updateChart(perfomanceSummary, xSelVal, ySelVal, zName, aproxType) {
   })
 
   showPlotlyData(chartPlotly,  xAxis, yAxis, zAxis)
+}
+
+function sortTable(n) {
+  let table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+  table = document.getElementById('tablePreviewResults');
+  switching = true;
+  dir = 'asc';
+  while (switching) {
+    switching = false;
+    rows = table.rows;
+    for (i = 1; i < (rows.length - 1); i++) {
+      shouldSwitch = false;
+      x = rows[i].getElementsByTagName('TD')[n];
+      y = rows[i + 1].getElementsByTagName('TD')[n];
+      if (dir == 'asc') {
+        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+          shouldSwitch = true;
+          break;
+        }
+      } else if (dir == 'desc') {
+        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+          shouldSwitch = true;
+          break;
+        }
+      }
+    }
+    if (shouldSwitch) {
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+      switchcount ++;
+    } else {
+      if (switchcount == 0 && dir == 'asc') {
+        dir = 'desc';
+        switching = true;
+      }
+    }
+  }
 }
