@@ -37,10 +37,10 @@ ui.checkInjectedElements = () => {
       return
     const importExportEl = document.createElement('div')
     importExportEl.id = 'iondvImportExport'
-    importExportEl.setAttribute('style', 'padding-left: 10px;padding-right: 10px')
+    importExportEl.setAttribute('style', 'padding-left: 10px;padding-right: 10px; padding-top: 8px;')
     importExportEl.innerHTML = '<a id="iondvImport" style="cursor: pointer;padding-right: 5px"><i class="iondv_icon iondv_upload"></i></a>' +
       '<a id="iondvExport" style="cursor: pointer;padding-left: 5px;"><i class="iondv_icon iondv_download"></i></a>'
-    strategyDefaultEl.after(importExportEl)
+    strategyDefaultEl.before(importExportEl)
     const exportBtn = document.getElementById('iondvExport')
     const importBtn = document.getElementById('iondvImport')
     if (exportBtn) {
