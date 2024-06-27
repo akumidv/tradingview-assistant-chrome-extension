@@ -33,7 +33,7 @@ function setOptionsEvents() {
 }
 
 function setClickEvents() {
-  for(let elId of ['uploadSignals', 'testStrategy', 'deepTestStrategy', 'downloadStrategyTestResults', 'getStrategyTemplate', 'uploadStrategyTestParameters', 'clearAll', 'show3DChart']) {
+  for(let elId of ['uploadSignals', 'testStrategy', 'deepTestStrategy', 'previewStrategyTestResults', 'downloadStrategyTestResults', 'getStrategyTemplate', 'uploadStrategyTestParameters', 'clearAll', 'show3DChart']) {
     function signalListener() {
       sendSignalToActiveTab(elId)
     }
@@ -186,7 +186,7 @@ function saveOptions(signal) {
   console.log('Saved options', iondvOptions)
 }
 
-function sendSignalToActiveTab (signal) {
+function sendSignalToActiveTab(signal) {
   let iondvOptions = null
   if(signal !== 'clearAll') {
     iondvOptions = getOptions(signal)

@@ -2,6 +2,10 @@ const action = {
   workerStatus: null
 }
 
+const message = {
+  errorsNoBacktest: 'There is no backtest data. Try to do a new backtest'
+}
+
 action.saveParameters = async () => {
   const strategyData = await tv.getStrategy(null, true)
   if(!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
@@ -47,14 +51,28 @@ action.clearAll = async () => {
   await ui.showPopup(clearRes && clearRes.length ? `The data was deleted: \n${clearRes.map(item => '- ' + item).join('\n')}` : 'There was no data in the storage')
 }
 
+action.previewStrategyTestResults = async () => {
+  const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
+  if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
+    await ui.showWarningPopup(message.errorsNoBacktest)
+    return
+  }
+  console.log('previewStrategyTestResults', testResults)
+  const eventData = await sendActionMessage(testResults, 'previewStrategyTestResults')
+  if (eventData.hasOwnProperty('message'))
+    await ui.showPopup(eventData.message)
+
+  // await ui.showPreviewResults(previewResults) // WHY NOT WORKING ?
+}
+
 action.downloadStrategyTestResults = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
   if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
-    await ui.showWarningPopup('There is no data for conversion. Try to do test again')
+    await ui.showWarningPopup(message.errorsNoBacktest)
     return
   }
   testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
-  console.log('testResults', testResults)
+  console.log('downloadStrategyTestResults', testResults)
   const CSVResults = file.convertResultsToCSV(testResults)
   const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
   const propVal = {}
@@ -270,22 +288,22 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
 }
 
 
-action.show3DChart= async () => {
+action.show3DChart = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
   if(!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
     await ui.showPopup('There is no results data for to show. Try to backtest again')
     return
   }
   testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
-  const eventData = await send3dChartMessage(testResults)
+  const eventData = await sendActionMessage(testResults, 'show3DChart')
   if (eventData.hasOwnProperty('message'))
     await ui.showPopup(eventData.message)
 }
 
-async function send3dChartMessage (testResults) {
+async function sendActionMessage(data, action) {
   return new Promise(resolve => {
     const url =  window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
-    tvPageMessageData['show3DChart'] = resolve
-    window.postMessage({name: 'iondvScript', action: 'show3DChart', data: testResults}, url) // TODO wait for data
+    tvPageMessageData[action] = resolve
+    window.postMessage({name: 'iondvScript', action, data}, url) // TODO wait for data
   })
 }
