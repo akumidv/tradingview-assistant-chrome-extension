@@ -14,7 +14,7 @@ Active use of the extension can cause detection by the TradingView as using a bo
 
 Although the extension is not a bot (i.e. it does not work independently of the user in the cloud), it does not use the 
 TradingView API and does not interfere with data transmission, but only automates user behavior through the UI. Its use and 
-all risks remain with the users. 
+all risks remain with the users.
 
 **Disclaimer** 
 
@@ -22,25 +22,11 @@ The developer of the extension does not response for any possible consequences o
 
 
 ## Last version changes
-2.1 => 2.2:
-- fix for TV UI changes
-- fix for breaking set of strategy parameters if strategy have parameters with identical names
-
-2.0 => 2.1
-- fixed TV UI changed in performance report table that freeze extension
-
-1.16 => 2.0(1.17):
-- deep backtesting - thanks @Murena7 for implementation draft version 
-- fixed for chrome memory error (increased possible cycles for backtesting and speed for settiings of parameters)
-- delay for backtesting results (for deep backtesting x2)
-- delay between backtests for reduce TV API load
-- saving in CSV values with more than 2 digits after point
-- fixes for numbers input in nonumbers fields - thanks @TomKaltz for pull request with changes
-- backtesting for timeframes - thanks jarno for suppport this changes in version
-
+2.9.3 > 2.10.0:
+- fix selector that prevent working import/export [@azarzag]
+- new functinality to preview results of backtesting [@pegaltier]
 
 ## Functionality
-
 
 ### Backtesting trading strategies, optimisation of the strategy's parameters:
 
@@ -157,17 +143,5 @@ akumidv `[at]` yahoo.com  (Do not send errors to email please, use [github issue
 
 https://linkedin.com/in/akuminov
 
-https://fb.com/akuminov
+Email is preferred way, but usually I do not have the ability to answer quickly (2-3 days delay).
 
-Regarding contacts via social networks - they are banned in Russia, so I do not answer quickly. Email is preferred way, but usually I do not have the ability to answer quickly (2-3 days delay).
-
-## Project development donate
-Cryptocurrency transfer information       
-       
-* USDT, TRX (TRC20) network        TFqv5hB3cdVHxkxhL8qjpfRMbeqMcuwzFP
-* USDT, Matic (Polygon) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
-* USDT, ETH (ERC20) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
-* USDT, BSC (BEP20) network:        0x1e2598ff5aa98b83acc92cf2831b452b2c708b27
-* USDT, Sol (Solana) network:        CuwuesyM1tyrjyJr9avDrrRqcB4rTbciao5mXYP8HkKo
-
-Binance Pay ID for USDT, USDC, BUSD or other crypto:        240890941 (akumidv)
