@@ -31,7 +31,7 @@ const SEL = {
     strategyReportHeader: '#bottom-area div.backtesting div[class^="reportContainer"] table thead > tr > th',
     strategyReportRow: '#bottom-area div.backtesting div[class^="reportContainer"] table tbody > tr',
     strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
-    strategyDefaultElement: '#study-defaults-manager',
+    strategyDefaultElement: '#property-actions',
     strategyDeepTestCheckbox: '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input',
     strategyDeepTestStartDate: '#bottom-area div[class^="backtesting"]  [class^="historyParams"]  [class^="container" ]> div:nth-child(1) div[class^="pickerInput"] input',
     strategyDeepTestGenerateBtn: '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"]:not([disabled])',
