@@ -195,7 +195,7 @@ action._getStrategyData = async () => {
 action._parseTF = (listOfTF) => {
   if (!listOfTF || typeof (listOfTF) !== 'string')
     return []
-  return listOfTF.split(',').map(tf => tf.trim()).filter(tf => /(^\d{1,2}m$)|(^\d{1}h$)|(^\d{1}D$)|(^\d{1}W$)|(^\d{1}M$)/.test(tf))
+  return listOfTF.split(',').map(tf => tf.trim()).filter(tf => /(^\d{1,2}m$)|(^\d{1,2}h$)|(^\d{1,2}D$)|(^\d{1,2}W$)|(^\d{1,2}M$)/.test(tf))
 
 }
 
