@@ -22,20 +22,29 @@ const SEL = {
     strategySummaryActive: '[id="Performance Summary"][class*="selected"]',
     strategyPerformanceTab: '[id="Performance Summary"]',
     strategyPerformanceTabActive: '[id="Performance Summary"][class*="selected"]',
-    strategyReport: '#bottom-area div.backtesting div[class^="reportContainer"] table',
-    strategyReportInProcess: '#bottom-area div[class^="backtesting"] [role="progressbar"]',
-    // strategyReportIsTransition: '#bottom-area div.backtesting-content-wrapper > [role="progressbar"]',
-    strategyReportReady: '#bottom-area div.backtesting div[class^="reportContainer"] [class*="root"]',
+
+    strategyReportObserveArea: '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]',
+    strategyReportInProcess: '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]  div[role="progressbar"]', //div[class^="tv-spinner"]',
+    strategyReportReady: '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] [class*="root"]',
     // strategyReportTransitionReady: '#bottom-area div.backtesting-content-wrapper > div:not(.opacity-transition).reports-content',
-    strategyReportError: '#bottom-area div.backtesting div[class^="reportContainer"] [class*=emptyStateIcon]',
-    strategyReportHeader: '#bottom-area div.backtesting div[class^="reportContainer"] table thead > tr > th',
-    strategyReportRow: '#bottom-area div.backtesting div[class^="reportContainer"] table tbody > tr',
-    strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
-    strategyDefaultElement: '#property-actions',
+    strategyReportError: '#bottom-area div[class^="backtesting"] div[class^="container"] [class*=emptyStateIcon]',
+    strategyReportHeader: '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] table thead > tr > th',
+    strategyReportRow: '#bottom-area  div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] table tbody > tr',
+
+
     strategyDeepTestCheckbox: '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input',
     strategyDeepTestStartDate: '#bottom-area div[class^="backtesting"]  [class^="historyParams"]  [class^="container" ]> div:nth-child(1) div[class^="pickerInput"] input',
     strategyDeepTestGenerateBtn: '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"]:not([disabled])',
     strategyDeepTestGenerateBtnDisabled: '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"][disabled]',
+    strategyReportDeepTestObserveArea: '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"]',
+    strategyReportDeepTestInProcess: '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[role="progressbar"]',
+    strategyReportDeepTestReady: '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] [class*="root"]',
+    strategyReportDeepTestHeader: '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] table thead > tr > th',
+    strategyReportDeepTestRow: '#bottom-area  div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] table tbody > tr',
+
+
+    strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
+    strategyDefaultElement: '#property-actions',
 
     strategyImportExport: '#iondvImportExport',
 

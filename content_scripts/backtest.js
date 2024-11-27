@@ -130,7 +130,7 @@ async function getInitBestValues(testResults) {
     }
   }
   await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
-  const res  = await tv.getPerformance(testResults)//tv.parseReportTable()
+  const res = await tv.getPerformance(testResults)
   resData = res['data']
   if (res['error'] === null)
     resData = calculateAdditionValuesToReport(resData)

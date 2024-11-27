@@ -1,5 +1,6 @@
 const tv = {
   reportNode: null,
+  reportDeepNode: null,
   tickerTextPrev: null,
   timeFrameTextPrev: null,
   isReportChanged: false
@@ -55,8 +56,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
         throw new Error('There is not strategy param button on the "Strategy tester" tab.' + SUPPORT_TEXT)
       }
       page.mouseClick(stratParamEl)
-      // stratParamEl.click()
-      const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
+      const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 7500)
       if (!dialogTitle || !dialogTitle.innerText) {
         if (document.querySelector(SEL.cancelBtn))
           document.querySelector(SEL.cancelBtn).click()
@@ -335,13 +335,12 @@ tv.checkAndOpenStrategy = async (name) => {
 }
 
 tv.openStrategyTab = async () => {
-  // let isStrategyActiveEl = document.querySelector(SEL.strategyTesterTabActive)
   let isStrategyActiveEl = await page.waitForSelector(SEL.strategyTesterTabActive)
   if(!isStrategyActiveEl) {
-    // const strategyTabEl = document.querySelector(SEL.strategyTesterTab)
     const strategyTabEl = await page.waitForSelector(SEL.strategyTesterTab)
     if(strategyTabEl) {
       strategyTabEl.click()
+      await page.waitForSelector(SEL.strategyTesterTabActive)
     } else {
       throw new Error('There is not "Strategy Tester" tab on the page. Open correct page.' + SUPPORT_TEXT)
     }
@@ -377,13 +376,15 @@ tv.switchToStrategyTab = async () => {
     console.error('The "Performance summary" tab is not active after click')
   }
 
-  await page.waitForSelector(SEL.strategyReport, 10000)
+  await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
   if(!tv.reportNode) {
-    tv.reportNode = await page.waitForSelector(SEL.strategyReport, 10000)
+    // tv.reportNode = await page.waitForSelector(SEL.strategyReport, 10000)
+    tv.reportNode = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
     if(tv.reportNode) {
       const reportObserver = new MutationObserver(()=> {
         tv.isReportChanged = true
       });
+      console.log('SET DEEP TEST OBSERVE AREA')
       reportObserver.observe(tv.reportNode, {
         childList: true,
         subtree: true,
@@ -392,6 +393,23 @@ tv.switchToStrategyTab = async () => {
       });
     } else {
       throw new Error('The strategy report did not found.' + SUPPORT_TEXT)
+    }
+  }
+
+  if(!tv.reportDeepNode) {
+    tv.reportDeepNode = await page.waitForSelector(SEL.strategyReportDeepTestObserveArea, 5000)
+    if(tv.reportDeepNode) {
+      const reportObserver = new MutationObserver(()=> {
+        tv.isReportChanged = true
+      });
+      reportObserver.observe(tv.reportDeepNode, {
+        childList: true,
+        subtree: true,
+        attributes: false,
+        characterData: false
+      });
+    } else {
+      console.error('The strategy deep report did not found.')
     }
   }
   return testResults
@@ -469,10 +487,13 @@ tv.dialogHandler = async () => {
 
 tv.isParsed = false
 
-tv.parseReportTable = async () => {
+tv.parseReportTable = async (isDeepTest) => {
   const strategyHeaders = []
-  await page.waitForSelector(SEL.strategyReportHeader, 2500)
-  let allHeadersEl = document.querySelectorAll(SEL.strategyReportHeader)
+  const selHeader = isDeepTest ? SEL.strategyReportDeepTestHeader : SEL.strategyReportHeader
+  const selRow = isDeepTest ? SEL.strategyReportDeepTestRow : SEL.strategyReportRow
+  await page.waitForSelector(selHeader, 2500)
+
+  let allHeadersEl = document.querySelectorAll(selHeader)
   if (!allHeadersEl || !(allHeadersEl.length === 4 || allHeadersEl.length === 5)) { // 5 - Extra column for full screen
     if (!tv.isParsed)
       throw new Error('Can\'t get performance headers.' +  SUPPORT_TEXT)
@@ -485,8 +506,8 @@ tv.parseReportTable = async () => {
   }
 
   const report = {}
-  await page.waitForSelector(SEL.strategyReportRow, 2500)
-  let allReportRowsEl = document.querySelectorAll(SEL.strategyReportRow)
+  await page.waitForSelector(selRow, 2500)
+  let allReportRowsEl = document.querySelectorAll(selRow)
   if (!allReportRowsEl || allReportRowsEl.length === 0) {
     if (!tv.isParsed)
       throw new Error('Can\'t get performance rows.'  +  SUPPORT_TEXT)
@@ -500,6 +521,7 @@ tv.parseReportTable = async () => {
         continue
       }
       let paramName = allTdEl[0].innerText
+      // if (paramName === 'Net Profit') console.log('##paramName', paramName, allTdEl[1].innerText)
       let isSingleValue = allTdEl.length === 3 || ['Buy & Hold Return', 'Max Run-up', 'Max Drawdown', 'Sharpe Ratio', 'Sortino Ratio', 'Open PL'].includes(paramName)
       for(let i = 1; i <  allTdEl.length; i++) {
         if (isSingleValue && i >= 2)
@@ -547,61 +569,64 @@ tv.parseReportTable = async () => {
   return report
 }
 
-tv.generateDeepTestReport = async (loadingTime = 60000) => {
+tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
   const generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
   if (generateBtnEl) {
     page.mouseClick(generateBtnEl) // // generateBtnEl.click()
-    const reportHeader = await page.waitForSelector(SEL.strategyReportHeader, loadingTime)
-    if (!reportHeader) {
-      if (tv.isParsed)
-        return false
-      else
-        throw new Error('Error waiting Performance summary table for deep backtesting.' + SUPPORT_TEXT)
-    }
-  } else if (tv.isParsed) {
-    return false
+    // const reportHeader = await page.waitForSelector(SEL.strategyReportHeader, loadingTime)
+    // if (!reportHeader) {
+    //   // if (tv.isParsed)
+    //   //   return false
+    //   // else
+    //     throw new Error('Error waiting Performance summary table for deep backtesting.' + SUPPORT_TEXT)
+    // }
+  // } else if (tv.isParsed) {
+  //   return false
   } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
-    return false
+    return ' Deep backtesting process is not started'
   } else {
     throw new Error('Error for generate deep backtesting report due the button is not exist.'  + SUPPORT_TEXT)
   }
-  return true
+  return ''
 
 }
 
 tv.getPerformance = async (testResults, isIgnoreError=false) => {
   let reportData = {}
-
-  // let isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 2500)
-  let isProcessStart = false
-  let isProcessEnd = false
+  let message = ''
   let isProcessError = null
+  let selProgress = SEL.strategyReportInProcess
+  let selReady = SEL.strategyReportReady
+  const dataWaitingTime = testResults.isDeepTest ? testResults.dataLoadingTime * 2000 : testResults.dataLoadingTime * 1000
   if (testResults.isDeepTest) {
-    isProcessEnd = await tv.generateDeepTestReport(testResults.dataLoadingTime * 2000)
-    isProcessStart = isProcessEnd
-    isProcessError = !isProcessEnd
-  } else {
-    isProcessStart = await page.waitForSelector(SEL.strategyReportInProcess, 5000)//SEL.strategyReportIsTransition, 5000)
-    isProcessEnd = tv.isReportChanged
-    if (isProcessStart) {
-      const tick = 100
-      for(let i = 0; i < 5000/tick; i++) { // Waiting for an error 5000 ms      // isProcessEnd = await page.waitForSelector(SEL.strategyReportError, 5000)
-        isProcessEnd = await page.waitForSelector(SEL.strategyReportError, tick)
-        if (isProcessEnd || document.querySelector(SEL.strategyReportReady))
-          break
-      }
-      if (isProcessEnd == null)
-        isProcessEnd = await page.waitForSelector(SEL.strategyReportReady, testResults.dataLoadingTime * 1000)
-    } else if (isProcessEnd)
-      isProcessStart = true
-
-    isProcessError = document.querySelector(SEL.strategyReportError)
-    await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+    message = await tv.generateDeepTestReport() //testResults.dataLoadingTime * 2000)
+    if (message)
+      isProcessError = true
+    selProgress = SEL.strategyReportDeepTestInProcess
+    selReady = SEL.strategyReportDeepTestReady
   }
 
-  // reportData = await tv.getPerformance()
+  let isProcessStart = await page.waitForSelector(selProgress, 2500)
+  let isProcessEnd = tv.isReportChanged
+  if (isProcessStart) {
+    const tick = 100
+    for(let i = 0; i < 5000/tick; i++) { // Waiting for an error 5000 ms      // isProcessEnd = await page.waitForSelector(SEL.strategyReportError, 5000)
+      isProcessError = await page.waitForSelector(SEL.strategyReportError, tick)
+      isProcessEnd = document.querySelector(selReady)
+      if (isProcessError || isProcessEnd) {
+        break
+      }
+    }
+    if (isProcessError == null)
+      isProcessEnd = await page.waitForSelector(selReady, dataWaitingTime)
+  } else if (isProcessEnd)
+    isProcessStart = true
+
+  isProcessError = isProcessError || document.querySelector(SEL.strategyReportError)
+  await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+
   if (!isProcessError)
-    reportData = await tv.parseReportTable()
+    reportData = await tv.parseReportTable(testResults.isDeepTest)
   if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if(reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
@@ -610,7 +635,18 @@ tv.getPerformance = async (testResults, isIgnoreError=false) => {
       isProcessStart = true
     }
   }
-  return {error: isProcessError ? 2 : !isProcessStart ? 1 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
+  if (reportData['comment'])
+    message += '. ' + reportData['comment']
+  const comment = message ? message : testResults.isDeepTest ? 'Deep BT. ' : null
+  if (comment) {
+    if (reportData['comment'])
+      reportData['comment'] = comment ? comment + ' ' + reportData['comment'] : reportData['comment']
+    else {
+      reportData['comment'] = comment
+    }
+  }
+
+  return {error: isProcessError ? 2 : !isProcessStart ? 1 : !isProcessEnd ? 3 : null, message: message, data: reportData}
   // return await tv.parseReportTable()
   // TODO change the object to get data
   // function convertPercent(key, value) {
