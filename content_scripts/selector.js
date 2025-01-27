@@ -1,4 +1,8 @@
 
+const selStatus = {
+    isPrevVersion: true
+}
+
 const SEL = {
     tvLegendIndicatorItem: 'div[data-name="legend"] div[class^="sourcesWrapper"] div[class^="sources"] div[data-name="legend-source-item"]',
     tvLegendIndicatorItemTitle: 'div[data-name="legend-source-title"]',
@@ -18,10 +22,10 @@ const SEL = {
     strategyTesterTabActive: '[data-name="backtesting"][data-active="true"]', // 2023-10-19 #footer-chart-panel  or #bottom-area
     strategyCaption: '#bottom-area  [class^="strategyGroup"] [data-strategy-title]',
     strategyDialogParam: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"]  > div:nth-child(2) > button:nth-child(1)',
-    strategySummary: '[id="Performance Summary"]',
-    strategySummaryActive: '[id="Performance Summary"][class*="selected"]',
-    strategyPerformanceTab: '[id="Performance Summary"]',
-    strategyPerformanceTabActive: '[id="Performance Summary"][class*="selected"]',
+    strategySummary: selStatus.isPrevVersion ? '[id="Performance Summary"]' : '[id="Performance"]',
+    strategySummaryActive: selStatus.isPrevVersion ? '[id="Performance Summary"][class*="selected"]' : '[id="Performance"][class*="selected"]',
+    strategyPerformanceTab: selStatus.isPrevVersion ? '[id="Performance Summary"]' : '[id="Performance"]',
+    strategyPerformanceTabActive: selStatus.isPrevVersion ? '[id="Performance Summary"][class*="selected"]' : '[id="Performance"][class*="selected"]',
 
     strategyReportObserveArea: '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]',
     strategyReportInProcess: '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]  div[role="progressbar"]', //div[class^="tv-spinner"]',

@@ -366,8 +366,13 @@ tv.switchToStrategyTab = async () => {
 
 
   let stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
-  if(!stratSummaryEl) {
-    throw new Error('There is not "Performance summary" tab on the page. Open correct page.' + SUPPORT_TEXT)
+  if (!stratSummaryEl) {
+    selStatus.isPrevVersion = false
+    stratSummaryEl = await page.$(SEL.strategySummary)
+    if (!stratSummaryEl) {
+      selStatus.isPrevVersion = true
+      throw new Error('There is not "Performance summary" tab on the page. Open correct page.' + SUPPORT_TEXT)
+    }
   }
   if (!page.$(SEL.strategySummaryActive))
     stratSummaryEl.click()
