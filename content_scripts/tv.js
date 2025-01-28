@@ -348,7 +348,6 @@ tv.openStrategyTab = async () => {
   return true
 }
 
-
 tv.switchToStrategyTab = async () => {
   await tv.openStrategyTab()
   const testResults = {}
@@ -364,24 +363,18 @@ tv.switchToStrategyTab = async () => {
   }
   testResults.name = strategyCaptionEl.getAttribute('data-strategy-title') //strategyCaptionEl.innerText
 
-
-  let stratSummaryEl = await page.waitForSelector(SEL.strategySummary, 1000)
+  let stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
   if (!stratSummaryEl) {
-    selStatus.isPrevVersion = false
-    stratSummaryEl = await page.$(SEL.strategySummary)
-    if (!stratSummaryEl) {
-      selStatus.isPrevVersion = true
-      throw new Error('There is not "Performance summary" tab on the page. Open correct page.' + SUPPORT_TEXT)
-    }
+      throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
   }
-  if (!page.$(SEL.strategySummaryActive))
+  if (!page.$(SEL.strategyPerformanceTabActive))
     stratSummaryEl.click()
-  const isActive = await page.waitForSelector(SEL.strategySummaryActive, 1000)
+  const isActive = await page.waitForSelector(SEL.strategyPerformanceTabActive, 1000)
   if (!isActive) {
     console.error('The "Performance summary" tab is not active after click')
   }
 
-  await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
+  const reportEl = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
   if(!tv.reportNode) {
     // tv.reportNode = await page.waitForSelector(SEL.strategyReport, 10000)
     tv.reportNode = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
