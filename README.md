@@ -91,6 +91,16 @@ timestamp,ticker,timeframe,signal
 
 The signals are stored in the browser, to activate them, open the properties of the created indicator named 'iondvSignals'.
 
+#### PS
+** The field separator for CSV files is a comma.
+
+## Browser configuration
+If Chrome tab that have your backtest running is not active or minimized the backtest will stop working till the tab is active again.
+To avoid this :
+* Main Menu > More tools > Perfomance > Always keep these sites active > Add Button (Add TV domain)
+* Close all other tabs (except TV) > goto [chrome://discards/](chrome://discards/) > Find TV Tab(s) > Toggle Auto Discardable from ✔ to ❌
+
+
 ## Setup
 
 Install from [Chrome webstore](https://chromewebstore.google.com/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg)
@@ -114,9 +124,6 @@ Please add issues in this repository by following [link](https://github.com/akum
 
 Very helpfull will be if you can attach full screenshot with tradingview page and errors. And also with open command tab in browser developer mode (please press F12 to open developer mode and click on console tab)
 
-## PS
-** The field separator for CSV files is a comma.
-
 
 ## **Recommendation**
 
@@ -131,7 +138,7 @@ Where transfering from TradingViews scripts usually developer should solve some 
 - Wrap this code for frameworks of parameter gyperspace optimization (simple example you can see in [trade-strategies-backtesting-optimization](https://github.com/akumidv/trade-strategies-backtesting-optimization)) and increase speed of backtesting with some methods.
 
 
-From my experience it demands 2-3 minutes developer time for each row of tradingview script. For example if you have 200 line strategy it would demand ~6 hours to conversion. For some complicated strategies it can deman much more.
+From my experience it demands 2-3 minutes developer time for each row of tradingview script. For example if you have 200 line strategy it would demand ~6 hours to conversion. For some complicated strategies it can demand much more.
 
 To reduce developing time you can use some my repositories: 
 * [tradingview-ta-lib](https://github.com/akumidv/tradingview-ta-lib) - Tradingview `ta` lib implementation in python (only for tradingview indecators that have different caclulatoin results with `ta-lib` or `python-ta` - early developing stage.
@@ -144,4 +151,3 @@ akumidv `[at]` yahoo.com  (Do not send errors to email please, use [github issue
 https://linkedin.com/in/akuminov
 
 Email is preferred way, but usually I do not have the ability to answer quickly (2-3 days delay).
-
