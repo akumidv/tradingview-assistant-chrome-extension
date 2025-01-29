@@ -579,7 +579,7 @@ tv.parseReportTable = async (isDeepTest) => {
       [SEL.strategyRatiosTab, SEL.strategyRatiosTabActive]]
     for (const sel of tabs) {
       page.mouseClickSelector(sel[0])
-      const tabEl = await page.waitForSelector(sel[0], 2500)
+      const tabEl = await page.waitForSelector(sel[1], 1000)
       if (tabEl) {
         strategyHeaders = []
         allHeadersEl = document.querySelectorAll(selHeader)
@@ -595,7 +595,7 @@ tv.parseReportTable = async (isDeepTest) => {
       }
     }
     page.mouseClickSelector(SEL.strategyPerformanceTab)
-    await page.waitForSelector(SEL.strategyTradeAnalysisTab, 2500)
+    await page.waitForSelector(SEL.strategyPerformanceTabActive, 1000)
   }
   return report
 }
