@@ -3,6 +3,7 @@
     "author": "Andrei Kuminov (akumidv)",
     "description": "An assistant for backtesting trading strategies and showing external signals in Tradingview",
     "name": "Tradingview assistant",
+
     "version": "2.10.5",
     "icons": {
             "16": "images/tv_assist_16.png",

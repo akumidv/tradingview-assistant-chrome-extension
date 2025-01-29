@@ -30,6 +30,18 @@ const SEL = {
   get strategyPerformanceTabActive() {
     return selStatus.isNewVersion ? '[id="Performance"][class*="selected"]' : '[id="Performance Summary"][class*="selected"]'
   },
+    get strategyTradeAnalysisTab() {
+    return selStatus.isNewVersion ? '[id="Trade Analysis"]' : '[id="Trade Analysis"]'
+  },
+    get strategyTradeAnalysisTabActive() {
+    return selStatus.isNewVersion ? '[id="Trade Analysis"][class*="selected"]' : '[id="Trade Analysis"][class*="selected"]'
+  },
+      get strategyRatiosTab() {
+    return selStatus.isNewVersion ? '[id="Ratios"]' : '[id="Ratios"]'
+  },
+    get strategyRatiosTabActive() {
+    return selStatus.isNewVersion ? '[id="Ratios"][class*="selected"]' : '[id="Ratios"][class*="selected"]'
+  },
   get strategyReportObserveArea() {
     return selStatus.isNewVersion ?
       '[class="backtesting deep-history"] > div:nth-child(1) > div[class^="wrapper"]' :

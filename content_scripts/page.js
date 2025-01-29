@@ -100,35 +100,16 @@ page.setInputElementValue = function (element, value, isChange = false) {
 }
 
 
-// function mouseTrigger (el, eventType) {
-//   // const clickEvent = document.createEvent ('MouseEvents');
-//   // clickEvent.initEvent (eventType, true, true);
-//   // el.dispatchEvent(clickEvent);
-//
-//   // if (!el.hasOwnProperty('iondvEvents'))
-//   //   el.iondvEvents = {};
-//   // if(!el.iondvEvents.hasOwnProperty(eventType)) {
-//   //   const clickEvent = document.createEvent ('MouseEvents');
-//   //   clickEvent.initEvent (eventType, true, true);
-//   //   el.iondvEvents[eventType] = clickEvent
-//   // }
-//   el.dispatchEvent(iondvMouseEvents[eventType]);
-// }
 
 
 page.mouseClick = function (el) {
   ["mouseover", "mousedown", "mouseup", "click"].forEach((eventType) =>
     el.dispatchEvent(page._mouseEvents[eventType])
   )
-  // mouseTrigger (el, "mouseover");
-  // mouseTrigger (el, "mousedown");
-  // mouseTrigger (el, "mouseup");
-  // mouseTrigger (el, "click");
 }
 
 
 page.mouseClickSelector = function (selector) {
-  // const el = document.querySelector(selector)
   const el = page.$(selector)
   if (el)
     page.mouseClick(el)
