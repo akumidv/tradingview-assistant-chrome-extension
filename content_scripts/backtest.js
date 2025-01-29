@@ -242,7 +242,7 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
         res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
         if(bestValue < res.data[testResults.optParamName]) {
           res.isBestChanged = true
-          console.log(`Best value max: ${bestValue} => ${res.bestValue}`)
+          console.log(`Best value max: ${bestValue} => ${res.bestValue}`, res.bestPropVal)
         } else {
           res.isBestChanged = false
         }
