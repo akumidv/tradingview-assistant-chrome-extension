@@ -519,14 +519,19 @@ tv.parseReportTable = async (isDeepTest) => {
         continue
       }
       let paramName = allTdEl[0].innerText
-      // if (paramName === 'Net Profit') console.log('##paramName', paramName, allTdEl[1].innerText)
-      let isSingleValue = allTdEl.length === 3 || ['Buy & Hold Return', 'Max Run-up', 'Max Drawdown', 'Sharpe Ratio', 'Sortino Ratio', 'Open PL'].includes(paramName)
+      let isSingleValue = allTdEl.length === 3 || ['Buy & Hold Return', 'Max Run-up', 'Max Drawdown', 'Sharpe Ratio', 'Sortino Ratio', 'Open PL', // Prev version
+                                                   'Open P&L', 'Buy & hold return', 'Max equity run-up', 'Max equity drawdown', 'Sharpe ratio', 'Sortino ratio' // New Version 2025-01-25
+                                                  ].includes(paramName)
       for(let i = 1; i <  allTdEl.length; i++) {
         if (isSingleValue && i >= 2)
           continue
         let values = allTdEl[i].innerText
 
-        const isNegative = allTdEl[i].querySelector('[class^="negativeValue"]') && !['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown'].includes(paramName)
+        const isNegative = ['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown', // Prev version
+                            'Max equity run-up', 'Max equity drawdown', 'Commission paid', 'Avg losing trade',
+                            'Largest losing trade', 'Largest losing trade percent', 'Avg # bars in losing trades', 'Margin calls',
+                           'Losing trades'// New Version 2025-01-25
+                           ].includes(paramName)// && allTdEl[i].querySelector('[class^="negativeValue"]')
         if(values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
           const digitalValues = values.replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '')
