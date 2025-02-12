@@ -40,11 +40,11 @@ async function messageHandler(event) {
 }
 
 
-tv.getStrategy = async (strategyName = '', isIndicatorSave = false) => {
+tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest = false) => {
   let indicatorName = null
   if (strategyName !== null) {
     if (!strategyName) {
-      await tv.openStrategyTab()
+      await tv.openStrategyTab(isDeepTest)
       let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
       if (!strategyCaptionEl || !strategyCaptionEl.innerText) {
         throw new Error('There is not strategy name element on "Strategy tester" tab.' + SUPPORT_TEXT)
@@ -201,7 +201,7 @@ tv.getStrategyParams = async (isIndicatorSave = false) => {
   return strategyInputs
 }
 
-tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
+tv.setStrategyParams = async (name, propVal, keepStrategyParamOpen = false, isDeepTest) => {
   // if (isCheckOpenedWindow) {
   //   const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
   //   if (!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
@@ -213,7 +213,8 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
   //   if (!indicatorTitleEl)
   //     return null
   // }
-  const indicatorTitleEl = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+
+  const indicatorTitleEl = await tv.checkAndOpenStrategy(name, isDeepTest) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
   if (!indicatorTitleEl)
     return null
   const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
@@ -256,7 +257,7 @@ tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
     }
   }
   // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
-  if (!isCheckOpenedWindow && document.querySelector(SEL.okBtn))
+  if (!keepStrategyParamOpen && document.querySelector(SEL.okBtn))
     document.querySelector(SEL.okBtn).click()
   return true
 }
@@ -291,7 +292,8 @@ tv.openCurrentStrategyParam = async () => {
     await ui.showErrorPopup('There is not strategy parameters input tab. Test stopped. Open correct page please')
     return null
   }
-  tabInputEl.click()
+  page.mouseClick(tabInputEl) //tabInputEl.click()
+
   const tabInputActiveEl = await page.waitForSelector(SEL.tabInputActive)
   if (!tabInputActiveEl) {
     await ui.showErrorPopup('There is not strategy parameters active input tab. Test stopped. Open correct page please')
@@ -311,7 +313,7 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
 
   async function turnDeepModeOn() {
     const switchTurnedOffEl = isTurnedOff()
-    if(switchTurnedOffEl)
+    if (switchTurnedOffEl)
       page.mouseClick(switchTurnedOffEl) //switchTurnedOffEl.click()
     const el = await page.waitForSelector(SEL.strategyDeepTestCheckboxChecked)
     if (!el)
@@ -319,8 +321,8 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
   }
 
   async function turnDeepModeOff() {
-    const switchTurnedOnEl = isTurnedOff()
-    if(switchTurnedOnEl)
+    const switchTurnedOnEl = isTurnedOn()
+    if (switchTurnedOnEl)
       page.mouseClick(switchTurnedOnEl) // // switchTurnedOnEl.click()
     const el = await page.waitForSelector(SEL.strategyDeepTestCheckboxUnchecked)
     if (!el)
@@ -350,16 +352,20 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
   }
 }
 
-tv.checkAndOpenStrategy = async (name) => {
+tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
   let indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
   if (!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
     try {
-      await tv.switchToStrategyTab()
-    } catch {
+      await tv.openStrategyTab(isDeepTest)
+    } catch (err) {
+      console.warn('checkAndOpenStrategy error', err)
       return null
     }
-    if (!await tv.openCurrentStrategyParam())
+    const isOpened = await tv.openCurrentStrategyParam()
+    if (!isOpened) {
+      console.warn('Can able to open current strategy parameters')
       return null
+    }
     indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
     if (!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
       await ui.showErrorPopup(`The ${name} strategy parameters could not opened. ${indicatorTitleEl.innerText ? 'Opened "' + indicatorTitleEl.innerText + '".' : ''} Reload the page, leave one strategy on the chart and try again.`)
@@ -369,7 +375,7 @@ tv.checkAndOpenStrategy = async (name) => {
   return indicatorTitleEl
 }
 
-tv.openStrategyTab = async () => {
+tv.openStrategyTab = async (isDeepTest) => {
   let isStrategyActiveEl = await page.waitForSelector(SEL.strategyTesterTabActive)
   if (!isStrategyActiveEl) {
     const strategyTabEl = await page.waitForSelector(SEL.strategyTesterTab)
@@ -380,30 +386,17 @@ tv.openStrategyTab = async () => {
       throw new Error('There is not "Strategy Tester" tab on the page. Open correct page.' + SUPPORT_TEXT)
     }
   }
-  return true
-}
-
-tv.switchToStrategyTab = async (isDeepTest = false) => {
-  await tv.openStrategyTab()
-  const testResults = {}
-
-
-  testResults.ticker = await tvChart.getTicker()
-  testResults.timeFrame = await tvChart.getCurrentTimeFrame()
-
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
   // strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // From 2022-11-13
   if (!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
     throw new Error('There is not strategy name element on "Strategy Tester" tab.' + SUPPORT_TEXT)
   }
-  testResults.name = strategyCaptionEl.getAttribute('data-strategy-title') //strategyCaptionEl.innerText
-
   let stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
   if (!stratSummaryEl) {
     await tv.setDeepTest(isDeepTest)
-    if(isDeepTest) {
+    if (isDeepTest) {
       if (page.$(SEL.strategyDeepTestGenerateBtn))
-          page.mouseClickSelector(SEL.strategyDeepTestGenerateBtn)
+        page.mouseClickSelector(SEL.strategyDeepTestGenerateBtn)
     }
     stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
     if (!stratSummaryEl)
@@ -416,6 +409,17 @@ tv.switchToStrategyTab = async (isDeepTest = false) => {
   if (!isActive) {
     console.error('The "Performance summary" tab is not active after click')
   }
+  return true
+}
+
+tv.switchToStrategyTabAndSetObserveForReport = async (isDeepTest = false) => {
+  await tv.openStrategyTab(isDeepTest)
+
+  const testResults = {}
+  testResults.ticker = await tvChart.getTicker()
+  testResults.timeFrame = await tvChart.getCurrentTimeFrame()
+  let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
+  testResults.name = strategyCaptionEl.getAttribute('data-strategy-title') //strategyCaptionEl.innerText
 
   const reportEl = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
   if (!tv.reportNode) {
@@ -437,20 +441,22 @@ tv.switchToStrategyTab = async (isDeepTest = false) => {
     }
   }
 
-  if (!tv.reportDeepNode) {
-    tv.reportDeepNode = await page.waitForSelector(SEL.strategyReportDeepTestObserveArea, 5000)
-    if (tv.reportDeepNode) {
-      const reportObserver = new MutationObserver(() => {
-        tv.isReportChanged = true
-      });
-      reportObserver.observe(tv.reportDeepNode, {
-        childList: true,
-        subtree: true,
-        attributes: false,
-        characterData: false
-      });
-    } else {
-      console.error('The strategy deep report did not found.')
+  if (isDeepTest) {
+    if (!tv.reportDeepNode) {
+      tv.reportDeepNode = await page.waitForSelector(SEL.strategyReportDeepTestObserveArea, 5000)
+      if (tv.reportDeepNode) {
+        const reportObserver = new MutationObserver(() => {
+          tv.isReportChanged = true
+        });
+        reportObserver.observe(tv.reportDeepNode, {
+          childList: true,
+          subtree: true,
+          attributes: false,
+          characterData: false
+        });
+      } else {
+        console.error('The strategy deep report did not found.')
+      }
     }
   }
   return testResults

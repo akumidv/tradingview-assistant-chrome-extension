@@ -89,7 +89,7 @@ action.downloadStrategyTestResults = async () => {
 
 action.testStrategy = async (request, isDeepTest = false) => {
   try {
-    const strategyData = await action._getStrategyData()
+    const strategyData = await action._getStrategyData(isDeepTest)
     const [allRangeParams, paramRange, cycles] = await action._getRangeParams(strategyData)
     if (allRangeParams !== null) { // click cancel on parameters
       const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles, isDeepTest)
@@ -182,9 +182,9 @@ action._getRangeParams = async (strategyData) => {
   return [allRangeParams, paramRange, cycles]
 }
 
-action._getStrategyData = async () => {
+action._getStrategyData = async (isDeepTest) => {
   ui.statusMessage('Get the initial parameters.')
-  const strategyData = await tv.getStrategy()
+  const strategyData = await tv.getStrategy('', false, isDeepTest)
   if (!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
     throw new Error('The current strategy do not contain inputs, than can be optimized. You can choose another strategy to optimize.')
   }
@@ -200,7 +200,7 @@ action._parseTF = (listOfTF) => {
 }
 
 action._getTestParams = async (request, strategyData, allRangeParams, paramRange, cycles, isDeepTest=false) => {
-  let testParams = await tv.switchToStrategyTab(isDeepTest)
+  let testParams = await tv.switchToStrategyTabAndSetObserveForReport(isDeepTest)
   const options = request && request.hasOwnProperty('options') ? request.options : {}
   const testMethod = options.hasOwnProperty('optMethod') && typeof (options.optMethod) === 'string' ? options.optMethod.toLowerCase() : 'random'
   let paramSpaceNumber = 0

@@ -27,6 +27,7 @@ const SEL = {
   get strategyPerformanceTab() {
     return selStatus.isNewVersion ? '[id="Performance"]' : '[id="Performance Summary"]'
   },
+  goproPopupCloseButton: '[data-dialog-name="gopro"][class^="dialog"] button[class*="close"]',
   get strategyPerformanceTabActive() {
     return selStatus.isNewVersion ? '[id="Performance"][class*="selected"]' : '[id="Performance Summary"][class*="selected"]'
   },
