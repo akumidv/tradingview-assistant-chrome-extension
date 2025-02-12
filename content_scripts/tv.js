@@ -297,16 +297,18 @@ tv.openCurrentStrategyParam = async () => {
 }
 
 tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
-  const deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckbox)
+  let deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckboxChecked)
   if (!deepCheckboxEl && !isDeepTest)
     return
+  if(isDeepTest && deepCheckboxEl)
+    return
+  deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckboxUnchecked)
   if (isDeepTest && !deepCheckboxEl)
     throw new Error('Deep Backtesting mode switch not found. Do you have Premium subscription or may be TV UI changed?')
-  const isChecked = Boolean(deepCheckboxEl.checked)
-  if (isDeepTest !== isChecked) {
-    page.mouseClick(deepCheckboxEl)
-    deepCheckboxEl.checked = isDeepTest
-  }
+  page.mouseClick(deepCheckboxEl)
+  deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckboxChecked)
+  if(!deepCheckboxEl)
+    throw new Error('Can not switch to deep backtesting mode')
   if (isDeepTest && deepStartDate) {
     const startDateEl = await page.waitForSelector(SEL.strategyDeepTestStartDate)
     if (startDateEl) {
@@ -348,7 +350,7 @@ tv.openStrategyTab = async () => {
   return true
 }
 
-tv.switchToStrategyTab = async () => {
+tv.switchToStrategyTab = async (isDeepTest = false) => {
   await tv.openStrategyTab()
   const testResults = {}
 
@@ -365,7 +367,21 @@ tv.switchToStrategyTab = async () => {
 
   let stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
   if (!stratSummaryEl) {
-    throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
+    if (page.$(SEL.strategyDeepTestCheckboxChecked)) {
+      if (isDeepTest) {
+        if (page.$(SEL.strategyDeepTestGenerateBtn))
+          page.mouseClickSelector(SEL.strategyDeepTestGenerateBtn)
+      } else {
+        page.mouseClickSelector(SEL.strategyDeepTestCheckboxChecked)
+        await page.waitForSelector(SEL.strategyDeepTestCheckboxUnchecked, 1000)
+      }
+
+      stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
+      if (!stratSummaryEl)
+        throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
+    } else {
+      throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
+    }
   }
   if (!page.$(SEL.strategyPerformanceTabActive))
     stratSummaryEl.click()
@@ -485,7 +501,13 @@ tv.dialogHandler = async () => {
 
 tv.isParsed = false
 
-tv._parseRows = async (allReportRowsEl, strategyHeaders, report) => {
+tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
+  function parseNumTypeByRowName(rowName, value) {
+    return rowName.includes('trades') || rowName.includes('contracts held')
+      ? parseInt(value)
+      : parseFloat(value)
+  }
+
   for (let rowEl of allReportRowsEl) {
     if (rowEl) {
       const allTdEl = rowEl.querySelectorAll('td')
@@ -493,18 +515,16 @@ tv._parseRows = async (allReportRowsEl, strategyHeaders, report) => {
         continue
       }
       let paramName = allTdEl[0].innerText
-      let isSingleValue = allTdEl.length === 3 || ['Buy & Hold Return', 'Max Run-up', 'Max Drawdown', 'Sharpe Ratio', 'Sortino Ratio', 'Open PL', // Prev version
-        'Open P&L', 'Buy & hold return', 'Max equity run-up', 'Max equity drawdown', 'Sharpe ratio', 'Sortino ratio' // New Version 2025-01-25
+      let isSingleValue = allTdEl.length === 3 || ['Buy & hold return', 'Max equity run-up', 'Max equity drawdown',
+        'Open P&L', 'Sharpe ratio', 'Sortino ratio'
       ].includes(paramName)
       for (let i = 1; i < allTdEl.length; i++) {
         if (isSingleValue && i >= 2)
           continue
         let values = allTdEl[i].innerText
-
-        const isNegative = ['Avg Losing Trade', 'Largest Losing Trade', 'Gross Loss', 'Max Run-up', 'Max Drawdown', // Prev version
-          'Max equity run-up', 'Max equity drawdown', 'Commission paid', 'Avg losing trade',
-          'Largest losing trade', 'Largest losing trade percent', 'Avg # bars in losing trades', 'Margin calls',
-          'Losing trades'// New Version 2025-01-25
+        const isNegative = ['Gross loss', 'Commission paid', 'Max equity run-up', 'Max equity drawdown',
+          'Losing trades', 'Avg losing trade', 'Largest losing trade', 'Largest losing trade percent',
+          'Avg # bars in losing trades', 'Margin calls'
         ].includes(paramName)// && allTdEl[i].querySelector('[class^="negativeValue"]')
         if (values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
@@ -513,20 +533,20 @@ tv._parseRows = async (allReportRowsEl, strategyHeaders, report) => {
           const nameDigits = isSingleValue ? paramName : `${paramName}: ${strategyHeaders[i]}`
           const namePercents = isSingleValue ? `${paramName} %` : `${paramName} %: ${strategyHeaders[i]}`
           if ((values.includes('\n') && values.endsWith('%'))) {
-            const valuesPair = values.split('\n', 2)
-            if (valuesPair && valuesPair.length === 2) {
+            const valuesPair = values.split('\n', 3)
+            if (valuesPair && valuesPair.length >= 2) {
               const digitVal0 = valuesPair[0].replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //.match(/-?\d+\.?\d*/)
-              const digitVal1 = valuesPair[1].replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //match(/-?\d+\.?\d*/)
+              const digitVal1 = valuesPair[valuesPair.length - 1].replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //match(/-?\d+\.?\d*/)
 
               if (Boolean(digitVal0)) {
-                report[nameDigits] = nameDigits.includes('Trades') ? parseInt(digitVal0) : parseFloat(digitVal0)//[0])
+                report[nameDigits] = parseNumTypeByRowName(nameDigits, digitVal0)
                 if (report[nameDigits] > 0 && isNegative)
                   report[nameDigits] = report[nameDigits] * -1
               } else {
                 report[nameDigits] = valuesPair[0]
               }
               if (Boolean(digitVal1)) {
-                report[namePercents] = namePercents.includes('Trades') ? parseInt(digitVal1) : parseFloat(digitVal1) //[0])
+                report[namePercents] = parseNumTypeByRowName(namePercents, digitVal1)
                 if (report[namePercents] > 0 && isNegative)
                   report[namePercents] = report[namePercents] * -1
               } else {
@@ -534,7 +554,7 @@ tv._parseRows = async (allReportRowsEl, strategyHeaders, report) => {
               }
             }
           } else if (Boolean(digitOfValues)) {
-            report[nameDigits] = nameDigits.includes('Trades') ? parseInt(digitalValues) : parseFloat(digitalValues)//[0])
+            report[nameDigits] = parseNumTypeByRowName(namePercents, digitalValues)
             if (report[nameDigits] > 0 && isNegative)
               report[nameDigits] = report[nameDigits] * -1
           } else

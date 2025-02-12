@@ -1,5 +1,5 @@
 const selStatus = {
-  isNewVersion: null
+  isNewVersion: true // null
 }
 
 
@@ -31,10 +31,10 @@ const SEL = {
     return selStatus.isNewVersion ? '[id="Performance"][class*="selected"]' : '[id="Performance Summary"][class*="selected"]'
   },
     get strategyTradeAnalysisTab() {
-    return selStatus.isNewVersion ? '[id="Trade Analysis"]' : '[id="Trade Analysis"]'
+    return selStatus.isNewVersion ? '[id="Trades Analysis"]' : '[id="Trade Analysis"]'
   },
     get strategyTradeAnalysisTabActive() {
-    return selStatus.isNewVersion ? '[id="Trade Analysis"][class*="selected"]' : '[id="Trade Analysis"][class*="selected"]'
+    return selStatus.isNewVersion ? '[id="Trades Analysis"][class*="selected"]' : '[id="Trade Analysis"][class*="selected"]'
   },
       get strategyRatiosTab() {
     return selStatus.isNewVersion ? '[id="Ratios"]' : '[id="Ratios"]'
@@ -79,6 +79,16 @@ const SEL = {
       '[class="backtesting deep-history"] [class^="switchGroup"] [class^="switcher"] input' :
       '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
   },
+    get strategyDeepTestCheckboxUnchecked() {
+    return selStatus.isNewVersion ?
+      '[class="backtesting deep-history"] [class^="switchGroup"] [class^="switcher"] input:not([aria-checked]' :
+      '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
+  },
+  get strategyDeepTestCheckboxChecked() {
+    return selStatus.isNewVersion ?
+      '[class="backtesting deep-history"] [class^="switchGroup"] [class^="switcher"] input[aria-checked]' :
+      '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
+  },
   get strategyDeepTestStartDate() {
     return selStatus.isNewVersion ?
       '[class="backtesting deep-history"] [class^="historyParams"] [class^="container"] div:nth-child(1) [class^="pickerInput"] input' :
@@ -86,12 +96,12 @@ const SEL = {
   },
   get strategyDeepTestGenerateBtn() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] [class^="historyParams"] button[class^="generateReportBtn"]:not([disabled])' :
+      '[class="backtesting deep-history"] [class^="historyParams"] button[class^="generateReportBtn"]:not([aria-disabled])' :
       '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"]:not([disabled])'
   },
   get strategyDeepTestGenerateBtnDisabled() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] [class^="historyParams"] button[class^="generateReportBtn"][disabled]' :
+      '[class="backtesting deep-history"] [class^="historyParams"] button[class^="generateReportBtn"][aria-disabled]' :
       '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"][disabled]'
   },
   get strategyReportDeepTestObserveArea() {

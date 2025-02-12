@@ -92,7 +92,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
     const strategyData = await action._getStrategyData()
     const [allRangeParams, paramRange, cycles] = await action._getRangeParams(strategyData)
     if (allRangeParams !== null) { // click cancel on parameters
-      const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles)
+      const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles, isDeepTest)
       console.log('Test parameters', testParams)
       action._showStartMsg(testParams.paramSpace, testParams.cycles, testParams.backtestDelay ? ` with delay between tests ${testParams.backtestDelay} sec` : '')
       testParams.isDeepTest = isDeepTest
@@ -138,8 +138,8 @@ action.testStrategy = async (request, isDeepTest = false) => {
         testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
         await action._saveTestResults(testResults, testParams)
       }
-      if (isDeepTest)
-        await tv.setDeepTest(!isDeepTest) // Reverse (switch off)
+      // if (isDeepTest)
+      //   await tv.setDeepTest(!isDeepTest) // Reverse (switch off)
     }
   } catch (err) {
     console.error(err)
@@ -199,8 +199,8 @@ action._parseTF = (listOfTF) => {
 
 }
 
-action._getTestParams = async (request, strategyData, allRangeParams, paramRange, cycles) => {
-  let testParams = await tv.switchToStrategyTab()
+action._getTestParams = async (request, strategyData, allRangeParams, paramRange, cycles, isDeepTest=false) => {
+  let testParams = await tv.switchToStrategyTab(isDeepTest)
   const options = request && request.hasOwnProperty('options') ? request.options : {}
   const testMethod = options.hasOwnProperty('optMethod') && typeof (options.optMethod) === 'string' ? options.optMethod.toLowerCase() : 'random'
   let paramSpaceNumber = 0
@@ -238,27 +238,13 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
     testParams.method = testMethod
     testParams.filterAscending = request.options.hasOwnProperty('optFilterAscending') ? request.options.optFilterAscending : null
     testParams.filterValue = request.options.hasOwnProperty('optFilterValue') ? request.options.optFilterValue : 50
-    testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total Closed Trades: All'
+    testParams.filterParamName = request.options.hasOwnProperty('optFilterParamName') ? request.options.optFilterParamName : 'Total trades: All'
     testParams.deepStartDate = !request.options.hasOwnProperty('deepStartDate') || request.options['deepStartDate'] === '' ? null : request.options['deepStartDate']
     testParams.backtestDelay = !request.options.hasOwnProperty('backtestDelay') || !request.options['backtestDelay'] ? 0 : request.options['backtestDelay']
     testParams.randomDelay = request.options.hasOwnProperty('randomDelay') ? Boolean(request.options['randomDelay']) : true
     testParams.shouldSkipInitBestResult = request.options.hasOwnProperty('shouldSkipInitBestResult') ? Boolean(request.options['shouldSkipInitBestResult']) : false
     testParams.shouldSkipWaitingForDownload = request.options.hasOwnProperty('shouldSkipWaitingForDownload') ? Boolean(request.options['shouldSkipWaitingForDownload']) : false
     testParams.dataLoadingTime = request.options.hasOwnProperty('dataLoadingTime') && !isNaN(parseInt(request.options['dataLoadingTime'])) ? request.options['dataLoadingTime'] : 30
-  }
-
-  if (Object.hasOwn(testParams, 'optParamName') && testParams.optParamName && selStatus.isNewVersion) { // Convert prev params names to new
-    const versionParamNamesMapper = {
-      'Net Profit: All': 'Net profit: All',
-      'Buy & Hold Return': 'Buy & hold return',
-      'Open PL': 'Open P&L',
-      'Max Run-up': 'Max equity run-up',
-      'Max Drawdown': 'Max equity drawdown',
-      'Sharpe Ratio': 'Sharpe ratio All',
-      'Sortino Ratio': 'Sortino ratio',
-    }
-    if (Object.hasOwn(versionParamNamesMapper, testParams.optParamName))
-      testParams.optParamName = versionParamNamesMapper[testParams.optParamName]
   }
 
   return testParams

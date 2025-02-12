@@ -1,5 +1,5 @@
 const backtest = {
-  DEF_MAX_PARAM_NAME: 'Net Profit All'
+  DEF_MAX_PARAM_NAME: 'Net profit: All'
 }
 
 backtest.delay = async (backtestDelay = 0, isRandom = true) => {
