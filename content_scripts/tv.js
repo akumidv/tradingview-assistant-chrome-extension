@@ -314,7 +314,7 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
   async function turnDeepModeOn() {
     const switchTurnedOffEl = isTurnedOff()
     if (switchTurnedOffEl)
-      page.mouseClick(switchTurnedOffEl) //switchTurnedOffEl.click()
+      switchTurnedOffEl.click() // page.mouseClick(switchTurnedOffEl)
     const el = await page.waitForSelector(SEL.strategyDeepTestCheckboxChecked)
     if (!el)
       throw new Error('Can not switch to deep backtesting mode')
@@ -323,7 +323,7 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
   async function turnDeepModeOff() {
     const switchTurnedOnEl = isTurnedOn()
     if (switchTurnedOnEl)
-      page.mouseClick(switchTurnedOnEl) // // switchTurnedOnEl.click()
+      switchTurnedOnEl.click() //page.mouseClick(switchTurnedOnEl) // // switchTurnedOnEl.click()
     const el = await page.waitForSelector(SEL.strategyDeepTestCheckboxUnchecked)
     if (!el)
       throw new Error('Can not switch off from deep backtesting mode')
