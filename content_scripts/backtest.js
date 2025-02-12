@@ -29,7 +29,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
   ui.statusMessage('Get the best initial values.')
 
 
-  const initRes = await getInitBestValues(testResults, allRangeParams)
+  const initRes = await getInitBestValues(testResults) // allRangeParams
   if(initRes && initRes.hasOwnProperty('bestValue') && initRes.bestValue !== null && initRes.hasOwnProperty('bestPropVal') && initRes.hasOwnProperty('data')) {
     testResults.initBestValue = initRes.bestValue
     testResults.bestValue = initRes.bestValue

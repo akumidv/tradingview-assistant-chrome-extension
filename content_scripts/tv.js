@@ -202,16 +202,20 @@ tv.getStrategyParams = async (isIndicatorSave = false) => {
 }
 
 tv.setStrategyParams = async (name, propVal, isCheckOpenedWindow = false) => {
-  if (isCheckOpenedWindow) {
-    const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
-    if (!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-      return null
-    }
-  } else {
-    const indicatorTitleEl = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
-    if (!indicatorTitleEl)
-      return null
-  }
+  // if (isCheckOpenedWindow) {
+  //   const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
+  //   if (!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
+  //     return null
+  //   }
+  // }
+  // else {
+  //   const indicatorTitleEl = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+  //   if (!indicatorTitleEl)
+  //     return null
+  // }
+  const indicatorTitleEl = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
+  if (!indicatorTitleEl)
+    return null
   const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
   const propKeys = Object.keys(propVal)
   let setResultNumber = 0
@@ -276,7 +280,7 @@ tv.openCurrentStrategyParam = async () => {
     await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
     return null
   }
-  stratParamEl.click()
+  page.mouseClick(stratParamEl) // stratParamEl.click()
   const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 2000)
   if (!stratIndicatorEl) {
     await ui.showErrorPopup('There is not strategy parameters. Test stopped. Open correct page please')
@@ -297,19 +301,48 @@ tv.openCurrentStrategyParam = async () => {
 }
 
 tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
-  let deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckboxChecked)
-  if (!deepCheckboxEl && !isDeepTest)
+  function isTurnedOn() {
+    return page.$(SEL.strategyDeepTestCheckboxChecked)
+  }
+
+  function isTurnedOff() {
+    return page.$(SEL.strategyDeepTestCheckboxUnchecked)
+  }
+
+  async function turnDeepModeOn() {
+    const switchTurnedOffEl = isTurnedOff()
+    if(switchTurnedOffEl)
+      page.mouseClick(switchTurnedOffEl) //switchTurnedOffEl.click()
+    const el = await page.waitForSelector(SEL.strategyDeepTestCheckboxChecked)
+    if (!el)
+      throw new Error('Can not switch to deep backtesting mode')
+  }
+
+  async function turnDeepModeOff() {
+    const switchTurnedOnEl = isTurnedOff()
+    if(switchTurnedOnEl)
+      page.mouseClick(switchTurnedOnEl) // // switchTurnedOnEl.click()
+    const el = await page.waitForSelector(SEL.strategyDeepTestCheckboxUnchecked)
+    if (!el)
+      throw new Error('Can not switch off from deep backtesting mode')
+  }
+
+  let deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckbox)
+  if (!deepCheckboxEl) {
+    if (isDeepTest)
+      throw new Error('Deep Backtesting mode switch not found. Do you have Premium subscription or may be TV UI changed?')
     return
-  if(isDeepTest && deepCheckboxEl)
+  }
+  if (!isDeepTest) {
+    if (isTurnedOn())
+      await turnDeepModeOff()
     return
-  deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckboxUnchecked)
-  if (isDeepTest && !deepCheckboxEl)
-    throw new Error('Deep Backtesting mode switch not found. Do you have Premium subscription or may be TV UI changed?')
-  page.mouseClick(deepCheckboxEl)
-  deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckboxChecked)
-  if(!deepCheckboxEl)
-    throw new Error('Can not switch to deep backtesting mode')
-  if (isDeepTest && deepStartDate) {
+  }
+  if (isTurnedOff())
+    await turnDeepModeOn()
+  if (!isTurnedOn())
+    throw new Error('Deep mode is not turned on')
+  if (deepStartDate) {
     const startDateEl = await page.waitForSelector(SEL.strategyDeepTestStartDate)
     if (startDateEl) {
       page.setInputElementValue(startDateEl, deepStartDate)
@@ -367,21 +400,15 @@ tv.switchToStrategyTab = async (isDeepTest = false) => {
 
   let stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
   if (!stratSummaryEl) {
-    if (page.$(SEL.strategyDeepTestCheckboxChecked)) {
-      if (isDeepTest) {
-        if (page.$(SEL.strategyDeepTestGenerateBtn))
+    await tv.setDeepTest(isDeepTest)
+    if(isDeepTest) {
+      if (page.$(SEL.strategyDeepTestGenerateBtn))
           page.mouseClickSelector(SEL.strategyDeepTestGenerateBtn)
-      } else {
-        page.mouseClickSelector(SEL.strategyDeepTestCheckboxChecked)
-        await page.waitForSelector(SEL.strategyDeepTestCheckboxUnchecked, 1000)
-      }
-
-      stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
-      if (!stratSummaryEl)
-        throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
-    } else {
-      throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
     }
+    stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
+    if (!stratSummaryEl)
+      throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
+
   }
   if (!page.$(SEL.strategyPerformanceTabActive))
     stratSummaryEl.click()
@@ -624,17 +651,8 @@ tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
   const generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
   if (generateBtnEl) {
     page.mouseClick(generateBtnEl) // // generateBtnEl.click()
-    // const reportHeader = await page.waitForSelector(SEL.strategyReportHeader, loadingTime)
-    // if (!reportHeader) {
-    //   // if (tv.isParsed)
-    //   //   return false
-    //   // else
-    //     throw new Error('Error waiting Performance summary table for deep backtesting.' + SUPPORT_TEXT)
-    // }
-    // } else if (tv.isParsed) {
-    //   return false
   } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
-    return ' Deep backtesting process is not started'
+    return 'Deep backtesting process is not started'
   } else {
     throw new Error('Error for generate deep backtesting report due the button is not exist.' + SUPPORT_TEXT)
   }
