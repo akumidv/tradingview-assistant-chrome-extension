@@ -573,6 +573,43 @@ tv.dialogHandler = async () => {
   }
 }
 
+const paramNamePrevVersionMap = {
+  // Prev version: New version from set parameters
+  'Net Profit': 'Net profit',
+  'Gross Profit': 'Gross profit',
+  'Gross Loss': 'Gross loss',
+  'Max Drawdown': 'Max equity drawdown',
+  'Buy & Hold Return': 'Buy & hold return',
+  'Sharpe Ratio': 'Sharpe ratio',
+  'Sortino Ratio': 'Sortino ratio',
+  'Max Contracts Held': 'Max contracts held',
+  'Open PL': 'Open P&L',
+  'Commission Paid': 'Commission paid',
+  'Total Closed Trades': 'Total trades',
+  'Total Open Trades': 'Total open trades',
+  'Number Winning Trades': 'Winning trades',
+  'Number Losing Trades': 'Losing trades',
+  'Avg Trade': 'Avg P&L',
+  'Avg Winning Trade': 'Avg winning trade',
+  'Avg Losing Trade': 'Avg losing trade',
+  'Ratio Avg Win / Avg Loss': 'Ratio avg win / avg loss',
+  'Largest Winning Trade': 'Largest winning trade',
+  'Largest Losing Trade': 'Largest losing trade',
+  'Avg # Bars in Trades': 'Avg # bars in trades',
+  'Avg # Bars in Winning Trades': 'Avg # bars in winning trades',
+  'Avg # Bars in Losing Trades': 'Avg # bars in losing trades',
+  'Margin Calls': 'Margin calls',
+}
+
+tv.convertParameterName = (field) => {
+   if (selStatus.isNewVersion)  // new version
+     return field
+   if (!Object.hasOwn(paramNamePrevVersionMap, field))
+     return field
+   return field
+}
+
+
 tv.isParsed = false
 
 tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
@@ -588,7 +625,8 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
       if (!allTdEl || allTdEl.length < 2 || !allTdEl[0]) {
         continue
       }
-      let paramName = allTdEl[0].innerText
+      let paramName = allTdEl[0].innerText || ''
+      paramName = tv.convertParameterName(paramName)
       let isSingleValue = allTdEl.length === 3 || ['Buy & hold return', 'Max equity run-up', 'Max equity drawdown',
         'Open P&L', 'Sharpe ratio', 'Sortino ratio'
       ].includes(paramName)
@@ -599,7 +637,7 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
         const isNegative = ['Gross loss', 'Commission paid', 'Max equity run-up', 'Max equity drawdown',
           'Losing trades', 'Avg losing trade', 'Largest losing trade', 'Largest losing trade percent',
           'Avg # bars in losing trades', 'Margin calls'
-        ].includes(paramName)// && allTdEl[i].querySelector('[class^="negativeValue"]')
+        ].includes(paramName.toLowerCase())// && allTdEl[i].querySelector('[class^="negativeValue"]')
         if (values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
           const digitalValues = values.replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '')
@@ -639,6 +677,9 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
   }
   return report
 }
+
+
+
 
 tv.parseReportTable = async (isDeepTest) => {
 
@@ -712,8 +753,8 @@ tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
     throw new Error('Error for generate deep backtesting report due the button is not exist.' + SUPPORT_TEXT)
   }
   return ''
-
 }
+
 
 tv.getPerformance = async (testResults, isIgnoreError = false) => {
   let reportData = {}
@@ -769,7 +810,6 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
       reportData['comment'] = comment
     }
   }
-
   return {
     error: isProcessError ? 2 : !isProcessStart ? 1 : !isProcessEnd ? 3 : null,
     message: message,

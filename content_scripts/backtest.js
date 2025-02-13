@@ -197,7 +197,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
   try {
     tv.isReportChanged = false // Global value
     if (!isIgnoreSetParam) {
-      const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal,  !testResults.isDeepTest, testResults.isDeepTest)
+      const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal,  false, testResults.isDeepTest)
       if (!isParamsSet)
         return { error: 1, errMessage: 'The strategy parameters cannot be set', data: null }
     }
@@ -225,8 +225,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 
 async function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
   let isFiltered = false
-
-  if (res.data.hasOwnProperty(testResults.optParamName)) {
+  if (Object.hasOwn(res.data, testResults.optParamName)){
     if (testResults.filterAscending !== null &&
       res.data.hasOwnProperty(testResults.filterParamName) && testResults.hasOwnProperty('filterValue')) {
       if (typeof res.data[testResults.filterParamName] !== 'number' ||
@@ -277,7 +276,7 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
   } else {
     res.bestValue = bestValue
     res.bestPropVal = bestPropVal
-    res.currentValue = 'error'
+    res.currentValue = `${testResults.optParamName} missed in data`
   }
   return res
 }
