@@ -614,9 +614,10 @@ tv.isParsed = false
 
 tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
   function parseNumTypeByRowName(rowName, value) {
-    return rowName.includes('trades') || rowName.includes('contracts held')
-      ? parseInt(value)
-      : parseFloat(value)
+    const digitalValues = value.replaceAll(/([\-\d\.\n])|(.)/g, (a, b) => b || '')
+    return rowName.toLowerCase().includes('trades') || rowName.toLowerCase().includes('contracts held')
+      ? parseInt(digitalValues)
+      : parseFloat(digitalValues)
   }
 
   for (let rowEl of allReportRowsEl) {
@@ -640,15 +641,15 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
         ].includes(paramName.toLowerCase())// && allTdEl[i].querySelector('[class^="negativeValue"]')
         if (values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
-          const digitalValues = values.replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '')
+          const digitalValues = values.replaceAll(/([\-\d\.\n])|(.)/g, (a, b) => b || '')
           let digitOfValues = digitalValues.match(/-?\d+\.?\d*/)
           const nameDigits = isSingleValue ? paramName : `${paramName}: ${strategyHeaders[i]}`
           const namePercents = isSingleValue ? `${paramName} %` : `${paramName} %: ${strategyHeaders[i]}`
           if ((values.includes('\n') && values.endsWith('%'))) {
             const valuesPair = values.split('\n', 3)
             if (valuesPair && valuesPair.length >= 2) {
-              const digitVal0 = valuesPair[0].replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //.match(/-?\d+\.?\d*/)
-              const digitVal1 = valuesPair[valuesPair.length - 1].replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //match(/-?\d+\.?\d*/)
+              const digitVal0 = valuesPair[0] //.replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //.match(/-?\d+\.?\d*/)
+              const digitVal1 = valuesPair[valuesPair.length - 1]//.replaceAll(/([\-\d\.])|(.)/g, (a, b) => b || '') //match(/-?\d+\.?\d*/)
 
               if (Boolean(digitVal0)) {
                 report[nameDigits] = parseNumTypeByRowName(nameDigits, digitVal0)
@@ -740,7 +741,7 @@ tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
   if (generateBtnEl) {
     // page.mouseClick(generateBtnEl) // // generateBtnEl.click()
     generateBtnEl.click()
-    generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtnDisabled, 1000) // Some times is not started
+    await page.waitForSelector(SEL.strategyDeepTestGenerateBtnDisabled, 1000) // Some times is not started
     let progressEl = await page.waitForSelector(SEL.strategyReportDeepTestInProcess, 1000)
     generateBtnEl = await page.$(SEL.strategyDeepTestGenerateBtn)
     if (!progressEl && generateBtnEl) { // Some time button changed, but returned
