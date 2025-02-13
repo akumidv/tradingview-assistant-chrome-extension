@@ -329,12 +329,18 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
       throw new Error('Can not switch off from deep backtesting mode')
   }
 
+  if (!isDeepTest && (typeof selStatus.userDoNotHaveDeepBacktest === 'undefined' || selStatus.userDoNotHaveDeepBacktest))
+    return // Do not check if user do not have userDoNotHaveDeepBacktest switch
   let deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckbox)
   if (!deepCheckboxEl) {
+    selStatus.userDoNotHaveDeepBacktest = true
     if (isDeepTest)
       throw new Error('Deep Backtesting mode switch not found. Do you have Premium subscription or may be TV UI changed?')
     return
+  } else {
+    selStatus.userDoNotHaveDeepBacktest = false
   }
+
   if (!isDeepTest) {
     if (isTurnedOn())
       await turnDeepModeOff()
@@ -375,6 +381,39 @@ tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
   return indicatorTitleEl
 }
 
+tv.checkIsNewVersion = async (timeout = 1000) => {
+  // check by deepHistory element if it's present
+  if (typeof selStatus === 'undefined' || selStatus.isNewVersion !== null) // Already checked
+    return
+  let element = await page.waitForSelector(SEL.strategyDeepTestCheckbox, timeout)
+  if (!element) {
+    selStatus.isNewVersion = true
+    element = await page.waitForSelector(SEL.strategyDeepTestCheckbox, timeout)
+    if (element) { // New version
+      console.log('[INFO] New TV UI by deep backtest switch')
+      return
+    }
+
+    selStatus.isNewVersion = null
+  }
+  // If user do not have deep history checkbox then per
+  element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
+  if (element) { // Old versions
+    selStatus.isNewVersion = false
+    console.log('[INFO] Prev TV UI by performance tab')
+    return
+  }
+  selStatus.isNewVersion = true
+  element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
+  if (element) { // New versions
+    selStatus.isNewVersion = true
+    console.log('[INFO] New TV UI by by performance tab')
+    return
+  }
+  selStatus.isNewVersion = true
+  console.warn('[WARN] Can able to detect current TV UI changes. Set it to new one')
+}
+
 tv.openStrategyTab = async (isDeepTest) => {
   let isStrategyActiveEl = await page.waitForSelector(SEL.strategyTesterTabActive)
   if (!isStrategyActiveEl) {
@@ -391,14 +430,16 @@ tv.openStrategyTab = async (isDeepTest) => {
   if (!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
     throw new Error('There is not strategy name element on "Strategy Tester" tab.' + SUPPORT_TEXT)
   }
-  let stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
+  await tv.checkIsNewVersion()
+  // let stratSummaryEl = await page.$(SEL.strategyPerformanceTab)
+  let stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
   if (!stratSummaryEl) {
     await tv.setDeepTest(isDeepTest)
     if (isDeepTest) {
       if (page.$(SEL.strategyDeepTestGenerateBtn))
         page.mouseClickSelector(SEL.strategyDeepTestGenerateBtn)
     }
-    stratSummaryEl = await page.getElBySelNameWithCheckIsNewUI('strategyPerformanceTab', 1000)
+    stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
     if (!stratSummaryEl)
       throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
 
@@ -654,11 +695,19 @@ tv.parseReportTable = async (isDeepTest) => {
 }
 
 tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
-  const generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
+  let generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
   if (generateBtnEl) {
-    page.mouseClick(generateBtnEl) // // generateBtnEl.click()
+    // page.mouseClick(generateBtnEl) // // generateBtnEl.click()
+    generateBtnEl.click()
+    generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtnDisabled, 1000) // Some times is not started
+    let progressEl = await page.waitForSelector(SEL.strategyReportDeepTestInProcess, 1000)
+    generateBtnEl = await page.$(SEL.strategyDeepTestGenerateBtn)
+    if (!progressEl && generateBtnEl) { // Some time button changed, but returned
+      generateBtnEl.click()
+    }
+
   } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
-    return 'Deep backtesting process is not started'
+    return 'Deep backtesting strategy parameters are not changed'
   } else {
     throw new Error('Error for generate deep backtesting report due the button is not exist.' + SUPPORT_TEXT)
   }

@@ -1,5 +1,6 @@
 const selStatus = {
-  isNewVersion: true // null
+  isNewVersion: null,
+  userDoNotHaveDeepBacktest: null
 }
 
 

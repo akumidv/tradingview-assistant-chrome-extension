@@ -8,30 +8,6 @@ page.$ = function (selector) {
   }
 }
 
-
-page.getElBySelNameWithCheckIsNewUI = async (selectorName, timeout = 1000) => {
-  const selector = SEL[selectorName]
-  if (typeof selStatus !== 'undefined' && selStatus.isNewVersion === null) {
-    const element = await page.waitForSelector(selector, timeout)
-    if (element) {
-      selStatus.isNewVersion = false
-      console.log('[INFO] Prev version UI')
-      return element
-    }
-    selStatus.isNewVersion = true
-    const selectorNew = SEL[selectorName]
-    const newVerElement = page.$(selectorNew)
-    if (!newVerElement) {
-      selStatus.isNewVersion = false
-      console.log('[INFO] Prev version UI')
-    } else {
-      console.log('[INFO] New version UI')
-    }
-    return newVerElement
-  }
-  return await page.waitForSelector(selector, timeout)
-}
-
 page.waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(resolve, timeout))
 
 page.waitForSelectorOld2del = async function (selector, timeout = 5000, isHide = false, parentEl) { //2023-04-18
