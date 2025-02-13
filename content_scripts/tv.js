@@ -97,7 +97,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest =
     let dialogTitleEl = await page.waitForSelector(SEL.indicatorTitle, 2500)
     if (!dialogTitleEl || !dialogTitleEl.innerText) {
       await page.mouseClickSelector(SEL.cancelBtn)
-      await tv.openStrategyTab()
+      await tv.openStrategyTab(isDeepTest)
       await tv.openCurrentStrategyParam()
       dialogTitleEl = await page.$(SEL.indicatorTitle)
     }
@@ -393,7 +393,6 @@ tv.checkIsNewVersion = async (timeout = 1000) => {
       console.log('[INFO] New TV UI by deep backtest switch')
       return
     }
-
     selStatus.isNewVersion = null
   }
   // If user do not have deep history checkbox then per
@@ -436,8 +435,9 @@ tv.openStrategyTab = async (isDeepTest) => {
   if (!stratSummaryEl) {
     await tv.setDeepTest(isDeepTest)
     if (isDeepTest) {
-      if (page.$(SEL.strategyDeepTestGenerateBtn))
-        page.mouseClickSelector(SEL.strategyDeepTestGenerateBtn)
+      const generateBtnEl = page.$(SEL.strategyDeepTestGenerateBtn)
+      if (generateBtnEl)
+        page.mouseClick(generateBtnEl)
     }
     stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
     if (!stratSummaryEl)
