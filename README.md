@@ -1,5 +1,6 @@
 # About
-An assistant for backtesting trading strategies and checking (showing) external signals in Tradingview implemented as a Chrome browser extension.
+An assistant for backtesting trading strategies and checking (showing) external signals in Tradingview implemented as a 
+Chrome browser extension.
 
 Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg)
 
@@ -10,16 +11,17 @@ Video [how to install extension](https://www.youtube.com/watch?v=FH7dI4K8w5k)
 ## Disclaimer
 **Attention!** 
 
-Active use of the extension can cause detection by the TradingView as using a bot for backtesting and lead to the ban of the user's account.
+Active use of the extension can cause detection by the TradingView as using a bot for backtesting and lead to the ban 
+of the user's account.
 
-Although the extension is not a bot (i.e. it does not work independently of the user in the cloud). And main idea of 
+Although the extension is not a bot (i.e. it does not work independently of the user in the cloud). The main idea of 
 this extension to help Tradingview community to have tools and functionality that not provided by Tradingview itself. 
-And one of the goal of extension developing have no intention to break Tradingview rules, so extension does not 
+So as extension developing have no intention to break Tradingview rules, in result it does not 
 call the TradingView API, does not interfere with data transmission, and doesn't (and won't) parse/save/send any marker 
-data(charts/news) and other financial information, but only automates user behavior through the UI and provide some
+(charts/news) data and other financial information, but only automates user behavior through the UI and provide some
 additional information. 
 
-But usage of extensions and all risks remain with the users.
+But still usage of extensions and all risks remain with the users.
 
 The Tradingview support mention this rule for banned users
 
@@ -30,27 +32,27 @@ The Tradingview support mention this rule for banned users
 > protective mechanisms designed to prevent unauthorized reproduction or distribution of TradingView content is 
 > expressly forbidden."
 
+They have an obligation to their data providers and won't risk violating this agreement and of course won't 
+provide services at a loss.
 
 Most cases of banned users are due to the use of extensions for a long time on a few browsers/tabs with a single account and IP.
 
 It is important to note that any changes to strategy parameters require a request to the Tradingview servers, and this
-costs money. They have an obligation to their data providers and won't risk violating this agreement and of course won't 
-provide services at a loss.
+costs money. 
 
 To estimate how much your backtesting optimization cost for Tradingview you can use as basis of price
-for 1 second of backtesting $0.0001 (AWS Lambda cost fo 5GB-sec). So 10 seconds strategy backtesting calculation with 
-1000 requests will demand servers for $1. If you are doing this everyday - it will cost $20 a month. Of course if you 
-are using free account, Essential($12 a month) or Plus ($24 a month) - you will generate lost for Tradingview and they 
-won't like this. If you backtest all night for 10_000 requests every day, then you high-load Tradingview servers for 
-$300 a month or more.
+for 1 second of backtesting as $0.0001 (AWS Lambda cost fo 5GB-sec). So 10 seconds strategy backtesting calculation with 
+1000 by changing parameters requests will demand servers for $1. If you are doing this everyday - it will cost $20 a month. 
+Of course if you are using free account, Essential($12 a month) or Plus ($24 a month) - you will generate lost for 
+Tradingview and they won't like this. If you backtest all night for 10,000 requests every day, then you high-load 
+Tradingview servers for $300 a month or more.
 
 In that case if you have real good strategy it may be good idea to convert it to Python and test it
 on your own servers (and it will be in 10-100 times faster)
 
-If your trading strategy is not good the brute force for millions of combinations will not help. 
+If your trading strategy is not good, the brute force for millions of combinations will not help. 
 
 So be carefully and use extension wisely. 
-
 
 **Disclaimer** 
 
@@ -63,7 +65,7 @@ better the strategy will be tuned to a specific market situation. In this case, 
 anymore, but rather a filter.
 
 The key recommendation is to focus on the 2-3 most significant parameters that have the most impact on result. These 
-are the parameters that are important for optimizing your strategy  (correlated with profit). Instead of looking for 
+are the parameters that are important for optimizing your strategy (correlated with profit). Instead of looking for 
 the absolute best parameters, look for those that produce an acceptable result across a wide range of market conditions 
 (for example, parameters that work well for multiple instruments and timeframes).
 
