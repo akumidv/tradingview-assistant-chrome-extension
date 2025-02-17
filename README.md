@@ -56,6 +56,22 @@ So be carefully and use extension wisely.
 
 The developer of the extension does not response for any possible consequences of its use.
 
+## Recommendations
+
+Keep in mind the general rule: the more parameters a trading strategy has and the more precisely they are selected, the 
+better the strategy will be tuned to a specific market situation. In this case, it's not really a trading strategy 
+anymore, but rather a filter.
+
+The key recommendation is to focus on the 2-3 most significant parameters that have the most impact on result. These 
+are the parameters that are important for optimizing your strategy  (correlated with profit). Instead of looking for 
+the absolute best parameters, look for those that produce an acceptable result across a wide range of market conditions 
+(for example, parameters that work well for multiple instruments and timeframes).
+
+If the strategy generates more revenue than the buy-and-hold strategy on the broad market (S&P for example, alfa), on 
+different instruments and timeframes, during different periods of deep testing, then it is possible that this strategy 
+could be a good one. However, if the strategy generates more than twice the alfa income, it would be wise to understand 
+why this is the case. Most often, this is due to the higher risk (beta) associated with the strategy, as well as the 
+historical fit, meaning that it may not work as well in the future.
 
 ## Last version changes
 2.10.x > 2.11.x:
