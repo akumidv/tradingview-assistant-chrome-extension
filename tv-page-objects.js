@@ -1,3 +1,19 @@
+async function waitForSelector(selector, timeout = 15000) {
+  const waitForTick = async () => new Promise(resolve => setTimeout(resolve, 100))
+  let elem = null
+  while(timeout > 0 && elem == null ) {
+    try {
+      elem = document.querySelector(selector)
+    } catch {
+    }
+    await waitForTick()
+    timeout -= 100
+  }
+  return elem
+}
+
+
+
 
 waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(resolve, timeout))
 (async function() {

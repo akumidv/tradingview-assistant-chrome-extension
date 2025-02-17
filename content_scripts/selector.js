@@ -46,12 +46,12 @@ const SEL = {
   },
   get strategyReportObserveArea() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) > div[class^="wrapper"]' :
+      '[class="backtesting deep-history"] div[class^="wrapper"]' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]'
   },
   get strategyReportInProcess() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) > div[class^="wrapper"] div[role="progressbar"]' :
+      '[class="backtesting deep-history"] div[class^="wrapper"] div[role="progressbar"]' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]  div[role="progressbar"]'
   },
   get strategyReportReady() {
@@ -62,7 +62,7 @@ const SEL = {
   // strategyReportTransitionReady: '#bottom-area div.backtesting-content-wrapper > div:not(.opacity-transition).reports-content',
   get strategyReportError() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) > div[class^="wrapper"] [class*=emptyStateIcon]' :
+      '[class="backtesting deep-history"] div[class^="wrapper"] [class*=emptyStateIcon]' :
       '#bottom-area div[class^="backtesting"] div[class^="container"] [class*=emptyStateIcon]'
   },
   get strategyReportHeader() {

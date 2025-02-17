@@ -329,8 +329,14 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
       throw new Error('Can not switch off from deep backtesting mode')
   }
 
-  if (!isDeepTest && (typeof selStatus.userDoNotHaveDeepBacktest === 'undefined' || selStatus.userDoNotHaveDeepBacktest))
+  if ((typeof selStatus.userDoNotHaveDeepBacktest === 'undefined' || selStatus.userDoNotHaveDeepBacktest) &&!isDeepTest)
     return // Do not check if user do not have userDoNotHaveDeepBacktest switch
+
+  if(selStatus.isNewVersion === false) {
+    console.log('[INFO] FOR PREVIOUS VERSION (Feb of 2025) DEEP BACKTEST SHOULD BE SET MANUALLY')
+    return
+  }
+
   let deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckbox)
   if (!deepCheckboxEl) {
     selStatus.userDoNotHaveDeepBacktest = true
@@ -342,14 +348,11 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
   }
 
   if (!isDeepTest) {
-    if (isTurnedOn())
-      await turnDeepModeOff()
+    await turnDeepModeOff()
     return
   }
   if (isTurnedOff())
     await turnDeepModeOn()
-  if (!isTurnedOn())
-    throw new Error('Deep mode is not turned on')
   if (deepStartDate) {
     const startDateEl = await page.waitForSelector(SEL.strategyDeepTestStartDate)
     if (startDateEl) {
@@ -405,15 +408,13 @@ tv.checkIsNewVersion = async (timeout = 1000) => {
   selStatus.isNewVersion = true
   element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
   if (element) { // New versions
-    selStatus.isNewVersion = true
     console.log('[INFO] New TV UI by by performance tab')
     return
   }
-  selStatus.isNewVersion = true
   console.warn('[WARN] Can able to detect current TV UI changes. Set it to new one')
 }
 
-tv.openStrategyTab = async (isDeepTest) => {
+tv.openStrategyTab = async (isDeepTest = false) => {
   let isStrategyActiveEl = await page.waitForSelector(SEL.strategyTesterTabActive)
   if (!isStrategyActiveEl) {
     const strategyTabEl = await page.waitForSelector(SEL.strategyTesterTab)
@@ -594,6 +595,7 @@ const paramNamePrevVersionMap = {
   'Avg Losing Trade': 'Avg losing trade',
   'Ratio Avg Win / Avg Loss': 'Ratio avg win / avg loss',
   'Largest Winning Trade': 'Largest winning trade',
+  'Percent Profitable': 'Percent profitable',
   'Largest Losing Trade': 'Largest losing trade',
   'Avg # Bars in Trades': 'Avg # bars in trades',
   'Avg # Bars in Winning Trades': 'Avg # bars in winning trades',
@@ -602,11 +604,11 @@ const paramNamePrevVersionMap = {
 }
 
 tv.convertParameterName = (field) => {
-   if (selStatus.isNewVersion)  // new version
-     return field
-   if (!Object.hasOwn(paramNamePrevVersionMap, field))
-     return field
-   return field
+  if (selStatus.isNewVersion)  // new version
+    return field
+  if (Object.hasOwn(paramNamePrevVersionMap, field))
+    return paramNamePrevVersionMap[field]
+  return field
 }
 
 
@@ -680,10 +682,7 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
 }
 
 
-
-
 tv.parseReportTable = async (isDeepTest) => {
-
   const selHeader = isDeepTest ? SEL.strategyReportDeepTestHeader : SEL.strategyReportHeader
   const selRow = isDeepTest ? SEL.strategyReportDeepTestRow : SEL.strategyReportRow
   await page.waitForSelector(selHeader, 2500)
@@ -711,7 +710,8 @@ tv.parseReportTable = async (isDeepTest) => {
   }
   report = tv._parseRows(allReportRowsEl, strategyHeaders, report)
   if (selStatus.isNewVersion) {
-    const tabs = [[SEL.strategyTradeAnalysisTab, SEL.strategyTradeAnalysisTabActive],
+    const tabs = [
+      [SEL.strategyTradeAnalysisTab, SEL.strategyTradeAnalysisTabActive],
       [SEL.strategyRatiosTab, SEL.strategyRatiosTabActive]]
     for (const sel of tabs) {
       page.mouseClickSelector(sel[0])
@@ -778,7 +778,7 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
     const tick = 100
     for (let i = 0; i < 5000 / tick; i++) { // Waiting for an error 5000 ms      // isProcessEnd = await page.waitForSelector(SEL.strategyReportError, 5000)
       isProcessError = await page.waitForSelector(SEL.strategyReportError, tick)
-      isProcessEnd = document.querySelector(selReady)
+      isProcessEnd = page.$(selReady)
       if (isProcessError || isProcessEnd) {
         break
       }
