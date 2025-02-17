@@ -12,9 +12,44 @@ Video [how to install extension](https://www.youtube.com/watch?v=FH7dI4K8w5k)
 
 Active use of the extension can cause detection by the TradingView as using a bot for backtesting and lead to the ban of the user's account.
 
-Although the extension is not a bot (i.e. it does not work independently of the user in the cloud), it does not use the 
-TradingView API and does not interfere with data transmission, but only automates user behavior through the UI. Its use and 
-all risks remain with the users.
+Although the extension is not a bot (i.e. it does not work independently of the user in the cloud). And main idea of 
+this extesnion to help Tradingview community to have tools and functionality that not provided by Tradingview itself. 
+And won't break Tradingivew rules, so extension it does not call the TradingView API, does not interfere with data 
+transmission, and doesn't (and won't) parse/save/send any marker data(charts/news) and other financial information, but 
+only automates user behavior through the UI and provide some additional information. 
+
+But usage of extensions and all risks remain with the users.
+
+The Tradingview support mention this rule for banned users
+```
+TradingView is dedicated to providing users with a secure and accessible platform for the display of market data, 
+charts, news, and other financial information. As such, users are strictly prohibited from employing any automated 
+data collection methods, including but not limited to scripts, APIs, screen scraping, data mining, robots, or other 
+data gathering and extraction tools, regardless of their intended purposes. The use of any technology to circumvent 
+protective mechanisms designed to prevent unauthorized reproduction or distribution of TradingView content is 
+expressly forbidden."
+```
+
+Most cases of banned users are due to the use of extensions for a long time on a few browsers with a single account and IP.
+
+It is important to note that any changes to strategy parameters require a request to the Tradingview servers, and this
+costs money. They have an obligation to their data providers and won't risk violating this agreement and of course won't 
+providing services at a loss.
+
+To estimate how much your backtesting optimization cost for Tradingview you can use as piece of price
+as 1 second of backtesting $0.0001 (AWS Lambda cost fo 5GB-sec). So 10 seconds backtesting calculation with 1000 requests
+will demand servers for $1. If you are doing this everyday - it will cost $20 a month. Of course if you are using
+free account, Essential($12 a month) or Plus ($24 a month) - you will generate lost for Tradingview and they 
+won't like this. If you backtest all night for 10_000 requests everyday, then you highload Tradingview servers for 
+$300 a month or more.
+
+In that case if you have real good strategy it may be good idea to convert it to Python and test it
+on your own servers (and it will be in 10-100 times faster) 
+
+If your trading strategy is not good the brute force for millions of combinations will not help. 
+
+So be carefully and use extension wisely. 
+
 
 **Disclaimer** 
 
