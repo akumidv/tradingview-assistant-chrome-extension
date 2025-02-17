@@ -176,7 +176,7 @@ Please add issues in this repository by following [link](https://github.com/akum
 Very helpfull will be if you can attach full screenshot with tradingview page and errors. And also with open command tab in browser developer mode (please press F12 to open developer mode and click on console tab)
 
 
-## **Recommendation**
+## Translating the code into Python.
 
 If your strategy requires a large amount of testing, it is recommended to order its conversion into python and perform 
 backtesting and hyperoptimization of parameters using resources, such as Google Collab or your computer. In addition, it significantly speeds up the search for parameters (in 5-10 times per cycle) and history deep. Examples in Jupyter Notebooks in repository [trade-strategies-backtesting-optimization](https://github.com/akumidv/trade-strategies-backtesting-optimization). You can run examples in Google Collab, it's free. You would just upload files  with extension `*.ipynb` to your Google Drive and open these files.
