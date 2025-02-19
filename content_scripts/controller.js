@@ -77,6 +77,7 @@
   const dialogWindowNode = await page.waitForSelector(SEL.tvDialogRoot, 0)
   if(dialogWindowNode) {
     const tvObserver = new MutationObserver(tv.dialogHandler);
+    console.log('[INFO] Observer added to dialogWindowNone')
     tvObserver.observe(dialogWindowNode, {
       childList: true,
       subtree: true,

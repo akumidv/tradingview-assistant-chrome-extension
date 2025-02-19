@@ -1,4 +1,19 @@
-const page = {}
+const page = {
+  _inputEvent: new Event('input', { bubbles: true }),
+  _changeEvent: new Event('change', { bubbles: true }),
+  _mouseEvents: {}
+};
+
+["mouseover", "mousedown", "mouseup", "click",
+  "dblclick", "contextmenu"].forEach(eventType => {
+  page._mouseEvents[eventType] = new MouseEvent(eventType, {
+    bubbles: true,
+    cancelable: true,
+    view: window,
+  })
+})
+
+const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
 
 page.$ = function (selector) {
   try {
@@ -9,21 +24,6 @@ page.$ = function (selector) {
 }
 
 page.waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeout(resolve, timeout))
-
-page.waitForSelectorOld2del = async function (selector, timeout = 5000, isHide = false, parentEl) { //2023-04-18
-  parentEl = parentEl ? parentEl : document
-  return new Promise(async (resolve) => {
-    let iter = 0
-    let elem
-    const tikTime = timeout === 0 ? 1000 : 50
-    do {
-      await page.waitForTimeout(tikTime)
-      elem = parentEl.querySelector(selector)
-      iter += 1
-    } while ((timeout === 0 ? true : (tikTime * iter) < timeout) && (isHide ? !!elem : !elem))
-    resolve(elem)
-  });
-}
 
 
 page.waitForSelector = async (selector, timeout = 5000, isHide = false, parentEl = null) => {
@@ -52,16 +52,6 @@ page.waitForSelector = async (selector, timeout = 5000, isHide = false, parentEl
   })
 }
 
-const reactValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-page._inputEvent = new Event('input', { bubbles: true });
-page._changeEvent = new Event('change', { bubbles: true });
-
-page._mouseEvents = {};
-["mouseover", "mousedown", "mouseup", "click",
-  "dblclick", "contextmenu"].forEach(eventType => {
-  page._mouseEvents[eventType] = document.createEvent('MouseEvents')
-  page._mouseEvents[eventType].initEvent(eventType, true, true)
-})
 
 page.getTextForSel = function (selector, elParent) {
   elParent = elParent ? elParent : document
@@ -72,10 +62,9 @@ page.getTextForSel = function (selector, elParent) {
 page.setInputElementValue = function (element, value, isChange = false) {
   reactValueSetter.call(element, value)
   element.dispatchEvent(page._inputEvent);
-  if (isChange) element.dispatchEvent(page._changeEvent);
+  if (isChange)
+    element.dispatchEvent(page._changeEvent);
 }
-
-
 
 
 page.mouseClick = function (el) {
@@ -96,20 +85,26 @@ page.getElText = (element) => {
   return element.innerText.replaceAll('​', '')
 }
 
-page.setSelByText = (selector, textValue) => {
+
+page.setSelByText = async (selector, textValue) => {
   let isSet = false
-  const selectorAllVal = document.querySelectorAll(selector)
+  await page.waitForSelector(selector, 1000)
+  await page.waitForTimeout(15) // Some times if list quite long, TV is not filled values yet and it generate an error
+  let selectorAllVal = document.querySelectorAll(selector)
   if (!selectorAllVal || !selectorAllVal.length)
     return isSet
   for (let optionsEl of selectorAllVal) {
     if (optionsEl) {//&& options.innerText.startsWith(textValue)) {
-      const itemValue = page.getElText(optionsEl).toLowerCase()
+      let itemValue = page.getElText(optionsEl).toLowerCase()
       if (itemValue && textValue && itemValue.startsWith(textValue.toLowerCase())) {
-        page.mouseClick(optionsEl)
+        page.mouseClick(optionsEl) // optionsEl.click()
+        await page.waitForSelector(selector, 1000, true)
         isSet = true
         break
       }
+      itemValue = null
     }
   }
+  selectorAllVal = null
   return isSet
 }

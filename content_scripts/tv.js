@@ -201,47 +201,52 @@ tv.getStrategyParams = async (isIndicatorSave = false) => {
   return strategyInputs
 }
 
-tv.setStrategyParams = async (name, propVal, keepStrategyParamOpen = false, isDeepTest) => {
-  // if (isCheckOpenedWindow) {
-  //   const indicatorTitleEl = document.querySelector(SEL.indicatorTitle)
-  //   if (!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-  //     return null
-  //   }
-  // }
-  // else {
-  //   const indicatorTitleEl = await tv.checkAndOpenStrategy(name) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
-  //   if (!indicatorTitleEl)
-  //     return null
-  // }
+tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyParamOpen = false) => {
 
   const indicatorTitleEl = await tv.checkAndOpenStrategy(name, isDeepTest) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
   if (!indicatorTitleEl)
     return null
-  const indicProperties = document.querySelectorAll(SEL.indicatorProperty)
+  let popupVisibleHeight = 917
+  try {
+    popupVisibleHeight = page.$(SEL.indicatorScroll)?.getBoundingClientRect()?.bottom || 917
+  } catch {
+  }
+  let indicProperties = document.querySelectorAll(SEL.indicatorProperty)
   const propKeys = Object.keys(propVal)
   let setResultNumber = 0
   let setPropertiesNames = {}
   for (let i = 0; i < indicProperties.length; i++) {
     const propText = indicProperties[i].innerText
     if (propText && propKeys.includes(propText)) {
+      try {
+        const rect = indicProperties[i].getBoundingClientRect()
+        if (rect.top < 0 || rect.bottom > popupVisibleHeight || !indicProperties[i].checkVisibility()) {
+          indicProperties[i].scrollIntoView() // TODO scroll by hight and if not visible, than scroll Into - faster becouse for 5-10 elemetns at the time
+          await page.waitForTimeout(10)
+          if (indicProperties[i].getBoundingClientRect()?.bottom > popupVisibleHeight)
+            await page.waitForTimeout(50)
+        }
+      } catch {}
       setPropertiesNames[propText] = true
       setResultNumber++
       const propClassName = indicProperties[i].getAttribute('class')
       if (propClassName.includes('first-')) {
         i++
-        if (indicProperties[i].querySelector('input')) {
-          page.setInputElementValue(indicProperties[i].querySelector('input'), propVal[propText])
-        } else if (indicProperties[i].querySelector('span[role="button"]')) { // List
-          const buttonEl = indicProperties[i].querySelector('span[role="button"]')
-          if (!buttonEl || !buttonEl.innerText)
-            continue
-          buttonEl.scrollIntoView()
-          await page.waitForTimeout(100)
-          page.mouseClick(buttonEl)
-          page.setSelByText(SEL.strategyListOptions, propVal[propText])
+        let inputEl = indicProperties[i].querySelector('input')
+        if (inputEl) {
+          page.setInputElementValue(inputEl, propVal[propText])
+          inputEl = null
+        } else {
+          let buttonEl = indicProperties[i].querySelector('span[role="button"]')
+          if (buttonEl?.innerText) { // DropDown List
+            buttonEl.click()
+            buttonEl = null
+            await page.setSelByText(SEL.strategyListOptions, propVal[propText])
+          }
         }
       } else if (propClassName.includes('fill-')) {
-        const checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
+        let checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
+
         if (checkboxEl) {
           // const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
           const isChecked = Boolean(checkboxEl.checked)
@@ -249,6 +254,7 @@ tv.setStrategyParams = async (name, propVal, keepStrategyParamOpen = false, isDe
             page.mouseClick(checkboxEl)
             checkboxEl.checked = Boolean(propVal[propText])
           }
+          checkboxEl =  null
         }
       }
       setResultNumber = Object.keys(setPropertiesNames).length
@@ -256,9 +262,11 @@ tv.setStrategyParams = async (name, propVal, keepStrategyParamOpen = false, isDe
         break
     }
   }
+  indicProperties = null
   // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
-  if (!keepStrategyParamOpen && document.querySelector(SEL.okBtn))
-    document.querySelector(SEL.okBtn).click()
+  const elOkBtn = page.$(SEL.okBtn)
+  if (!keepStrategyParamOpen && elOkBtn)
+    elOkBtn.click()
   return true
 }
 
@@ -329,10 +337,10 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
       throw new Error('Can not switch off from deep backtesting mode')
   }
 
-  if ((typeof selStatus.userDoNotHaveDeepBacktest === 'undefined' || selStatus.userDoNotHaveDeepBacktest) &&!isDeepTest)
+  if ((typeof selStatus.userDoNotHaveDeepBacktest === 'undefined' || selStatus.userDoNotHaveDeepBacktest) && !isDeepTest)
     return // Do not check if user do not have userDoNotHaveDeepBacktest switch
 
-  if(selStatus.isNewVersion === false) {
+  if (selStatus.isNewVersion === false) {
     console.log('[INFO] FOR PREVIOUS VERSION (Feb of 2025) DEEP BACKTEST SHOULD BE SET MANUALLY')
     return
   }
@@ -381,6 +389,7 @@ tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
       return null
     }
   }
+  await page.waitForSelector(SEL.indicatorProperty)
   return indicatorTitleEl
 }
 
@@ -388,18 +397,7 @@ tv.checkIsNewVersion = async (timeout = 1000) => {
   // check by deepHistory element if it's present
   if (typeof selStatus === 'undefined' || selStatus.isNewVersion !== null) // Already checked
     return
-  let element = await page.waitForSelector(SEL.strategyDeepTestCheckbox, timeout)
-  if (!element) {
-    selStatus.isNewVersion = true
-    element = await page.waitForSelector(SEL.strategyDeepTestCheckbox, timeout)
-    if (element) { // New version
-      console.log('[INFO] New TV UI by deep backtest switch')
-      return
-    }
-    selStatus.isNewVersion = null
-  }
-  // If user do not have deep history checkbox then per
-  element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
+  let element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
   if (element) { // Old versions
     selStatus.isNewVersion = false
     console.log('[INFO] Prev TV UI by performance tab')
@@ -408,10 +406,10 @@ tv.checkIsNewVersion = async (timeout = 1000) => {
   selStatus.isNewVersion = true
   element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
   if (element) { // New versions
-    console.log('[INFO] New TV UI by by performance tab')
+    console.log('[INFO] New TV UI by performance tab')
     return
   }
-  console.warn('[WARN] Can able to detect current TV UI changes. Set it to new one')
+  console.warn('[WARN] Can able to detect current TV UI changes. Probably Deep mode set. Set it to new one')
 }
 
 tv.openStrategyTab = async (isDeepTest = false) => {
@@ -426,12 +424,10 @@ tv.openStrategyTab = async (isDeepTest = false) => {
     }
   }
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
-  // strategyCaptionEl = !strategyCaptionEl ? document.querySelector(SEL.strategyCaptionNew) : strategyCaptionEl // From 2022-11-13
   if (!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
     throw new Error('There is not strategy name element on "Strategy Tester" tab.' + SUPPORT_TEXT)
   }
   await tv.checkIsNewVersion()
-  // let stratSummaryEl = await page.$(SEL.strategyPerformanceTab)
   let stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
   if (!stratSummaryEl) {
     await tv.setDeepTest(isDeepTest)
@@ -465,19 +461,19 @@ tv.switchToStrategyTabAndSetObserveForReport = async (isDeepTest = false) => {
 
   const reportEl = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
   if (!tv.reportNode) {
-    // tv.reportNode = await page.waitForSelector(SEL.strategyReport, 10000)
+    // TODO When user switch to deep backtest or minimize window - it should be deleted and created again. Or delete observer after every test
     tv.reportNode = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
     if (tv.reportNode) {
       const reportObserver = new MutationObserver(() => {
         tv.isReportChanged = true
       });
-      console.log('SET DEEP TEST OBSERVE AREA')
       reportObserver.observe(tv.reportNode, {
         childList: true,
         subtree: true,
         attributes: false,
         characterData: false
       });
+      console.log('[INFO] Observer added to tv.reportNode')
     } else {
       throw new Error('The strategy report did not found.' + SUPPORT_TEXT)
     }
@@ -496,8 +492,9 @@ tv.switchToStrategyTabAndSetObserveForReport = async (isDeepTest = false) => {
           attributes: false,
           characterData: false
         });
+        console.log('[INFO] Observer added to tv.reportDeepNode')
       } else {
-        console.error('The strategy deep report did not found.')
+        console.error('[INFO] The strategy deep report did not found.')
       }
     }
   }
