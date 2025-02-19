@@ -61,7 +61,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     // }
     let startTime = new Date()
     await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
-    const delayTime = Math.round((new Date() - startTime)/1000 * 10)/10
+    const delayTime = Math.round((new Date() - startTime) / 1000 * 10) / 10
     startTime = new Date()
     let optRes = {}
     switch (testResults.method) {
@@ -91,11 +91,17 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     }
     if (isEnd)
       break
-    const durationTime =  Math.round((new Date() - startTime)/1000 * 10)/10
-    const setTime = optRes['data']['__setTime']
-    const parseTime = optRes['data']['__parseTime']
-    avgTime = Math.round((avgTime - avgTime / (i + 1)  + durationTime/(i + 1)) * 10)/10
-
+    const durationTime = Math.round((new Date() - startTime) / 1000 * 10) / 10
+    avgTime = Math.round((avgTime - avgTime / (i + 1) + durationTime / (i + 1)) * 10) / 10
+    let setTime = 0
+    let parseTime = 0
+    try {
+      if (!Object.hasOwn(optRes, 'data'))
+        optRes['data'] = {}
+      setTime = optRes.data['_setTime_']
+      parseTime = optRes.data['_parseTime_']
+    } catch  {
+    }
     optRes['data']['__durationTime'] = durationTime
     if (optRes.hasOwnProperty('data') && optRes.hasOwnProperty('bestValue') && optRes.bestValue !== null && optRes.hasOwnProperty('bestPropVal')) {
       testResults.bestValue = optRes.bestValue
@@ -105,14 +111,16 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
         text += optRes.hasOwnProperty('currentValue') ? `<p>Current "${testResults.optParamName}": ${backtest.convertValue(optRes.currentValue)}</p>` : ''
         text += optRes.error !== null ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
-      } catch {}
+      } catch {
+      }
     } else {
       try {
         let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`
         text += optRes.currentValue ? `<p>Current "${testResults.optParamName}": ${backtest.convertValue(optRes.currentValue)}</p>` : `<p>Current "${testResults.optParamName}": error</p>`
         text += optRes.error !== null ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
-      } catch {}
+      } catch {
+      }
     }
   }
   return testResults
@@ -147,7 +155,10 @@ async function getInitBestValues(testResults) {
   }
 
   await backtest.delay(testResults.backtestDelay, testResults.randomDelay)
+  const startTime = new Date()
   const res = await tv.getPerformance(testResults)
+  res['data']['_setTime_'] = 0
+  res['data']['_parseTime_'] = Math.round((new Date() -  startTime)/1000 * 10) / 10
   resData = res['data']
   if (res['error'] === null)
     resData = calculateAdditionValuesToReport(resData)
@@ -207,14 +218,14 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
     tv.isReportChanged = false // Global value
     let startTime = new Date()
     if (!isIgnoreSetParam) {
-      const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal,  testResults.isDeepTest, false)
+      const isParamsSet = await tv.setStrategyParams(testResults.shortName, propVal, testResults.isDeepTest, false)
       if (!isParamsSet)
         return { error: 1, errMessage: 'The strategy parameters cannot be set', data: null }
     }
-    const setTime =  Math.round((new Date() - startTime)/1000 * 10) / 10
+    const setTime = Math.round((new Date() - startTime) / 1000 * 10) / 10
     startTime = new Date()
     const res = await tv.getPerformance(testResults, isIgnoreError)
-    const parseTime =  Math.round((new Date() - startTime)/1000 * 10) / 10
+    const parseTime = Math.round((new Date() - startTime) / 1000 * 10) / 10
 
     Object.keys(propVal).forEach(key => res['data'][`__${key}`] = propVal[key])
 
@@ -226,19 +237,19 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
         res['error'] === 1 ? 'The tradingview calculation process has not started for the strategy based on these parameter values' :
           res['error'] === 3 ? `The calculation of the strategy parameters took more than ${testResults.dataLoadingTime} seconds for one combination. Testing of this combination is skipped.` : ''
     }
-    res['data']['__setTime'] = setTime
-    res['data']['__parseTime'] = parseTime
+    res['data']['_setTime_'] = setTime
+    res['data']['_parseTime_'] = parseTime
     return res
   } catch (err) {
     console.log('Error to getTestIterationResult ', err)
-    return {'data': {}}
+    return { 'data': {} }
   }
   // return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
 }
 
 async function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
   let isFiltered = false
-  if (Object.hasOwn(res.data, testResults.optParamName)){
+  if (Object.hasOwn(res.data, testResults.optParamName)) {
     if (testResults.filterAscending !== null &&
       res.data.hasOwnProperty(testResults.filterParamName) && testResults.hasOwnProperty('filterValue')) {
       if (typeof res.data[testResults.filterParamName] !== 'number' ||
