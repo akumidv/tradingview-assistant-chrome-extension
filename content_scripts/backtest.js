@@ -96,13 +96,13 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     let setTime = 0
     let parseTime = 0
     try {
-      if (!Object.hasOwn(optRes, 'data'))
-        optRes['data'] = {}
-      setTime = optRes.data['_setTime_']
-      parseTime = optRes.data['_parseTime_']
-    } catch  {
+      if (Object.hasOwn(optRes, 'data')) {
+        setTime = optRes.data['_setTime_']
+        parseTime = optRes.data['_parseTime_']
+        optRes['data']['_duration_'] = durationTime
+      }
+    } catch {
     }
-    optRes['data']['_duration_'] = durationTime
     if (optRes.hasOwnProperty('data') && optRes.hasOwnProperty('bestValue') && optRes.bestValue !== null && optRes.hasOwnProperty('bestPropVal')) {
       testResults.bestValue = optRes.bestValue
       testResults.bestPropVal = optRes.bestPropVal
@@ -158,7 +158,7 @@ async function getInitBestValues(testResults) {
   const startTime = new Date()
   const res = await tv.getPerformance(testResults)
   res['data']['_setTime_'] = 0
-  res['data']['_parseTime_'] = Math.round((new Date() -  startTime)/1000 * 10) / 10
+  res['data']['_parseTime_'] = Math.round((new Date() - startTime) / 1000 * 10) / 10
   res['data']['_duration_'] = 0
   resData = res['data']
   if (res['error'] === null)

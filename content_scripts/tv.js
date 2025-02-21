@@ -57,83 +57,13 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest =
     throw new Error('It was not possible open strategy. Add it to the chart and try again.')
   }
 
-  // if (strategyName !== null) {
-  //   if (!strategyName) {
-  //     await tv.openStrategyTab(isDeepTest)
-  //     let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
-  //     if (!strategyCaptionEl || !strategyCaptionEl.innerText) {
-  //       throw new Error('There is not strategy name element on "Strategy tester" tab.' + SUPPORT_TEXT)
-  //     }
-  //     indicatorName = strategyCaptionEl.innerText
-  //
-  //     let stratParamEl = document.querySelector(SEL.strategyDialogParam)
-  //     if (!stratParamEl) {
-  //       throw new Error('There is not strategy param button on the "Strategy tester" tab.' + SUPPORT_TEXT)
-  //     }
-  //     page.mouseClick(stratParamEl)
-  //     const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 7500)
-  //     if (!dialogTitle || !dialogTitle.innerText) {
-  //       if (document.querySelector(SEL.cancelBtn))
-  //         document.querySelector(SEL.cancelBtn).click()
-  //       throw new Error('The strategy parameter windows is not opened.' + SUPPORT_TEXT)
-  //     }
-  //
-  //     let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-  //     if (isIndicatorSave || isStrategyPropertiesTab) {
-  //       indicatorName = dialogTitle.innerText
-  //     }
-  //   } else {
-  //     const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
-  //     if (!indicatorLegendsEl)
-  //       return null
-  //     for (let indicatorItemEl of indicatorLegendsEl) {
-  //       const indicatorTitleEl = indicatorItemEl.querySelector(SEL.tvLegendIndicatorItemTitle)
-  //       if (!indicatorTitleEl)
-  //         continue
-  //       if (strategyName && strategyName !== indicatorTitleEl.innerText)
-  //         continue
-  //
-  //       page.mouseDoubleClick(indicatorTitleEl)
-  //       // page.mouseClick(indicatorTitleEl)
-  //       // page.mouseClick(indicatorTitleEl)
-  //       const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
-  //       if (!dialogTitle || !dialogTitle.innerText) {
-  //         if (document.querySelector(SEL.cancelBtn))
-  //           document.querySelector(SEL.cancelBtn).click()
-  //         continue
-  //       }
-  //       let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-  //       if (isIndicatorSave || isStrategyPropertiesTab) {
-  //         indicatorName = dialogTitle.innerText
-  //         break
-  //       }
-  //     }
-  //   }
-  // } else {
-  //   let dialogTitleEl = await page.waitForSelector(SEL.indicatorTitle, 2500)
-  //   if (!dialogTitleEl || !dialogTitleEl.innerText) {
-  //     await page.mouseClickSelector(SEL.cancelBtn)
-  //     await tv.openStrategyTab(isDeepTest)
-  //     await tv.openStrategyParameters()
-  //     dialogTitleEl = await page.$(SEL.indicatorTitle)
-  //   }
-  //   let isStrategyPropertiesTab = document.querySelector(SEL.tabProperties) // For strategy only
-  //   if (isIndicatorSave || isStrategyPropertiesTab) {
-  //     indicatorName = dialogTitleEl.innerText
-  //   }
-  // }
   const dialogTitle = await page.waitForSelector(SEL.indicatorTitle)
   if (!dialogTitle || dialogTitle.innerText === null)
     throw new Error('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
 
-
   if (!await tv.changeDialogTabToInput())
     throw new Error(`Can\'t activate input tab in strategy parameters` + SUPPORT_TEXT)
-  // if(await tv.changeDialogTabToInput()) {
 
-  // } else {
-  //   console.error(`Can't set parameters tab to input`)
-  // }
   const strategyInputs = await tv.getStrategyParams(isIndicatorSave)
   const strategyData = { name: indicatorName, properties: strategyInputs }
 
@@ -312,7 +242,6 @@ tv._openStrategyByButtonNearTitle = async () => {
 }
 
 tv._openStrategyParamsByStrategyDoubleClickBy = async (indicatorTitle) => {
-  console.log('>>>', tv._settingsMethod, indicatorTitle, (tv._settingsMethod !== null && tv._settingsMethod !== 'indName') || !indicatorTitle)
   if ((tv._settingsMethod !== null && tv._settingsMethod !== 'indName') || !indicatorTitle)
     return false
   const indicatorLegendsEl = document.querySelectorAll(SEL.tvLegendIndicatorItem)
@@ -322,14 +251,12 @@ tv._openStrategyParamsByStrategyDoubleClickBy = async (indicatorTitle) => {
     const indicatorTitleEl = indicatorItemEl.querySelector(SEL.tvLegendIndicatorItemTitle)
     if (!indicatorTitleEl)
       continue
-    console.log(indicatorTitleEl.innerText, indicatorTitle)
     if (indicatorTitle !== indicatorTitleEl.innerText)
       continue
     page.mouseDoubleClick(indicatorTitleEl)
     // page.mouseClick(indicatorTitleEl)
     // page.mouseClick(indicatorTitleEl)
     const dialogTitle = await page.waitForSelector(SEL.indicatorTitle, 2500)
-    console.log('Is iopened', !!dialogTitle)
     if (dialogTitle && dialogTitle.innerText === indicatorTitle) {
       tv._settingsMethod = 'indName'
       return true
@@ -357,17 +284,14 @@ tv._openStrategyParamsByStrategyMenu = async () => {
 }
 
 tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = false) => {
-  console.log('!!!', indicatorTitle, searchAgainstStrategies)
   let isOpened = false
   if (indicatorTitle && searchAgainstStrategies) {
     isOpened = await tv._openStrategyParamsByStrategyDoubleClickBy(indicatorTitle)
     tv._settingsMethod = null
   } else {
     isOpened = await tv._openStrategyByButtonNearTitle()
-    console.log('@@1', isOpened)
     if (!isOpened)
       isOpened = await tv._openStrategyParamsByStrategyMenu()
-    console.log('@@2', isOpened)
     if (!isOpened) {
       if (!indicatorTitle) {
         const curStrategyCaptionEl = page.$(SEL.strategyCaption)
@@ -376,8 +300,6 @@ tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = fal
       }
       isOpened = await tv._openStrategyParamsByStrategyDoubleClickBy(indicatorTitle)
     }
-
-    console.log('@@3', isOpened, indicatorTitle)
   }
   if (!isOpened) {
     await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
