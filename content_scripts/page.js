@@ -73,6 +73,11 @@ page.mouseClick = function (el) {
   )
 }
 
+page.mouseDoubleClick = function (el) {
+  ["mouseover", "mousedown", "mouseup", "click", "mousedown", "mouseup", "click"].forEach((eventType) =>
+    el.dispatchEvent(page._mouseEvents[eventType])
+  )
+}
 
 page.mouseClickSelector = function (selector) {
   const el = page.$(selector)
