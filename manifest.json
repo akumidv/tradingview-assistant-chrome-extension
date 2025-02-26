@@ -4,7 +4,7 @@
     "description": "An assistant for backtesting trading strategies and showing external signals in Tradingview",
     "name": "Tradingview assistant",
 
-    "version": "2.11.11",
+    "version": "2.11.12",
     "icons": {
             "16": "images/tv_assist_16.png",
             "32": "images/tv_assist_32.png",

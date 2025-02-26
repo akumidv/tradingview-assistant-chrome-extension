@@ -42,7 +42,6 @@ async function messageHandler(event) {
 
 
 tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest = false) => {
-  let indicatorName = null
   try {
     await tv.openStrategyTab(isDeepTest)
   } catch (err) {
@@ -60,14 +59,14 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest =
   const dialogTitle = await page.waitForSelector(SEL.indicatorTitle)
   if (!dialogTitle || dialogTitle.innerText === null)
     throw new Error('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
-
+  const indicatorName = tv.getStrategyNameFromPopup()
   if (!await tv.changeDialogTabToInput())
     throw new Error(`Can\'t activate input tab in strategy parameters` + SUPPORT_TEXT)
 
   const strategyInputs = await tv.getStrategyParams(isIndicatorSave)
   const strategyData = { name: indicatorName, properties: strategyInputs }
 
-  if (document.querySelector(SEL.cancelBtn)) {
+  if (!isIndicatorSave && document.querySelector(SEL.cancelBtn)) {
     document.querySelector(SEL.cancelBtn).click()
     await page.waitForSelector(SEL.cancelBtn, 1000, true)
   }
@@ -213,8 +212,10 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
   indicProperties = null
   // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
   const elOkBtn = page.$(SEL.okBtn)
-  if (!keepStrategyParamOpen && elOkBtn)
-    elOkBtn.click()
+  if (!keepStrategyParamOpen && elOkBtn) {
+   elOkBtn.click()
+  }
+
   return true
 }
 
@@ -283,12 +284,20 @@ tv._openStrategyParamsByStrategyMenu = async () => {
   return true
 }
 
+tv.getStrategyNameFromPopup = () => {
+  const strategyTitleEl = page.$(SEL.indicatorTitle)
+  if (strategyTitleEl)
+    return strategyTitleEl.innerText
+  return null
+}
+
 tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = false) => {
-  let isOpened = false
-  if (indicatorTitle && searchAgainstStrategies) {
+  const curStrategyTitle = tv.getStrategyNameFromPopup()
+  let isOpened = !!curStrategyTitle
+  if (!isOpened && (indicatorTitle && indicatorTitle !== curStrategyTitle) && searchAgainstStrategies) {
     isOpened = await tv._openStrategyParamsByStrategyDoubleClickBy(indicatorTitle)
     tv._settingsMethod = null
-  } else {
+  } else if (!isOpened) {
     isOpened = await tv._openStrategyByButtonNearTitle()
     if (!isOpened)
       isOpened = await tv._openStrategyParamsByStrategyMenu()
@@ -301,6 +310,7 @@ tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = fal
       isOpened = await tv._openStrategyParamsByStrategyDoubleClickBy(indicatorTitle)
     }
   }
+
   if (!isOpened) {
     await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
     return null
