@@ -1,3 +1,25 @@
+/*
+ * DEBUGGING INSTRUCTIONS FOR PARAMETER NAME ISSUES:
+ * 
+ * If you're getting "Net profit: All Error on runtime" but it works initially:
+ * 
+ * 1. Run your backtest and check the console logs for:
+ *    - "=== Available Parameters ===" - shows all parameter names from TradingView
+ *    - "Found Net Profit variations" - shows detected Net Profit parameter names
+ *    - "Using suggested parameter" - shows automatic parameter name correction
+ * 
+ * 2. If the automatic detection doesn't work, you can manually set the parameter name:
+ *    backtest.setOptParamName(testResults, 'Correct Parameter Name')
+ * 
+ * 3. Update DEF_MAX_PARAM_NAME below with the correct parameter name found in the logs
+ * 
+ * Common parameter names TradingView uses:
+ * - 'Net profit: All' (current default)
+ * - 'Net Profit: All' (old version)
+ * - 'Net P&L: All' (alternative)
+ * - 'Total Net Profit: All' (some versions)
+ */
+
 const backtest = {
   DEF_MAX_PARAM_NAME: 'Net profit: All'
 }
@@ -164,13 +186,30 @@ async function getInitBestValues(testResults) {
   if (res['error'] === null)
     resData = calculateAdditionValuesToReport(resData)
 
-  if (resData && resData.hasOwnProperty(testResults.optParamName)) {
-    console.log(`Init from current "${testResults.optParamName}":`, resData[testResults.optParamName])
-    // resVal = resData[testResults.optParamName]
+  // DEBUG: Log all available parameters
+  backtest.logAvailableParameters(resData, 'in getInitBestValues - Current')
+
+  // Check if parameter exists, if not try to find the correct one
+  let actualParamName = testResults.optParamName
+  if (resData && !resData.hasOwnProperty(testResults.optParamName)) {
+    console.error(`❌ Parameter "${testResults.optParamName}" not found in current report data!`)
+    const suggestedParam = backtest.findBestNetProfitParam(resData)
+    if (suggestedParam) {
+      console.log(`🔄 Using suggested parameter: "${suggestedParam}" instead of "${testResults.optParamName}"`)
+      actualParamName = suggestedParam
+      testResults.optParamName = suggestedParam
+    }
+  }
+
+  if (resData && resData.hasOwnProperty(actualParamName)) {
+    console.log(`Init from current "${actualParamName}":`, resData[actualParamName])
+    // resVal = resData[actualParamName]
     resData['comment'] = resData['comment'] ? `Current parameters. ${resData['comment']}` : 'Current parameters.'
     Object.keys(resPropVal).forEach(key => resData[`__${key}`] = resPropVal[key])
     const curPropVal = expandPropVal(testResults.startParams.current, resPropVal)
-    setBestVal(res.data[testResults.optParamName], curPropVal, res.data)
+    setBestVal(res.data[actualParamName], curPropVal, res.data)
+  } else {
+    console.error(`❌ Parameter "${actualParamName}" not found in current report data!`)
   }
 
   if (testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
@@ -230,6 +269,10 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 
     Object.keys(propVal).forEach(key => res['data'][`__${key}`] = propVal[key])
 
+    // DEBUG: Log all available parameters during iteration
+    if (res.error === null || isIgnoreError) {
+      backtest.logAvailableParameters(res['data'], 'in getTestIterationResult')
+    }
 
     if (res.error === null || isIgnoreError) {
       res['data'] = calculateAdditionValuesToReport(res['data'])
@@ -250,7 +293,26 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 
 async function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
   let isFiltered = false
-  if (Object.hasOwn(res.data, testResults.optParamName)) {
+  
+  // DEBUG: Check if the parameter exists and try to find alternative if not
+  let actualParamName = testResults.optParamName
+  if (!Object.hasOwn(res.data, testResults.optParamName)) {
+    console.error(`❌ Parameter "${testResults.optParamName}" not found in getResWithBestValue!`)
+    backtest.logAvailableParameters(res.data, 'in getResWithBestValue - Missing Parameter')
+    
+    // Try to find the correct parameter name automatically
+    const suggestedParam = backtest.findBestNetProfitParam(res.data)
+    if (suggestedParam) {
+      console.log(`🔄 Using suggested parameter: "${suggestedParam}" instead of "${testResults.optParamName}"`)
+      actualParamName = suggestedParam
+      // Update the testResults to use the correct parameter name for future iterations
+      testResults.optParamName = suggestedParam
+    } else {
+      console.error('❌ Could not find any suitable parameter to use!')
+    }
+  }
+  
+  if (Object.hasOwn(res.data, actualParamName)) {
     if (testResults.filterAscending !== null &&
       res.data.hasOwnProperty(testResults.filterParamName) && testResults.hasOwnProperty('filterValue')) {
       if (typeof res.data[testResults.filterParamName] !== 'number' ||
@@ -269,16 +331,16 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
       testResults.perfomanceSummary.push(res.data)
     await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
 
-    res.currentValue = res.data[testResults.optParamName]
+    res.currentValue = res.data[actualParamName]
     if (!isFiltered) {
       if (bestValue === null || typeof bestValue === 'undefined') {
-        res.bestValue = res.data[testResults.optParamName]
+        res.bestValue = res.data[actualParamName]
         res.bestPropVal = propVale
         console.log(`Best value (first): ${bestValue} => ${res.bestValue}`)
       } else if (!isFiltered && testResults.isMaximizing) {
-        res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
-        res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
-        if (bestValue < res.data[testResults.optParamName]) {
+        res.bestValue = bestValue < res.data[actualParamName] ? res.data[actualParamName] : bestValue
+        res.bestPropVal = bestValue < res.data[actualParamName] ? propVale : bestPropVal
+        if (bestValue < res.data[actualParamName]) {
           res.isBestChanged = true
           console.log(`Best value max: ${bestValue} => ${res.bestValue}`, res.bestPropVal)
         } else {
@@ -286,9 +348,9 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
         }
 
       } else {
-        res.bestValue = bestValue > res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
-        res.bestPropVal = bestValue > res.data[testResults.optParamName] ? propVale : bestPropVal
-        if (bestValue > res.data[testResults.optParamName]) {
+        res.bestValue = bestValue > res.data[actualParamName] ? res.data[actualParamName] : bestValue
+        res.bestPropVal = bestValue > res.data[actualParamName] ? propVale : bestPropVal
+        if (bestValue > res.data[actualParamName]) {
           res.isBestChanged = true
           console.log(`Best value min: ${bestValue} => ${res.bestValue}`)
         } else {
@@ -301,7 +363,7 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
   } else {
     res.bestValue = bestValue
     res.bestPropVal = bestPropVal
-    res.currentValue = `${testResults.optParamName} missed in data`
+    res.currentValue = `${actualParamName} missed in data`
   }
   return res
 }
@@ -657,4 +719,84 @@ async function optSequentialIteration(allRangeParams, testResults, bestValue, be
   else
     res.message += msg
   return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+}
+
+// Add debugging function to log available parameter names
+backtest.logAvailableParameters = (reportData, context = '') => {
+  console.log(`=== Available Parameters ${context} ===`)
+  const paramNames = Object.keys(reportData).filter(key => !key.startsWith('_') && key !== 'comment')
+  paramNames.forEach(name => {
+    console.log(`  "${name}": ${reportData[name]}`)
+  })
+  console.log(`=== End Parameters ${context} ===`)
+  
+  // Look for potential "Net profit" variations
+  const netProfitParams = paramNames.filter(name => 
+    name.toLowerCase().includes('net profit') || 
+    name.toLowerCase().includes('net p&l') ||
+    name.toLowerCase().includes('netprofit')
+  )
+  if (netProfitParams.length > 0) {
+    console.log(`🔍 Found Net Profit variations: ${netProfitParams.join(', ')}`)
+  }
+  
+  return paramNames
+}
+
+// Function to find the best matching parameter name for Net Profit
+backtest.findBestNetProfitParam = (reportData) => {
+  const paramNames = Object.keys(reportData).filter(key => !key.startsWith('_') && key !== 'comment')
+  
+  // Priority order for matching Net Profit parameters
+  const netProfitPatterns = [
+    'Net profit: All',      // Current expected
+    'Net Profit: All',      // Old version
+    'Net profit',           // Simple version
+    'Net Profit',           // Old simple version
+    'Net P&L: All',         // Alternative naming
+    'Net P&L',              // Alternative simple
+    'netProfit: All',       // Camel case
+    'netProfit'             // Camel case simple
+  ]
+  
+  // First try exact matches
+  for (const pattern of netProfitPatterns) {
+    if (paramNames.includes(pattern)) {
+      console.log(`✅ Found exact match for Net Profit: "${pattern}"`)
+      return pattern
+    }
+  }
+  
+  // Then try partial matches
+  for (const pattern of ['net profit', 'net p&l', 'netprofit']) {
+    const matches = paramNames.filter(name => 
+      name.toLowerCase().includes(pattern.toLowerCase())
+    )
+    if (matches.length > 0) {
+      console.log(`✅ Found partial match for Net Profit: "${matches[0]}"`)
+      return matches[0]
+    }
+  }
+  
+  // If no net profit found, look for other profit-related parameters
+  const profitParams = paramNames.filter(name => 
+    name.toLowerCase().includes('profit') || 
+    name.toLowerCase().includes('p&l') ||
+    name.toLowerCase().includes('return')
+  )
+  
+  if (profitParams.length > 0) {
+    console.log(`⚠️ No Net Profit found, suggesting: "${profitParams[0]}"`)
+    return profitParams[0]
+  }
+  
+  console.error('❌ No suitable profit parameter found!')
+  return null
+}
+
+// Function to manually set the correct parameter name (for debugging)
+backtest.setOptParamName = (testResults, newParamName) => {
+  console.log(`🔧 Manually setting parameter name from "${testResults.optParamName}" to "${newParamName}"`)
+  testResults.optParamName = newParamName
+  return testResults
 }

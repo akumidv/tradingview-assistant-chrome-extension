@@ -371,6 +371,7 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
     return
   }
 
+  /*
   let deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckbox)
   if (!deepCheckboxEl) {
     selStatus.userDoNotHaveDeepBacktest = true
@@ -387,13 +388,198 @@ tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
   }
   if (isTurnedOff())
     await turnDeepModeOn()
+  */
   if (deepStartDate) {
-    const startDateEl = await page.waitForSelector(SEL.strategyDeepTestStartDate)
-    if (startDateEl) {
-      page.setInputElementValue(startDateEl, deepStartDate)
+    try {
+      await tv.setDeepTestDateRange(deepStartDate)
+    } catch (dateRangeError) {
+      console.warn('Could not set deep test date range:', dateRangeError)
+      // Continue with testing even if date range setting fails
     }
   }
 }
+
+/**
+ * Sets the deep test date range using the new TradingView UI flow
+ * New UI flow: 
+ * 1. Click date range button (shows current range like "Jan 1, 2024 — Jul 4, 2025")
+ * 2. Click "Custom date range..." button
+ * 3. Set start and end date inputs
+ * 4. Click "Select" button
+ * 
+ * @param {string} deepStartDate - Start date in YYYY-MM-DD format
+ */
+tv.setDeepTestDateRange = async (deepStartDate) => {
+  try {
+    console.log('[DEBUG] Starting setDeepTestDateRange with date:', deepStartDate)
+    
+    // First, try the old method as fallback
+    const oldStartDateEl = await page.waitForSelector(SEL.strategyDeepTestStartDate, 1000)
+    if (oldStartDateEl) {
+      console.log('[DEBUG] Using old UI method for date setting')
+      page.clearInputElementValue(oldStartDateEl)
+      page.setInputElementValue(oldStartDateEl, deepStartDate)
+      return
+    }
+    
+    // Step 1: Click the date range button to open the date picker
+    console.log('[DEBUG] Trying new UI method for date setting')
+    let dateRangeButtonEl = null
+    const dateRangeButtons = document.querySelectorAll(SEL.strategyDeepTestDateRangeButton)
+    console.log('[DEBUG] Found', dateRangeButtons.length, 'potential date range buttons')
+    
+    // Find a date range button that contains a date range (e.g., "Jan 1, 2024 — Jul 4, 2025")
+    for (let button of dateRangeButtons) {
+      console.log('[DEBUG] Checking button text:', button.innerText)
+      if (button.innerText && (button.innerText.includes('—') || button.innerText.includes('-') || button.innerText.includes('2024') || button.innerText.includes('2025'))) {
+        dateRangeButtonEl = button
+        console.log('[DEBUG] Found date range button')
+        break
+      }
+    }
+    
+    if (!dateRangeButtonEl) {
+      console.warn('[DEBUG] Date range button not found, skipping date setting')
+      return
+    }
+    
+    page.mouseClick(dateRangeButtonEl)
+    await page.waitForTimeout(1000)
+
+    // Step 2: Click "Custom date range..." button
+    const customDateRangeButtons = document.querySelectorAll(SEL.strategyDeepTestCustomDateRangeButton)
+    console.log('[DEBUG] Found', customDateRangeButtons.length, 'potential custom date range buttons')
+    
+    let customDateRangeButtonEl = null
+    for (let button of customDateRangeButtons) {
+      console.log('[DEBUG] Checking button text:', button.innerText)
+      const buttonText = button.innerText || button.getAttribute('aria-label') || ''
+      if (buttonText && (buttonText.includes('Custom date range') || buttonText.includes('custom date range'))) {
+        customDateRangeButtonEl = button
+        console.log('[DEBUG] Found custom date range button')
+        break
+      }
+    }
+    
+    if (!customDateRangeButtonEl) {
+      console.warn('[DEBUG] Custom date range button not found, skipping date setting')
+      return
+    }
+    
+    page.mouseClick(customDateRangeButtonEl)
+    await page.waitForTimeout(500)
+
+    // Step 3: Set start and end date inputs
+    const dateInputs = document.querySelectorAll(SEL.strategyDeepTestDateInputs)
+    console.log('[DEBUG] Found', dateInputs.length, 'date input fields')
+    
+    if (dateInputs.length >= 2) {
+      const endDate = new Date()
+      endDate.setFullYear(endDate.getFullYear()) // Add one year
+      const endDateString = endDate.toISOString().split('T')[0] // Format as YYYY-MM-DD
+
+      if (dateInputs[0].value === deepStartDate && dateInputs[1].value === endDateString) {
+        console.log('[DEBUG] Dates already set correctly. Clicking Cancel.')
+        const cancelButton = document.querySelector(SEL.strategyDeepTestCancelButton)
+        if (cancelButton) {
+          page.mouseClick(cancelButton)
+          await page.waitForTimeout(250) // Wait for dialog to close
+        }
+        return // Dates are correct, no need to proceed
+      }
+      
+      // Set start date (first input)
+      console.log('[DEBUG] Setting start date to:', deepStartDate)
+      page.clearInputElementValue(dateInputs[0])
+      page.setInputElementValue(dateInputs[0], deepStartDate)
+      
+      // Set end date (second input) - use current date or a future date
+      console.log('[DEBUG] Setting end date to:', endDateString)
+      page.clearInputElementValue(dateInputs[1])
+      page.setInputElementValue(dateInputs[1], endDateString)
+      
+      await page.waitForTimeout(200)
+    } else if (dateInputs.length === 1) {
+      // Only one input found, set it as start date
+      console.log('[DEBUG] Only one date input found, setting start date')
+      page.clearInputElementValue(dateInputs[0])
+      page.setInputElementValue(dateInputs[0], deepStartDate)
+      await page.waitForTimeout(200)
+    } else {
+      console.warn('[DEBUG] Date input fields not found, skipping date setting')
+      return
+    }
+
+    // Step 4: Click "Select" button
+    const selectButtons = document.querySelectorAll(SEL.strategyDeepTestSelectButton)
+    console.log('[DEBUG] Found', selectButtons.length, 'potential select buttons')
+    
+    let selectButtonEl = null
+    for (let button of selectButtons) {
+      console.log('[DEBUG] Checking select button text:', button.innerText)
+      if (button.innerText && (button.innerText.includes('Select') || button.innerText.includes('select'))) {
+        selectButtonEl = button
+        console.log('[DEBUG] Found Select button')
+        break
+      }
+    }
+    
+    if (selectButtonEl) {
+      if (selectButtonEl.disabled || selectButtonEl.getAttribute('aria-disabled') === 'true') {
+        console.log('[DEBUG] Select button is disabled, attempting to select first available date.');
+        const firstAvailableButton = document.querySelector(SEL.strategyDeepTestFirstAvailableDateButton);
+        if (firstAvailableButton) {
+          page.mouseClick(firstAvailableButton);
+          await page.waitForTimeout(500); // Wait for UI to update
+        } else {
+          console.warn('[DEBUG] "Select first available date" button not found.');
+        }
+        
+        // NOW, check again.
+        if (selectButtonEl.disabled || selectButtonEl.getAttribute('aria-disabled') === 'true') {
+            // Still disabled. Give up and cancel.
+            console.warn('[DEBUG] Select button is still disabled. Clicking Cancel.');
+            const cancelButton = document.querySelector(SEL.strategyDeepTestCancelButton)
+            if (cancelButton) {
+              page.mouseClick(cancelButton)
+              await page.waitForTimeout(250) // Wait for dialog to close
+            }
+        } else {
+            // It got enabled. Click it.
+            console.log('[DEBUG] Clicking Select button');
+            page.mouseClick(selectButtonEl);
+            await page.waitForTimeout(500);
+        }
+
+      } else {
+        // It was enabled from the start. Click it.
+        console.log('[DEBUG] Clicking Select button');
+        page.mouseClick(selectButtonEl);
+        await page.waitForTimeout(500);
+      }
+    } else {
+      console.warn('[DEBUG] Select button not found, skipping')
+    }
+
+  } catch (error) {
+    console.error('Error setting deep test date range:', error)
+    // Fallback to old method
+    try {
+      const startDateEl = await page.waitForSelector(SEL.strategyDeepTestStartDate, 1000)
+      if (startDateEl) {
+        console.log('[DEBUG] Using fallback method for date setting')
+        page.clearInputElementValue(startDateEl)
+        page.setInputElementValue(startDateEl, deepStartDate)
+      } else {
+        console.warn('[DEBUG] Neither new nor old UI method worked for date setting')
+      }
+    } catch (fallbackError) {
+      console.warn('[DEBUG] Fallback method also failed:', fallbackError)
+    }
+  }
+}
+
+
 
 tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
   let indicatorTitleEl = page.$(SEL.indicatorTitle)
@@ -775,6 +961,8 @@ tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
     }
 
   } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
+    // Check for update report button even if no generation needed
+    await tv.handleUpdateReportButton()
     return 'Deep backtesting strategy parameters are not changed'
   } else {
     throw new Error('Error for generate deep backtesting report due the button is not exist.' + SUPPORT_TEXT)
@@ -791,9 +979,9 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
   let selReady = SEL.strategyReportReady
   const dataWaitingTime = testResults.isDeepTest ? testResults.dataLoadingTime * 2000 : testResults.dataLoadingTime * 1000
   if (testResults.isDeepTest) {
-    message = await tv.generateDeepTestReport() //testResults.dataLoadingTime * 2000)
-    if (message)
-      isProcessError = true
+//    message = await tv.generateDeepTestReport() //testResults.dataLoadingTime * 2000)
+//    if (message)
+//      isProcessError = true
     selProgress = SEL.strategyReportDeepTestInProcess
     selReady = SEL.strategyReportDeepTestReady
   }
@@ -815,33 +1003,110 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
     isProcessStart = true
 
   isProcessError = isProcessError || document.querySelector(SEL.strategyReportError)
+  console.log('[DEBUG] Process error check:', isProcessError)
   await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
 
-  if (!isProcessError)
-    reportData = await tv.parseReportTable(testResults.isDeepTest)
-  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
-    const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
-    if (reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
-      reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {
-      isProcessEnd = true
-      isProcessStart = true
+  // Handle "Update report" button if it appears - integrated into main process flow
+  if (!isProcessError) {
+    console.log('[DEBUG] Checking for Update report button...')
+    const updateReportButtons = document.querySelectorAll(SEL.strategyDeepTestUpdateReportButton)
+    let updateReportButtonEl = null
+    
+    for (let button of updateReportButtons) {
+      if (button.innerText && button.innerText.includes('Update report')) {
+        updateReportButtonEl = button
+        isProcessStart = true
+        break
+      }
+    }
+    
+    if (updateReportButtonEl) {
+      console.log('[INFO] Found Update report button, clicking and waiting for completion...')
+      page.mouseClick(updateReportButtonEl)
+      
+      // Wait for loading snackbar to appear
+      const loadingSnackbar = await page.waitForSelector(SEL.strategyReportLoadingSnackbar, 3000)
+      
+      if (loadingSnackbar) {
+        console.log('[INFO] Report update loading started, waiting for completion...')
+        
+        // Wait for loading to complete - integrated into main process detection
+        const maxWaitTime = 30000 // 30 seconds max wait
+        const startTime = Date.now()
+        
+        while (Date.now() - startTime < maxWaitTime) {
+          const isStillLoading = document.querySelector(SEL.strategyReportLoadingSnackbar)
+          const isSuccess = document.querySelector(SEL.strategyReportSuccessSnackbar)
+          
+          if (!isStillLoading || isSuccess) {
+            console.log('[INFO] Report update completed')
+            isProcessEnd = true
+            break
+          }
+          
+          await page.waitForTimeout(500)
+        }
+        
+        // Give a little extra time for the report to fully render
+        await page.waitForTimeout(1000)
+      } else {
+        console.log('[INFO] No loading snackbar detected, proceeding with short wait')
+        await page.waitForTimeout(2000)
+        isProcessEnd = true
+      }
     }
   }
-  if (reportData['comment'])
+
+  if (!isProcessError) {
+    console.log('[DEBUG] No process error, parsing report table...')
+    reportData = await tv.parseReportTable(testResults.isDeepTest)
+    console.log('[DEBUG] Parsed report data:', reportData)
+  } else {
+    console.log('[DEBUG] Process error detected, skipping report parsing')
+  }
+  
+  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
+    const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
+    console.log('[DEBUG] Checking for data changes - last result:', lastRes)
+    console.log('[DEBUG] Current report data:', reportData)
+    console.log('[DEBUG] Optimizing parameter name:', testResults.optParamName)
+    
+    if (reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
+      reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {
+      console.log('[DEBUG] Data changed - setting process end and start to true')
+      console.log('[DEBUG] Old value:', lastRes[testResults.optParamName], 'New value:', reportData[testResults.optParamName])
+      isProcessEnd = true
+      isProcessStart = true
+    } else {
+      console.log('[DEBUG] No data change detected')
+    }
+  }
+  
+  if (reportData['comment']) {
+    console.log('[DEBUG] Adding report comment to message:', reportData['comment'])
     message += '. ' + reportData['comment']
+  }
+  
   const comment = message ? message : testResults.isDeepTest ? 'Deep BT. ' : null
+  console.log('[DEBUG] Final comment:', comment)
+  
   if (comment) {
-    if (reportData['comment'])
+    if (reportData['comment']) {
+      console.log('[DEBUG] Merging comments')
       reportData['comment'] = comment ? comment + ' ' + reportData['comment'] : reportData['comment']
-    else {
+    } else {
+      console.log('[DEBUG] Setting new comment')
       reportData['comment'] = comment
     }
   }
-  return {
+  
+  const result = {
     error: isProcessError ? 2 : !isProcessStart ? 1 : !isProcessEnd ? 3 : null,
     message: message,
     data: reportData
   }
+  console.log('[DEBUG] Returning result:', result)
+  return result
   // return await tv.parseReportTable()
   // TODO change the object to get data
   // function convertPercent(key, value) {
