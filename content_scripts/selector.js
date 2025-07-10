@@ -158,4 +158,34 @@ const SEL = {
   chartTimeframeMenuTypeItemsMonth: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(5)",
   chartTimeframeMenuTypeItemsRange: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(6)",
 
+  // New selectors for updated deep backtesting date range interface (TradingView UI change)
+  // The new UI flow requires: Click date range button -> Click "Custom date range..." -> Set dates -> Click "Select"
+  get strategyDeepTestDateRangeButton() {
+    return selStatus.isNewVersion ?
+      '[class="backtesting deep-history"] [class*="dateRangeMenuWrapper"] button[role="button"]' :
+      '#bottom-area div[class^="backtesting"] [class*="dateRangeMenuWrapper"] button[role="button"]'
+  },
+  get strategyDeepTestCustomDateRangeButton() {
+    return '[role^="menuitem"], [data-is-popover-item-button="true"]'
+  },
+  get strategyDeepTestDateInputs() {
+    return 'input[placeholder="YYYY-MM-DD"]'
+  },
+  get strategyDeepTestSelectButton() {
+    return 'button[name="submit"], button[data-name="submit-button"], button[class*="button-"][class*="primary-"]'
+  },
+  strategyDeepTestCancelButton: 'button[name="cancel"]',
+  strategyDeepTestFirstAvailableDateButton: 'button[class*="firstAvailableDateButton-"]',
+  get strategyDeepTestUpdateReportButton() {
+    return 'button[class*="snackbarButton-"], button[class*="button-"]:not([class*="close"]):not([class*="cancel"])'
+  },
+
+  // Selectors for report update loading states
+  get strategyReportLoadingSnackbar() {
+    return 'div[data-qa-id="backtesting-loading-report-snackbar"]'
+  },
+  get strategyReportSuccessSnackbar() {
+    return 'div[data-qa-id="backtesting-success-report-snackbar"]'
+  },
 }
+

@@ -301,10 +301,47 @@ action.show3DChart = async () => {
     await ui.showPopup(eventData.message)
 }
 
+action.analyseResults = async () => {
+    const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS);
+    if (testResults && testResults.perfomanceSummary && testResults.perfomanceSummary.length > 0) {
+        const eventData = await sendActionMessage(testResults.perfomanceSummary, 'analyseResults');
+        if (eventData.hasOwnProperty('message')) {
+            await ui.showPopup(eventData.message);
+        }
+    } else {
+        await file.upload(action.analyseResultsFromFile, 'Please select a strategy test CSV file to analyse.', false);
+    }
+};
+
+action.analyseResultsFromFile = async (csvData, fileName) => {
+    return new Promise((resolve) => {
+        Papa.parse(csvData, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async function(results) {
+                const eventData = await sendActionMessage(results.data, 'analyseResults');
+                if (eventData.hasOwnProperty('message')) {
+                    await ui.showPopup(eventData.message);
+                }
+                resolve('');
+            }
+        });
+    });
+};
+
 async function sendActionMessage(data, action) {
   return new Promise(resolve => {
-    const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
-    tvPageMessageData[action] = resolve
-    window.postMessage({ name: 'iondvScript', action, data }, url) // TODO wait for data
-  })
+    const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com';
+    const messageId = action + Date.now();
+    
+    const messageListener = (event) => {
+        if (event.source === window && event.data && event.data.name === 'iondvPage' && event.data.action === action) {
+            window.removeEventListener('message', messageListener);
+            resolve(event.data);
+        }
+    };
+    window.addEventListener('message', messageListener);
+
+    window.postMessage({ name: 'iondvScript', action, data, id: messageId }, url);
+  });
 }
