@@ -61,6 +61,9 @@
           case 'show3DChart':
             await action.show3DChart()
             break
+          case 'analyseResults':
+            await action.analyseResults()
+            break
           default:
             console.log('None of realisation for signal:', request)
         }

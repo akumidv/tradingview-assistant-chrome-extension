@@ -59,29 +59,107 @@ window.addEventListener('message', async function (event) {
       }
       break
     }
+    case 'analyseResults': {
+        try {
+            if (!event.data.hasOwnProperty('data')) {
+                window.postMessage({name: 'iondvPage', action: event.data.action, message: message.errorNoDataMessage}, event.origin);
+                return;
+            }
+            await showAnalysisReport(event.data.data);
+            window.postMessage({name: 'iondvPage', action: event.data.action}, event.origin);
+        } catch (err) {
+            console.error(`[error] analyseResults`, err);
+            window.postMessage({name: 'iondvPage', action: event.data.action, data: null, message: `${err}`}, event.origin);
+        }
+        break;
+    }
     default:
       console.error(`[error] Unknown action for get data from page"${event.data.action}". Skip processing`)
       window.postMessage({name: 'iondvPage', action: event.data.action, data: null, message: `${err}`}, event.origin)
   }
 })
 
+function enhancePopup(popupElementId, resolve) {
+    const popupElement = document.getElementById(popupElementId);
+    if (!popupElement) return;
+
+    const closePopup = () => {
+        if (popupElement.parentNode) {
+            popupElement.parentNode.removeChild(popupElement);
+        }
+        document.removeEventListener('keydown', handleEsc);
+        if (resolve) resolve();
+    };
+
+    const handleEsc = (event) => {
+        if (event.key === 'Escape') {
+            closePopup();
+        }
+    };
+
+    document.addEventListener('keydown', handleEsc);
+    
+    const btnClose = popupElement.querySelector('#iondvBoxClose');
+    if (btnClose) {
+        btnClose.onclick = closePopup;
+    }
+
+    const contentElement = popupElement.querySelector('div[style*="position: absolute"]');
+    if (!contentElement) return;
+
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    
+    const header = contentElement.querySelector('h1, h2, h3');
+    const dragTarget = header || contentElement;
+
+    dragTarget.style.cursor = 'move';
+    dragTarget.onmousedown = dragMouseDown;
+
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+
+        if (contentElement.style.transform || contentElement.style.marginTop) {
+            const rect = contentElement.getBoundingClientRect();
+            contentElement.style.transform = '';
+            contentElement.style.left = rect.left + 'px';
+            contentElement.style.top = rect.top + 'px';
+            contentElement.style.marginTop = '0';
+            contentElement.style.marginLeft = '0';
+        }
+    }
+
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        contentElement.style.top = (contentElement.offsetTop - pos2) + "px";
+        contentElement.style.left = (contentElement.offsetLeft - pos1) + "px";
+    }
+
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
+}
+
 async function previewStrategyTestResults(testResults) {
   if (typeof testResults === 'undefined' || !testResults.hasOwnProperty('perfomanceSummary') || testResults.perfomanceSummary.length === 0)
     throw (message.errorsNoBacktest)
 
   return new Promise(resolve => {
-    createPreviewTestResultsPopup(testResults)
-    const btnClose = document.getElementById('iondvBoxClose')
-    if (btnClose) {
-      btnClose.onclick = () => {
-        const iondvPreviewResultsEl = document.getElementById('iondvPreviewResults')
-        if (iondvPreviewResultsEl)
-        iondvPreviewResultsEl.parentNode.removeChild(iondvPreviewResultsEl)
-        return resolve()
-      }
-    }
-
-  })
+    createPreviewTestResultsPopup(testResults);
+    enhancePopup('iondvPreviewResults', resolve);
+  });
 }
 
 async function show3DChart(testResults) {
@@ -91,16 +169,9 @@ async function show3DChart(testResults) {
     throw ("3D Chart library hadn't loaded. Please wait and try again")
 
   return new Promise(resolve => {
-    create3DPopup(testResults)
-    const btnClose = document.getElementById('iondvBoxClose')
-    if (btnClose) {
-      btnClose.onclick = () => {
-        const iondv3DChartEl = document.getElementById('iondv3DChart')
-        if (iondv3DChartEl)
-          iondv3DChartEl.parentNode.removeChild(iondv3DChartEl)
-        return resolve()
-      }
-    }
+    create3DPopup(testResults);
+    enhancePopup('iondv3DChart', resolve);
+
     const [paramNames, resultsNames] = prepareAxisList(testResults)
     let xSelVal = paramNames[0]
     let ySelVal = paramNames[1]
@@ -143,7 +214,6 @@ async function show3DChart(testResults) {
       }
     }
     updateChart(testResults.perfomanceSummary, xSelVal, ySelVal, zSelVal)
-
   })
 }
 function createPreviewTestResultsPopup(testResults) {
@@ -164,7 +234,7 @@ function createPreviewTestResultsPopup(testResults) {
   const arraySummary = testResults.filteredSummary.length ? testResults.filteredSummary : testResults.perfomanceSummary
   const style = 'style="text-align: right; padding: 4px;"'
   const styleHeader = 'style="text-align: right; padding: 4px; cursor: pointer;"'
-  const styleParam = 'style="text-align: right; padding: 4px; color: gray;"'
+  const styleParam = 'style="text-align: right; padding: 4px; color: #333;"'
   const title = `Preview ${arraySummary.length} results`
   const subtitle = `${testResults.name} ${testResults.ticker} ${testResults.timeFrame}`
   const headerParams = testResults.paramsNames.map((param) => `<th ${styleParam}>${param}</th>`)
@@ -178,7 +248,7 @@ function createPreviewTestResultsPopup(testResults) {
         width: 900px;height:600px; margin-top: -300px; margin-left: -400px;
         background: #fff; border: 1px solid #ccc; box-shadow: 3px 3px 7px #777;
         -webkit-box-shadow: 3px 3px 7px #777;-moz-border-radius: 22px; -webkit-border-radius: 22px;
-        z-index: 999; overflow-y: auto">
+        z-index: 999; overflow-y: auto; color: #333;">
       <div style="margin:0;padding: 0px;clear: both;width: 100%;">
         <div style="display:inline-block;vertical-align: middle;padding: 0px;width: 100%;">
           <h3 style="padding-bottom: 10px">${title}</h3>
@@ -221,7 +291,7 @@ function create3DPopup(testResults) {
         width: 900px;height:600px; margin-top: -300px; margin-left: -400px;
         background: #fff; border: 1px solid #ccc; box-shadow: 3px 3px 7px #777;
         -webkit-box-shadow: 3px 3px 7px #777;-moz-border-radius: 22px; -webkit-border-radius: 22px;
-        z-index: 999;">
+        z-index: 999; color: #333;">
     <div style="margin:0;padding: 0px;clear: both;width: 100%;">
       <div style="display:inline-block;vertical-align: middle;padding: 0px;width: 175px;">
         <h3 style="padding-bottom: 10px">Backtesting Results</h3>
@@ -364,6 +434,174 @@ function updateChart(perfomanceSummary, xSelVal, ySelVal, zName, aproxType) {
   })
 
   showPlotlyData(chartPlotly,  xAxis, yAxis, zAxis)
+}
+
+async function showAnalysisReport(data) {
+    return new Promise(resolve => {
+        const reportElement = createAnalysisReportPopup(data);
+        document.getElementsByTagName('body')[0].appendChild(reportElement);
+        enhancePopup('iondvAnalyseResults', resolve);
+    });
+}
+
+function createAnalysisReportPopup(data) {
+    const standardHeaders = [
+        "Open P&L","Open P&L %","Net profit: All","Net profit %: All","Net profit: Long","Net profit %: Long","Net profit: Short","Net profit %: Short","Gross profit: All","Gross profit %: All","Gross profit: Long","Gross profit %: Long","Gross profit: Short","Gross profit %: Short","Gross loss: All","Gross loss %: All","Gross loss: Long","Gross loss %: Long","Gross loss: Short","Gross loss %: Short","Commission paid: All","Commission paid: Long","Commission paid: Short","Buy & hold return","Buy & hold return %","Max equity run-up","Max equity run-up %","Max equity drawdown","Max equity drawdown %","Max contracts held: All","Max contracts held: Long","Max contracts held: Short","Total trades: All","Total trades: Long","Total trades: Short","Total open trades: All","Total open trades: Long","Total open trades: Short","Winning trades: All","Winning trades: Long","Winning trades: Short","Losing trades: All","Losing trades: Long","Losing trades: Short","Percent profitable: All","Percent profitable: Long","Percent profitable: Short","Avg P&L: All","Avg P&L %: All","Avg P&L: Long","Avg P&L %: Long","Avg P&L: Short","Avg P&L %: Short","Avg winning trade: All","Avg winning trade %: All","Avg winning trade: Long","Avg winning trade %: Long","Avg winning trade: Short","Avg winning trade %: Short","Avg losing trade: All","Avg losing trade %: All","Avg losing trade: Long","Avg losing trade %: Long","Avg losing trade: Short","Avg losing trade %: Short","Ratio avg win / avg loss: All","Ratio avg win / avg loss: Long","Ratio avg win / avg loss: Short","Largest winning trade: All","Largest winning trade: Long","Largest winning trade: Short","Largest winning trade percent: All","Largest winning trade percent: Long","Largest winning trade percent: Short","Largest losing trade: All","Largest losing trade: Long","Largest losing trade: Short","Largest losing trade percent: All","Largest losing trade percent: Long","Largest losing trade percent: Short","Avg # bars in trades: All","Avg # bars in trades: Long","Avg # bars in trades: Short","Avg # bars in winning trades: All","Avg # bars in winning trades: Long","Avg # bars in winning trades: Short","Avg # bars in losing trades: All","Avg # bars in losing trades: Long","Avg # bars in losing trades: Short","Sharpe ratio","Sortino ratio","Profit factor: All","Profit factor: Long","Profit factor: Short","Margin calls: All","Margin calls: Long","Margin calls: Short","comment","_setTime_","_parseTime_","_duration_"
+    ];
+
+    const popup = document.createElement('div');
+    popup.id = 'iondvAnalyseResults';
+    popup.setAttribute("style", `background-color:rgba(0, 0, 0, 0.4); position:absolute; width:100%; height:100%; top:0px; left:0px; z-index:10000; overflow-y: auto;`);
+    popup.style.height = document.documentElement.scrollHeight + "px";
+
+    const content = document.createElement('div');
+    content.setAttribute("style", `position: absolute; left: 50%; top: 50%; padding: 20px; width: 90%; max-width: 1200px; background: #fff; border: 1px solid #ccc; box-shadow: 3px 3px 7px #777; -webkit-box-shadow: 3px 3px 7px #777; -moz-border-radius: 22px; -webkit-border-radius: 22px; z-index: 999; transform: translate(-50%, -50%); max-height: 90vh; overflow-y: auto;`);
+
+    const closeButton = document.createElement('button');
+    closeButton.id = 'iondvBoxClose';
+    closeButton.textContent = 'Close';
+    closeButton.setAttribute("style", "position: absolute; top: 10px; right: 10px;");
+    content.appendChild(closeButton);
+
+    const title = document.createElement('h1');
+    title.textContent = 'TradingView Strategy Report';
+    title.style.color = '#333';
+    content.appendChild(title);
+
+    const reportsContainer = document.createElement('div');
+    reportsContainer.id = 'reports';
+    content.appendChild(reportsContainer);
+
+    popup.appendChild(content);
+
+    // Processing logic from csv-processor.html
+    data.forEach(row => {
+        for (const key in row) {
+            const num = parseFloat(row[key]);
+            if (!isNaN(num)) {
+                row[key] = num;
+            }
+        }
+    });
+    
+    const allHeaders = Object.keys(data[0]);
+    const strategyHeaders = allHeaders.filter(h => !standardHeaders.includes(h));
+    const changedStrategyHeaders = strategyHeaders.filter(header => {
+        const firstValue = data[0][header];
+        return data.some(row => row[header] !== firstValue);
+    });
+
+    reportsContainer.innerHTML = '';
+
+    // Combined Report
+    let combinedData = [...data]
+        .sort((a, b) => b['Percent profitable: All'] - a['Percent profitable: All'])
+        .slice(0, 50)
+        .sort((a, b) => a['Max equity drawdown %'] - b['Max equity drawdown %'])
+        .slice(0, 25)
+        .sort((a, b) => b['Net profit %: All'] - a['Net profit %: All'])
+        .slice(0, 10);
+    reportsContainer.appendChild(createReportTable(combinedData, 'Combined Report (Top 50% Profitable -> Top 25 Best Drawdown -> Top 10 Net Profit %)', ['Net profit %: All', 'Max equity drawdown %', 'Percent profitable: All'], changedStrategyHeaders));
+
+    // Report 1
+    let report1Data = [...data].sort((a, b) => b['Net profit %: All'] - a['Net profit %: All']).slice(0, 10);
+    reportsContainer.appendChild(createReportTable(report1Data, 'Top 10 by Net Profit %', ['Net profit %: All', 'Net profit: All', 'Max equity drawdown %', 'Percent profitable: All'], changedStrategyHeaders));
+
+    // Report 2
+    let report2Data = [...data].sort((a, b) => a['Max equity drawdown %'] - b['Max equity drawdown %']).slice(0, 10);
+    reportsContainer.appendChild(createReportTable(report2Data, 'Top 10 by Max Equity Drawdown % (Ascending)', ['Net profit %: All', 'Max equity drawdown %', 'Percent profitable: All'], changedStrategyHeaders));
+
+    // Report 3
+    let report3Data = [...data].sort((a, b) => b['Percent profitable: All'] - a['Percent profitable: All']).slice(0, 10);
+    reportsContainer.appendChild(createReportTable(report3Data, 'Top 10 by Percent Profitable', ['Net profit %: All', 'Max equity drawdown %', 'Percent profitable: All'], changedStrategyHeaders));
+    
+    return popup;
+}
+
+function createReportTable(data, title, fixedHeaders, dynamicHeaders) {
+    const container = document.createElement('div');
+    container.style.marginTop = '20px';
+
+    const h2 = document.createElement('h2');
+    h2.textContent = title;
+    h2.style.color = '#333';
+    container.appendChild(h2);
+
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.marginBottom = '20px';
+    const thead = table.createTHead();
+    const tbody = table.createTBody();
+    
+    const headerRow = thead.insertRow();
+    const allTableHeaders = [...fixedHeaders, ...dynamicHeaders];
+    allTableHeaders.forEach(headerText => {
+        const th = document.createElement('th');
+        th.textContent = headerText.replace(/^__/, '');
+        th.style.border = '1px solid #ddd';
+        th.style.padding = '8px';
+        th.style.textAlign = 'left';
+        th.style.backgroundColor = '#e9e9e9';
+        th.style.color = '#333';
+        headerRow.appendChild(th);
+    });
+
+    const metricsToColor = ['Net profit %: All', 'Max equity drawdown %', 'Percent profitable: All'];
+    const minMax = {};
+    metricsToColor.forEach(header => {
+        const values = data.map(row => row[header]).filter(v => typeof v === 'number');
+        if (values.length > 1) {
+            minMax[header] = {
+                min: Math.min(...values),
+                max: Math.max(...values),
+            };
+        }
+    });
+
+    data.forEach(rowData => {
+        const row = tbody.insertRow();
+        allTableHeaders.forEach(header => {
+            const cell = row.insertCell();
+            cell.style.border = '1px solid #ddd';
+            cell.style.padding = '8px';
+            cell.style.textAlign = 'left';
+            cell.style.color = '#333';
+
+            if (minMax[header]) {
+                const { min, max } = minMax[header];
+                if (max > min) {
+                    const numericValue = parseFloat(rowData[header]);
+                    const normalized = (numericValue - min) / (max - min);
+                    let hue;
+                    if (header === 'Max equity drawdown %') {
+                        // Lower is better, so we invert the hue scale (red to green)
+                        hue = (1 - normalized) * 120;
+                    } else {
+                        // Higher is better (red to green)
+                        hue = normalized * 120;
+                    }
+                    cell.style.backgroundColor = `hsl(${hue}, 70%, 85%)`;
+                }
+            }
+
+            let value = rowData[header];
+            if (typeof value === 'number') {
+                if (header.includes('%')) {
+                    value = value.toFixed(2) + '%';
+                } else if (header.includes('Net profit: All')) {
+                     value = value.toFixed(2);
+                }
+            }
+            cell.textContent = value;
+        });
+        if (row.children.length > 0) {
+          row.style.backgroundColor = (tbody.rows.length % 2 === 0) ? '#f2f2f2' : '';
+        }
+    });
+
+    container.appendChild(table);
+    return container;
 }
 
 function sortTable(n) {

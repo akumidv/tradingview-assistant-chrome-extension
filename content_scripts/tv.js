@@ -1008,52 +1008,55 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
 
   // Handle "Update report" button if it appears - integrated into main process flow
   if (!isProcessError) {
-    console.log('[DEBUG] Checking for Update report button...')
-    const updateReportButtons = document.querySelectorAll(SEL.strategyDeepTestUpdateReportButton)
-    let updateReportButtonEl = null
-    
-    for (let button of updateReportButtons) {
-      if (button.innerText && button.innerText.includes('Update report')) {
-        updateReportButtonEl = button
-        isProcessStart = true
-        break
+    // Wait for loading snackbar to appear
+    let loadingSnackbar = await page.waitForSelector(SEL.strategyReportLoadingSnackbar, 2000)
+    if (loadingSnackbar) {
+      console.log('[INFO] Report update loading started, waiting for completion...')
+      isProcessStart = true
+    } else {
+      console.log('[INFO] Report update loading not started, Checking for Update report button...')
+      const updateReportButtons = document.querySelectorAll(SEL.strategyDeepTestUpdateReportButton)
+      let updateReportButtonEl = null
+      
+      for (let button of updateReportButtons) {
+        if (button.innerText && button.innerText.includes('Update report')) {
+          updateReportButtonEl = button
+          isProcessStart = true
+          break
+        }
       }
-    }
-    
-    if (updateReportButtonEl) {
-      console.log('[INFO] Found Update report button, clicking and waiting for completion...')
-      page.mouseClick(updateReportButtonEl)
-      
+
+      if (updateReportButtonEl) {
+        console.log('[INFO] Found Update report button, clicking and waiting for completion...')
+        page.mouseClick(updateReportButtonEl)
+      }
+
       // Wait for loading snackbar to appear
-      const loadingSnackbar = await page.waitForSelector(SEL.strategyReportLoadingSnackbar, 3000)
-      
+      loadingSnackbar = await page.waitForSelector(SEL.strategyReportLoadingSnackbar, 3000)
       if (loadingSnackbar) {
         console.log('[INFO] Report update loading started, waiting for completion...')
-        
-        // Wait for loading to complete - integrated into main process detection
-        const maxWaitTime = 30000 // 30 seconds max wait
-        const startTime = Date.now()
-        
-        while (Date.now() - startTime < maxWaitTime) {
-          const isStillLoading = document.querySelector(SEL.strategyReportLoadingSnackbar)
-          const isSuccess = document.querySelector(SEL.strategyReportSuccessSnackbar)
-          
-          if (!isStillLoading || isSuccess) {
-            console.log('[INFO] Report update completed')
-            isProcessEnd = true
-            break
-          }
-          
-          await page.waitForTimeout(500)
-        }
-        
-        // Give a little extra time for the report to fully render
-        await page.waitForTimeout(1000)
-      } else {
-        console.log('[INFO] No loading snackbar detected, proceeding with short wait')
-        await page.waitForTimeout(2000)
-        isProcessEnd = true
+        isProcessStart = true
       }
+    }
+
+    if (isProcessStart) {
+      // Wait for loading to complete - integrated into main process detection
+      const maxWaitTime = 30000 // 30 seconds max wait
+      const startTime = Date.now()
+      
+      while (Date.now() - startTime < maxWaitTime) {
+        const isStillLoading = document.querySelector(SEL.strategyReportLoadingSnackbar)
+        const isSuccess = document.querySelector(SEL.strategyReportSuccessSnackbar)
+        
+        if (!isStillLoading || isSuccess) {
+          console.log('[INFO] Report update completed')
+          isProcessEnd = true
+          break
+        }
+        await page.waitForTimeout(500)
+      }
+      // Give a little extra time for the report to fully render
+      await page.waitForTimeout(1000)
     }
   }
 

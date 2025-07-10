@@ -64,6 +64,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     } catch {
     }
   }
+
   // console.log('bestValue', testResults.bestValue)
   // console.log('bestPropVal', testResults.bestPropVal)
 
@@ -324,6 +325,12 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
         res.message = res.data['comment']
         res.isFiltered = true
       }
+    }
+    if (testResults.perfomanceSummary.length > 10000) {
+      testResults.perfomanceSummary.shift()
+    }
+    if (testResults.filteredSummary.length > 10000) {
+      testResults.filteredSummary.shift()
     }
     if (isFiltered)
       testResults.filteredSummary.push(res.data)
