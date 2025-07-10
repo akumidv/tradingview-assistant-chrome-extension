@@ -66,6 +66,12 @@ page.setInputElementValue = function (element, value, isChange = false) {
     element.dispatchEvent(page._changeEvent);
 }
 
+page.clearInputElementValue = (element) => {
+  element.focus()
+  element.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }))
+  element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }))
+  element.blur()
+}
 
 page.mouseClick = function (el) {
   ["mouseover", "mousedown", "mouseup", "click"].forEach((eventType) =>
