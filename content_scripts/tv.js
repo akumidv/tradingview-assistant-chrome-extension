@@ -763,19 +763,21 @@ tv.parseReportTable = async (isDeepTest) => {
 }
 
 tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
-  let generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
+  // let generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
+  let generateBtnEl = await page.waitForSelector(SEL.strategyReportUpdate)
   if (generateBtnEl) {
     // page.mouseClick(generateBtnEl) // // generateBtnEl.click()
     generateBtnEl.click()
-    await page.waitForSelector(SEL.strategyDeepTestGenerateBtnDisabled, 1000) // Some times is not started
-    let progressEl = await page.waitForSelector(SEL.strategyReportDeepTestInProcess, 1000)
-    generateBtnEl = await page.$(SEL.strategyDeepTestGenerateBtn)
-    if (!progressEl && generateBtnEl) { // Some time button changed, but returned
-      generateBtnEl.click()
-    }
+    await page.waitForSelector(SEL.strategyReportUpdate, 1000, true) // Some times is not started
+    // await page.waitForSelector(SEL.strategyDeepTestGenerateBtnDisabled, 1000) // Some times is not started
+    // let progressEl = await page.waitForSelector(SEL.strategyReportDeepTestInProcess, 1000)
+    // generateBtnEl = await page.$(SEL.strategyDeepTestGenerateBtn)
+    // if (!progressEl && generateBtnEl) { // Some time button changed, but returned
+    //   generateBtnEl.click()
+    // }
 
-  } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
-    return 'Deep backtesting strategy parameters are not changed'
+  // } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
+  //   return 'Deep backtesting strategy parameters are not changed'
   } else {
     throw new Error('Error for generate deep backtesting report due the button is not exist.' + SUPPORT_TEXT)
   }
@@ -790,13 +792,18 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
   let selProgress = SEL.strategyReportInProcess
   let selReady = SEL.strategyReportReady
   const dataWaitingTime = testResults.isDeepTest ? testResults.dataLoadingTime * 2000 : testResults.dataLoadingTime * 1000
-  if (testResults.isDeepTest) {
-    message = await tv.generateDeepTestReport() //testResults.dataLoadingTime * 2000)
-    if (message)
-      isProcessError = true
-    selProgress = SEL.strategyReportDeepTestInProcess
-    selReady = SEL.strategyReportDeepTestReady
+  let generateBtnEl = await page.$(SEL.strategyReportUpdate)
+  if (generateBtnEl) {
+    generateBtnEl.click()
+    await page.waitForSelector(SEL.strategyReportUpdate, 1000, true)
   }
+  //   if (testResults.isDeepTest) {
+  //   message = await tv.generateDeepTestReport() //testResults.dataLoadingTime * 2000)
+  //   if (message)
+  //     isProcessError = true
+  //   // selProgress = SEL.strategyReportDeepTestInProcess
+  //   // selReady = SEL.strategyReportDeepTestReady
+  // }
 
   let isProcessStart = await page.waitForSelector(selProgress, 2500)
   let isProcessEnd = tv.isReportChanged
