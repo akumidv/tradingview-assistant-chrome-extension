@@ -459,12 +459,12 @@ tv.openStrategyTab = async (isDeepTest = false) => {
   await tv.checkIsNewVersion()
   let stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
   if (!stratSummaryEl) {
-    await tv.setDeepTest(isDeepTest)
-    if (isDeepTest) {
-      const generateBtnEl = page.$(SEL.strategyDeepTestGenerateBtn)
-      if (generateBtnEl)
-        page.mouseClick(generateBtnEl)
-    }
+    // await tv.setDeepTest(isDeepTest)
+    // if (isDeepTest) {
+    //   const generateBtnEl = page.$(SEL.strategyDeepTestGenerateBtn)
+    //   if (generateBtnEl)
+    //     page.mouseClick(generateBtnEl)
+    // }
     stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
     if (!stratSummaryEl)
       throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
@@ -709,8 +709,10 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
 
 
 tv.parseReportTable = async (isDeepTest) => {
-  const selHeader = isDeepTest ? SEL.strategyReportDeepTestHeader : SEL.strategyReportHeader
-  const selRow = isDeepTest ? SEL.strategyReportDeepTestRow : SEL.strategyReportRow
+  // const selHeader = isDeepTest ? SEL.strategyReportDeepTestHeader : SEL.strategyReportHeader
+  const selHeader = SEL.strategyReportHeader
+  // const selRow = isDeepTest ? SEL.strategyReportDeepTestRow : SEL.strategyReportRow
+  const selRow = SEL.strategyReportRow
   await page.waitForSelector(selHeader, 2500)
 
   let allHeadersEl = document.querySelectorAll(selHeader)
@@ -778,9 +780,10 @@ tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
 
   // } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
   //   return 'Deep backtesting strategy parameters are not changed'
-  } else {
-    throw new Error('Error for generate deep backtesting report due the button is not exist.' + SUPPORT_TEXT)
   }
+  // else {
+  //   throw new Error('Error for generate deep backtesting report due the button is not exist.' + SUPPORT_TEXT)
+  // }
   return ''
 }
 
@@ -792,8 +795,14 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
   let selProgress = SEL.strategyReportInProcess
   let selReady = SEL.strategyReportReady
   const dataWaitingTime = testResults.isDeepTest ? testResults.dataLoadingTime * 2000 : testResults.dataLoadingTime * 1000
-  let generateBtnEl = await page.$(SEL.strategyReportUpdate)
-  if (generateBtnEl) {
+
+  if (testResults.isDeepTest) {
+    await tv.generateDeepTestReport() //testResults.dataLoadingTime * 2000)
+  } else if (page.$(SEL.strategyReportUpdate)) {
+    const generateBtnEl = await page.$(SEL.strategyReportUpdate)
+    if(!testResults.isDeepTest)
+      console.log('[WARNING] Deep test activated, but not detected')
+    testResults.isDeepTest = true
     generateBtnEl.click()
     await page.waitForSelector(SEL.strategyReportUpdate, 1000, true)
   }

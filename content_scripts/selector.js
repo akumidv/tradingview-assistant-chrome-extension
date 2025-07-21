@@ -139,6 +139,10 @@ const SEL = {
       '[class="backtesting deep-history"] > div:nth-child(1) div[class^="ka root"] table tbody > tr' :
       '#bottom-area  div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] table tbody > tr'
   },
+
+  strategyTabPeriodDD: '[class^="dateRangeMenuWrapper"] button',
+  strategyTabPeriodEntyreHistory: '[class^="eventWrapper"] [role="group"] > div:nth-child(5) > div[aria-checked="true"]',
+
   strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
   strategyDefaultElement: '#property-actions',
 

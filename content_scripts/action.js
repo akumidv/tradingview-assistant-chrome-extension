@@ -87,16 +87,19 @@ action.downloadStrategyTestResults = async () => {
 }
 
 
+
+
 action.testStrategy = async (request, isDeepTest = false) => {
   try {
     const strategyData = await action._getStrategyData(isDeepTest)
+    isDeepTest = await tvChart.detectDeepTest()
     const [allRangeParams, paramRange, cycles] = await action._getRangeParams(strategyData)
     if (allRangeParams !== null) { // click cancel on parameters
       const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles, isDeepTest)
       console.log('Test parameters', testParams)
       action._showStartMsg(testParams.paramSpace, testParams.cycles, testParams.backtestDelay ? ` with delay between tests ${testParams.backtestDelay} sec` : '')
       testParams.isDeepTest = isDeepTest
-      await tv.setDeepTest(isDeepTest, testParams.deepStartDate)
+      // await tv.setDeepTest(isDeepTest, testParams.deepStartDate)
 
       let testResults = {}
       if (testParams.shouldTestTF) {

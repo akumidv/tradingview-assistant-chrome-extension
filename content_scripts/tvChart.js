@@ -1,5 +1,19 @@
 tvChart = {}
 
+tvChart.detectDeepTest = async () => {
+  const periodDD = page.$(SEL.strategyTabPeriodDD)
+  if(!periodDD)
+    return false
+  periodDD.click()
+  const entireHistoryEl = await page.waitForSelector(SEL.strategyTabPeriodEntyreHistory, 2500)
+  periodDD.click()
+  if(!entireHistoryEl)
+    return false
+  console.log('[INFO] Deep mode detected')
+  // Otherwise can detect by parsing dates? But for different timeframes it can't be easy
+  return true
+}
+
 tvChart.getTicker = async () => {
   let tickerEl = document.querySelector(SEL.chartTicker)
   if (!tickerEl)
