@@ -100,12 +100,34 @@ page.setSelByText = async (selector, textValue) => {
     return isSet
   for (let optionsEl of selectorAllVal) {
     if (optionsEl) {//&& options.innerText.startsWith(textValue)) {
-      let itemValue = page.getElText(optionsEl).toLowerCase()
-      if (itemValue && textValue && itemValue.startsWith(textValue.toLowerCase())) {
+      let itemValue = page.getElText(optionsEl)
+      if (!itemValue) {
+        const ariaLabel = optionsEl.getAttribute('aria-label') || optionsEl.getAttribute('data-label') || optionsEl.getAttribute('data-name')
+        if (ariaLabel)
+          itemValue = ariaLabel
+      }
+      if (!itemValue && optionsEl.dataset) {
+        if (optionsEl.dataset.value)
+          itemValue = optionsEl.dataset.value
+        else if (optionsEl.dataset.label)
+          itemValue = optionsEl.dataset.label
+      }
+      const normalizedItem = itemValue ? itemValue.trim().toLowerCase() : ''
+      const normalizedTarget = textValue ? textValue.trim().toLowerCase() : ''
+      if (normalizedItem && normalizedTarget && (normalizedItem === normalizedTarget || normalizedItem.startsWith(normalizedTarget))) {
         page.mouseClick(optionsEl) // optionsEl.click()
         await page.waitForSelector(selector, 1000, true)
         isSet = true
         break
+      }
+      if (!normalizedItem && optionsEl.textContent) {
+        const fallback = optionsEl.textContent.trim().toLowerCase()
+        if (fallback && normalizedTarget && (fallback === normalizedTarget || fallback.startsWith(normalizedTarget))) {
+          page.mouseClick(optionsEl)
+          await page.waitForSelector(selector, 1000, true)
+          isSet = true
+          break
+        }
       }
       itemValue = null
     }

@@ -4,7 +4,8 @@ const tv = {
   tickerTextPrev: null,
   timeFrameTextPrev: null,
   isReportChanged: false,
-  _settingsMethod: null
+  _settingsMethod: null,
+  lastSetStrategyResult: null
 }
 
 
@@ -31,12 +32,13 @@ async function messageHandler(event) {
     !event.data.hasOwnProperty('name') || event.data.name !== 'iondvPage' ||
     !event.data.hasOwnProperty('action'))
     return
-  if (tvPageMessageData.hasOwnProperty(event.data.action) && typeof (tvPageMessageData[event.data.action]) === 'function') { // Callback
-    const resolve = tvPageMessageData[event.data.action]
-    delete tvPageMessageData[event.data.action]
+  const messageKey = event.data.requestId ? `${event.data.action}#${event.data.requestId}` : event.data.action
+  if (tvPageMessageData.hasOwnProperty(messageKey) && typeof (tvPageMessageData[messageKey]) === 'function') { // Callback
+    const resolve = tvPageMessageData[messageKey]
+    delete tvPageMessageData[messageKey]
     resolve(event.data)
   } else {
-    tvPageMessageData[event.data.action] = event.data.data
+    tvPageMessageData[messageKey] = event.data.data
   }
 }
 
@@ -148,7 +150,85 @@ tv.getStrategyParams = async (isIndicatorSave = false) => {
 }
 
 tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyParamOpen = false) => {
+  tv.lastSetStrategyResult = null
+  let dialogPrepared = false
+  let dialogOpenedForApi = false
 
+  try {
+    const existingDialog = page.$(SEL.indicatorTitle)
+    if (existingDialog) {
+      dialogPrepared = await tv.changeDialogTabToInput()
+    }
+  } catch {
+    dialogPrepared = false
+  }
+
+  if (!dialogPrepared) {
+    try {
+      const indicatorTitleEl = await tv.checkAndOpenStrategy(name, isDeepTest)
+      if (indicatorTitleEl) {
+        dialogOpenedForApi = true
+        dialogPrepared = await tv.changeDialogTabToInput()
+      }
+    } catch (err) {
+      console.warn('[TV-ASS] Unable to prepare strategy dialog for API setter.', err)
+      dialogPrepared = false
+    }
+  }
+
+  let apiSucceeded = false
+  if (dialogPrepared) {
+    try {
+      const apiEnvelope = await tv.callPageAction('setStrategyParams', { name, values: propVal }, 8000)
+      const apiResponse = apiEnvelope && typeof apiEnvelope === 'object' ? apiEnvelope.data : null
+      if (apiResponse && typeof apiResponse === 'object') {
+        tv.lastSetStrategyResult = { method: 'api', response: apiResponse, raw: apiEnvelope }
+        const hasMissing = Array.isArray(apiResponse.missing) && apiResponse.missing.length
+        const hasErrors = Array.isArray(apiResponse.errors) && apiResponse.errors.length
+        const explicitlyFailed = apiEnvelope && apiEnvelope.success === false
+        if (!explicitlyFailed && !hasMissing && !hasErrors)
+          apiSucceeded = true
+        else
+          console.warn('[TV-ASS] Strategy parameters API reported issues. Falling back to legacy setter.', apiResponse)
+      } else if (apiEnvelope && apiEnvelope.success === false) {
+        console.warn('[TV-ASS] Strategy parameters API responded with failure.', apiEnvelope.error)
+        tv.lastSetStrategyResult = { method: 'api', response: null, raw: apiEnvelope }
+      }
+    } catch (err) {
+      console.warn('[TV-ASS] Strategy parameters API call failed, using legacy setter.', err)
+    }
+  }
+
+  if (apiSucceeded) {
+    if (!keepStrategyParamOpen) {
+      const okBtn = page.$(SEL.okBtn)
+      if (okBtn)
+        okBtn.click()
+      else {
+        const cancelBtn = page.$(SEL.cancelBtn)
+        if (cancelBtn)
+          cancelBtn.click()
+      }
+    }
+    return true
+  }
+
+  if (dialogOpenedForApi) {
+    const cancelBtn = page.$(SEL.cancelBtn)
+    if (cancelBtn)
+      cancelBtn.click()
+    await page.waitForSelector(SEL.cancelBtn, 1000, true)
+  }
+
+  const legacyEnvelope = await tv._setStrategyParamsLegacy(name, propVal, isDeepTest, keepStrategyParamOpen)
+  const legacySuccess = !!(legacyEnvelope && legacyEnvelope.success !== false)
+  if (!tv.lastSetStrategyResult)
+    tv.lastSetStrategyResult = { method: legacySuccess ? 'legacy' : 'legacy-error', response: null }
+  tv.lastSetStrategyResult.legacy = legacyEnvelope
+  return legacySuccess
+}
+
+tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStrategyParamOpen = false) => {
   const indicatorTitleEl = await tv.checkAndOpenStrategy(name, isDeepTest) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
   if (!indicatorTitleEl)
     return null
@@ -159,7 +239,6 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
   }
   let indicProperties = document.querySelectorAll(SEL.indicatorProperty)
   const propKeys = Object.keys(propVal)
-  let setResultNumber = 0
   let setPropertiesNames = {}
   for (let i = 0; i < indicProperties.length; i++) {
     const propText = indicProperties[i].innerText
@@ -167,7 +246,7 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
       try {
         const rect = indicProperties[i].getBoundingClientRect()
         if (rect.top < 0 || rect.bottom > popupVisibleHeight || !indicProperties[i].checkVisibility()) {
-          indicProperties[i].scrollIntoView() // TODO scroll by hight and if not visible, than scroll Into - faster becouse for 5-10 elemetns at the time
+          indicProperties[i].scrollIntoView()
           await page.waitForTimeout(10)
           if (indicProperties[i].getBoundingClientRect()?.bottom > popupVisibleHeight)
             await page.waitForTimeout(50)
@@ -175,7 +254,6 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
       } catch {
       }
       setPropertiesNames[propText] = true
-      setResultNumber++
       const propClassName = indicProperties[i].getAttribute('class')
       if (propClassName.includes('first-')) {
         i++
@@ -185,7 +263,7 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
           inputEl = null
         } else {
           let buttonEl = indicProperties[i].querySelector('span[role="button"]')
-          if (buttonEl?.innerText) { // DropDown List
+          if (buttonEl?.innerText) {
             buttonEl.click()
             buttonEl = null
             await page.setSelByText(SEL.strategyListOptions, propVal[propText])
@@ -193,9 +271,7 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
         }
       } else if (propClassName.includes('fill-')) {
         let checkboxEl = indicProperties[i].querySelector('input[type="checkbox"]')
-
         if (checkboxEl) {
-          // const isChecked = checkboxEl.getAttribute('checked') !== null ? checkboxEl.checked : false
           const isChecked = Boolean(checkboxEl.checked)
           if (Boolean(propVal[propText]) !== isChecked) {
             page.mouseClick(checkboxEl)
@@ -204,19 +280,23 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
           checkboxEl = null
         }
       }
-      setResultNumber = Object.keys(setPropertiesNames).length
-      if (propKeys.length === setResultNumber)
+      if (propKeys.length === Object.keys(setPropertiesNames).length)
         break
     }
   }
   indicProperties = null
-  // TODO check if not equal propKeys.length === setResultNumber, because there is none of changes too. So calculation doesn't start
   const elOkBtn = page.$(SEL.okBtn)
-  if (!keepStrategyParamOpen && elOkBtn) {
-   elOkBtn.click()
-  }
+  if (!keepStrategyParamOpen && elOkBtn)
+    elOkBtn.click()
 
-  return true
+  const appliedKeys = Object.keys(setPropertiesNames)
+  const missingKeys = propKeys.filter(key => !setPropertiesNames[key])
+
+  return {
+    success: missingKeys.length === 0,
+    applied: appliedKeys,
+    missing: missingKeys
+  }
 }
 
 tv.changeDialogTabToInput = async () => {
@@ -942,4 +1022,24 @@ tv.getPageData = async (actionName, timeout = 1000) => {
       break
   } while (!tvPageMessageData.hasOwnProperty(actionName))
   return tvPageMessageData.hasOwnProperty(actionName) ? tvPageMessageData[actionName] : null
+}
+
+tv.callPageAction = async (actionName, payload = null, timeout = 4000) => {
+  const url = window.location && window.location.origin ? window.location.origin : 'https://www.tradingview.com'
+  const requestId = `${Date.now()}_${Math.random().toString(16).slice(2)}`
+  const messageKey = `${actionName}#${requestId}`
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      if (tvPageMessageData.hasOwnProperty(messageKey))
+        delete tvPageMessageData[messageKey]
+      reject(new Error(`Timeout waiting for "${actionName}" response`))
+    }, timeout)
+    tvPageMessageData[messageKey] = (data) => {
+      clearTimeout(timer)
+      if (tvPageMessageData.hasOwnProperty(messageKey))
+        delete tvPageMessageData[messageKey]
+      resolve(data)
+    }
+    window.postMessage({ name: 'iondvScript', action: actionName, data: payload, requestId }, url)
+  })
 }

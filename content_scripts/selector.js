@@ -143,7 +143,7 @@ const SEL = {
   strategyTabPeriodDD: '[class^="dateRangeMenuWrapper"] button',
   strategyTabPeriodEntyreHistory: '[class^="eventWrapper"] [role="group"] > div:nth-child(5) > div[aria-checked="true"]',
 
-  strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
+  strategyListOptions: 'div[role="listbox"] [role="option"]',
   strategyDefaultElement: '#property-actions',
 
   strategyImportExport: '#iondvImportExport',
