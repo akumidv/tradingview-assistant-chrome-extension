@@ -1,6 +1,6 @@
 #!/bin/bash
 
-EXT_NAME="assistnat-ext"
+EXT_NAME="assistant-ext"
 
 
 if [ -f ./${EXT_NAME}.zip ]; then
