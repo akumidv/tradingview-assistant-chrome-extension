@@ -47,7 +47,7 @@ const SEL = {
   },
   get strategyReportObserveArea() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] div[class^="wrapper"]' :
+      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"]' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]'
   },
   get strategyReportInProcess() {
@@ -70,80 +70,80 @@ const SEL = {
   // strategyReportTransitionReady: '#bottom-area div.backtesting-content-wrapper > div:not(.opacity-transition).reports-content',
   get strategyReportError() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] div[class^="wrapper"] [class*=emptyStateIcon]' :
+      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] [class*=emptyStateIcon]' :
       '#bottom-area div[class^="backtesting"] div[class^="container"] [class*=emptyStateIcon]'
   },
   get strategyReportHeader() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) > div[class^="wrapper"] div[class^="ka root"] table thead > tr > th' :
+      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] table thead > tr > th'
   },
   get strategyReportRow() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) > div[class^="wrapper"] div[class^="ka root"] table tbody > tr' :
+      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"] table tbody > tr' :
       '#bottom-area  div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] table tbody > tr'
   },
 
   get strategyDeepTestCheckbox() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] [class^="switchGroup"] [class^="switcher"] input' :
+      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="switchGroup"] [class^="switcher"] input' :
       '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
   },
     get strategyDeepTestCheckboxUnchecked() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] [class^="switchGroup"] [class^="switcher"] input:not([aria-checked="true"])' :
+      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="switchGroup"] [class^="switcher"] input:not([aria-checked="true"])' :
       '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
   },
   get strategyDeepTestCheckboxChecked() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] [class^="switchGroup"] [class^="switcher"] input[aria-checked="true"]' :
+      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="switchGroup"] [class^="switcher"] input[aria-checked="true"]' :
       '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
   },
   get strategyDeepTestStartDate() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] [class^="historyParams"] [class^="container"] div:nth-child(1) [class^="pickerInput"] input' :
+      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="historyParams"] [class^="container"] div:nth-child(1) [class^="pickerInput"] input' :
       '#bottom-area div[class^="backtesting"]  [class^="historyParams"]  [class^="container" ]> div:nth-child(1) div[class^="pickerInput"] input'
   },
   get strategyDeepTestGenerateBtn() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] [class^="historyParams"] button[class^="generateReportBtn"]:not([aria-disabled="true"])' :
+      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="historyParams"] button[class^="generateReportBtn"]:not([aria-disabled="true"])' :
       '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"]:not([disabled])'
   },
   get strategyDeepTestGenerateBtnDisabled() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] [class^="historyParams"] button[class^="generateReportBtn"][aria-disabled="true"]' :
+      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="historyParams"] button[class^="generateReportBtn"][aria-disabled="true"]' :
       '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"][disabled]'
   },
   get strategyReportDeepTestObserveArea() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1)' :
+      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"]' :
       '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"]'
   },
   get strategyReportDeepTestInProcess() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) div[role="progressbar"]' :
+      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] div[role="progressbar"]' :
       '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[role="progressbar"]'
   },
   get strategyReportDeepTestReady() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) div[class^="ka root"]' :
+      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"]' :
       '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] [class*="root"]'
   },
   get strategyReportDeepTestHeader() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) div[class^="ka root"] table thead > tr > th' :
+      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th' :
       '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] table thead > tr > th'
   },
   get strategyReportDeepTestRow() {
     return selStatus.isNewVersion ?
-      '[class="backtesting deep-history"] > div:nth-child(1) div[class^="ka root"] table tbody > tr' :
+      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"] table tbody > tr' :
       '#bottom-area  div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] table tbody > tr'
   },
 
   strategyTabPeriodDD: '[class^="dateRangeMenuWrapper"] button',
   strategyTabPeriodEntyreHistory: '[class^="eventWrapper"] [role="group"] > div:nth-child(5) > div[aria-checked="true"]',
 
-  strategyListOptions: 'div[role="listbox"] div[data-name="menu-inner"] div[role="option"] span[class^="label-"]',
+  strategyListOptions: 'div[role="listbox"] [role="option"]',
   strategyDefaultElement: '#property-actions',
 
   strategyImportExport: '#iondvImportExport',
