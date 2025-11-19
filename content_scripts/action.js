@@ -136,7 +136,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
         }
       } else {
         testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
-        await action._saveTestResults(testResults, testParams)
+        await action._saveTestResults(testResults, testParams, true)
       }
       // if (isDeepTest)
       //   await tv.setDeepTest(!isDeepTest) // Reverse (switch off)
