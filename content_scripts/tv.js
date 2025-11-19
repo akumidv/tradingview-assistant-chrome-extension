@@ -101,8 +101,8 @@ tv.getStrategyParams = async (isIndicatorSave = false) => {
         } else {
           strategyInputs[propText] = propValue
         }
-      } else if (indicProperties[i].querySelector('span[role="button"]')) { // List
-        const buttonEl = indicProperties[i].querySelector('span[role="button"]')
+      } else if (indicProperties[i].querySelector('button[role="combobox"]')) { // List, type="button"
+        const buttonEl = indicProperties[i].querySelector('button[role="combobox"]')
         if (!buttonEl)
           continue
         const propValue = buttonEl.innerText
@@ -262,7 +262,7 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
           page.setInputElementValue(inputEl, propVal[propText])
           inputEl = null
         } else {
-          let buttonEl = indicProperties[i].querySelector('span[role="button"]')
+          let buttonEl = indicProperties[i].querySelector('button[role="button"]')
           if (buttonEl?.innerText) {
             buttonEl.click()
             buttonEl = null
