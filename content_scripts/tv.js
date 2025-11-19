@@ -262,7 +262,7 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
           page.setInputElementValue(inputEl, propVal[propText])
           inputEl = null
         } else {
-          let buttonEl = indicProperties[i].querySelector('button[role="button"]')
+          let buttonEl = indicProperties[i].querySelector('button[role="combobox"]')
           if (buttonEl?.innerText) {
             buttonEl.click()
             buttonEl = null
