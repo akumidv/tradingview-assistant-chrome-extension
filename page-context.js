@@ -635,16 +635,16 @@ async function setStrategyParamsFromPage(request) {
       else
         result.unchanged.push(rawKey)
     } catch (err) {
-      console.warn(`[TV-ASS] Failed to set value for "${rawKey}":`, err)
+      console.warn(`[TV-AS] Failed to set value for "${rawKey}":`, err)
       result.errors.push({ name: rawKey, message: err?.message || String(err) })
     }
   }
 
   if (typeof strategy.updateAllViews === 'function') {
     try {
-      strategy.updateAllViews()
+      strategy.updateAllViews({type: 'data-source-change', sourceId: ''})
     } catch (err) {
-      console.warn('[TV-ASS] Unable to refresh strategy views after applying parameters', err)
+      console.warn('[TV-AS] Unable to refresh strategy views after applying parameters', err)
     }
   }
 

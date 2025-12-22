@@ -47,7 +47,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest =
   try {
     await tv.openStrategyTab(isDeepTest)
   } catch (err) {
-    console.warn('checkAndOpenStrategy error', err)
+    console.warn('[ERROR]checkAndOpenStrategy', err)
   }
   let isOpened = false
   if (strategyName)
@@ -177,48 +177,50 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
   }
 
   let apiSucceeded = false
-  if (dialogPrepared) {
-    try {
-      const apiEnvelope = await tv.callPageAction('setStrategyParams', { name, values: propVal }, 8000)
-      const apiResponse = apiEnvelope && typeof apiEnvelope === 'object' ? apiEnvelope.data : null
-      if (apiResponse && typeof apiResponse === 'object') {
-        tv.lastSetStrategyResult = { method: 'api', response: apiResponse, raw: apiEnvelope }
-        const hasMissing = Array.isArray(apiResponse.missing) && apiResponse.missing.length
-        const hasErrors = Array.isArray(apiResponse.errors) && apiResponse.errors.length
-        const explicitlyFailed = apiEnvelope && apiEnvelope.success === false
-        if (!explicitlyFailed && !hasMissing && !hasErrors)
-          apiSucceeded = true
-        else
-          console.warn('[TV-ASS] Strategy parameters API reported issues. Falling back to legacy setter.', apiResponse)
-      } else if (apiEnvelope && apiEnvelope.success === false) {
-        console.warn('[TV-ASS] Strategy parameters API responded with failure.', apiEnvelope.error)
-        tv.lastSetStrategyResult = { method: 'api', response: null, raw: apiEnvelope }
-      }
-    } catch (err) {
-      console.warn('[TV-ASS] Strategy parameters API call failed, using legacy setter.', err)
-    }
-  }
+  // if (dialogPrepared) { // 2025-12-22 Turned of due changes in api, now schema do not have names, so links keys in_0.. and names should be prepared separatelly
+  //   try {
+  //     const apiEnvelope = await tv.callPageAction('setStrategyParams', { name, values: propVal }, 8000)
+  //     const apiResponse = apiEnvelope && typeof apiEnvelope === 'object' ? apiEnvelope.data : null
+  //     if (apiResponse && typeof apiResponse === 'object') {
+  //       tv.lastSetStrategyResult = { method: 'api', response: apiResponse, raw: apiEnvelope }
+  //       const hasMissing = Array.isArray(apiResponse.missing) && apiResponse.missing.length
+  //       const hasErrors = Array.isArray(apiResponse.errors) && apiResponse.errors.length
+  //       const explicitlyFailed = apiEnvelope && apiEnvelope.success === false
+  //       if (!explicitlyFailed && !hasMissing && !hasErrors)
+  //         apiSucceeded = true
+  //       else
+  //         console.warn('[TV-AS] Strategy parameters API reported issues. Falling back to legacy setter.', apiResponse)
+  //     } else if (apiEnvelope && apiEnvelope.success === false) {
+  //       console.warn('[TV-AS] Strategy parameters API responded with failure.', apiEnvelope.error)
+  //       tv.lastSetStrategyResult = { method: 'api', response: null, raw: apiEnvelope }
+  //     }
+  //   } catch (err) {
+  //     console.warn('[TV-ASS] Strategy parameters API call failed, using legacy setter.', err)
+  //   }
+  // }
 
-  if (apiSucceeded) {
-    if (!keepStrategyParamOpen) {
-      const okBtn = page.$(SEL.okBtn)
-      if (okBtn)
-        okBtn.click()
-      else {
-        const cancelBtn = page.$(SEL.cancelBtn)
-        if (cancelBtn)
-          cancelBtn.click()
-      }
-    }
-    return true
-  }
+  // if (apiSucceeded) {
+  //   console.log('###wait for 5 seconds')
+  //   await page.waitForTimeout(5000)
+  //   if (!keepStrategyParamOpen) {
+  //     const okBtn = page.$(SEL.okBtn)
+  //     if (okBtn)
+  //       okBtn.click()
+  //     else {
+  //       const cancelBtn = page.$(SEL.cancelBtn)
+  //       if (cancelBtn)
+  //         cancelBtn.click()
+  //     }
+  //   }
+  //   return true
+  // }
 
-  if (dialogOpenedForApi) {
-    const cancelBtn = page.$(SEL.cancelBtn)
-    if (cancelBtn)
-      cancelBtn.click()
-    await page.waitForSelector(SEL.cancelBtn, 1000, true)
-  }
+  // if (dialogOpenedForApi) {
+  //   const cancelBtn = page.$(SEL.cancelBtn)
+  //   if (cancelBtn)
+  //     cancelBtn.click()
+  //   await page.waitForSelector(SEL.cancelBtn, 1000, true)
+  // }
 
   const legacyEnvelope = await tv._setStrategyParamsLegacy(name, propVal, isDeepTest, keepStrategyParamOpen)
   const legacySuccess = !!(legacyEnvelope && legacyEnvelope.success !== false)
@@ -532,7 +534,8 @@ tv.openStrategyTab = async (isDeepTest = false) => {
       throw new Error('There is not "Strategy Tester" tab on the page. Open correct page.' + SUPPORT_TEXT)
     }
   }
-  let strategyCaptionEl = document.querySelector(SEL.strategyCaption) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
+  // let strategyCaptionEl = document.querySelector(SEL.strategyCaption) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
+  let strategyCaptionEl = await page.waitForSelector(SEL.strategyCaption, 2500) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
   if (!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
     throw new Error('There is not strategy name element on "Strategy Tester" tab.' + SUPPORT_TEXT)
   }

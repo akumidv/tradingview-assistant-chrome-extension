@@ -47,7 +47,7 @@ const SEL = {
   },
   get strategyReportObserveArea() {
     return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"]' :
+      '#bottom-area div[class*="backtesting"] div[class^="ka-table-wrapper"]' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]'
   },
   get strategyReportInProcess() {
@@ -70,17 +70,17 @@ const SEL = {
   // strategyReportTransitionReady: '#bottom-area div.backtesting-content-wrapper > div:not(.opacity-transition).reports-content',
   get strategyReportError() {
     return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] [class*=emptyStateIcon]' :
+      '#bottom-area div[class*="backtesting"] div[class^="wrapper-"] [class*=emptyStateIcon]' :
       '#bottom-area div[class^="backtesting"] div[class^="container"] [class*=emptyStateIcon]'
   },
   get strategyReportHeader() {
     return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th' :
+      '#bottom-area div[class*="backtesting"] div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] table thead > tr > th'
   },
   get strategyReportRow() {
     return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"] table tbody > tr' :
+      '#bottom-area div[class*="backtesting"] div[class^="wrapper-"] div[class^="ka root"] table tbody > tr' :
       '#bottom-area  div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] table tbody > tr'
   },
 
