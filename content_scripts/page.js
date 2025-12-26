@@ -94,12 +94,14 @@ page.getElText = (element) => {
 page.setSelByText = async (selector, textValue) => {
   let isSet = false
   await page.waitForSelector(selector, 1000)
-  await page.waitForTimeout(15) // Some times if list quite long, TV is not filled values yet and it generate an error
+  await page.waitForTimeout(15) // Give UI time to render
   let selectorAllVal = document.querySelectorAll(selector)
   if (!selectorAllVal || !selectorAllVal.length)
     return isSet
+
   for (let optionsEl of selectorAllVal) {
-    if (optionsEl) {//&& options.innerText.startsWith(textValue)) {
+    if (optionsEl) {
+      // 1. 获取选项文本
       let itemValue = page.getElText(optionsEl)
       if (!itemValue) {
         const ariaLabel = optionsEl.getAttribute('aria-label') || optionsEl.getAttribute('data-label') || optionsEl.getAttribute('data-name')
@@ -112,17 +114,23 @@ page.setSelByText = async (selector, textValue) => {
         else if (optionsEl.dataset.label)
           itemValue = optionsEl.dataset.label
       }
+
+      // 2. 规范化对比 (小写 + 去空格)
       const normalizedItem = itemValue ? itemValue.trim().toLowerCase() : ''
       const normalizedTarget = textValue ? textValue.trim().toLowerCase() : ''
-      if (normalizedItem && normalizedTarget && (normalizedItem === normalizedTarget || normalizedItem.startsWith(normalizedTarget))) {
-        page.mouseClick(optionsEl) // optionsEl.click()
+
+      // 🔥 修复重点 1：删掉了 startsWith，只保留 === 全等
+      if (normalizedItem && normalizedTarget && normalizedItem === normalizedTarget) {
+        page.mouseClick(optionsEl)
         await page.waitForSelector(selector, 1000, true)
         isSet = true
         break
       }
+
+      // 🔥 修复重点 2：Fallback 逻辑里也删掉 startsWith
       if (!normalizedItem && optionsEl.textContent) {
         const fallback = optionsEl.textContent.trim().toLowerCase()
-        if (fallback && normalizedTarget && (fallback === normalizedTarget || fallback.startsWith(normalizedTarget))) {
+        if (fallback && normalizedTarget && fallback === normalizedTarget) {
           page.mouseClick(optionsEl)
           await page.waitForSelector(selector, 1000, true)
           isSet = true

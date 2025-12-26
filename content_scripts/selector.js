@@ -143,12 +143,12 @@ const SEL = {
   strategyTabPeriodDD: '[class^="dateRangeMenuWrapper"] button',
   strategyTabPeriodEntyreHistory: '[class^="eventWrapper"] [role="group"] > div:nth-child(5) > div[aria-checked="true"]',
 
-  strategyListOptions: 'div[role="listbox"] [role="option"]',
+  strategyListOptions: 'div[role="option"]',
   strategyDefaultElement: '#property-actions',
 
   strategyImportExport: '#iondvImportExport',
 
-  chartTicker: '#header-toolbar-symbol-search > div[class*="text-"]',
+  chartTicker: '#header-toolbar-symbol-search span[class*="symbolName-"]',
   chartTimeframeFavorite: '#header-toolbar-intervals button[data-value]',
   chartTimeframeActive: '#header-toolbar-intervals button[data-value][aria-checked="true"]',
   chartTimeframeMenuOrSingle: '#header-toolbar-intervals button[class^="menu"]',
