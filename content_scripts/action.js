@@ -99,8 +99,6 @@ action.testStrategy = async (request, isDeepTest = false) => {
       console.log('Test parameters', testParams)
       action._showStartMsg(testParams.paramSpace, testParams.cycles, testParams.backtestDelay ? ` with delay between tests ${testParams.backtestDelay} sec` : '')
       testParams.isDeepTest = isDeepTest
-      // await tv.setDeepTest(isDeepTest, testParams.deepStartDate)
-
       let testResults = {}
       if (testParams.shouldTestTF) {
         if (!testParams.listOfTF || testParams.listOfTF.length === 0) {
@@ -141,8 +139,6 @@ action.testStrategy = async (request, isDeepTest = false) => {
         testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
         await action._saveTestResults(testResults, testParams, true)
       }
-      // if (isDeepTest)
-      //   await tv.setDeepTest(!isDeepTest) // Reverse (switch off)
     }
   } catch (err) {
     console.error(err)

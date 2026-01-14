@@ -89,8 +89,12 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
         if (optRes === null)
           isEnd = true
     }
-    if (isEnd)
+    if (optRes !== null &&optRes.hasOwnProperty('forceStop') && optRes.forceStop) {
+      throw new Error('Testing stopped due to missing optimization parameter in report data: ' + optRes.message)
+    }
+    if (isEnd) {
       break
+    }
     const durationTime = Math.round((new Date() - startTime) / 1000 * 10) / 10
     avgTime = Math.round((avgTime - avgTime / (i + 1) + durationTime / (i + 1)) * 10) / 10
     let setTime = 0
@@ -302,6 +306,8 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
     res.bestValue = bestValue
     res.bestPropVal = bestPropVal
     res.currentValue = `${testResults.optParamName} missed in data`
+    res.message = `Missed "${testResults.optParamName}". Add group with this parameter to metrics report.`
+    res.forceStop = true
   }
   return res
 }

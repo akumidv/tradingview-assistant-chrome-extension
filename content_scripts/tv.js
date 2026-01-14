@@ -1,5 +1,4 @@
 const tv = {
-  reportNode: null,
   reportDeepNode: null,
   tickerTextPrev: null,
   timeFrameTextPrev: null,
@@ -354,7 +353,7 @@ tv._openStrategyParamsByStrategyDoubleClickBy = async (indicatorTitle) => {
 tv._openStrategyParamsByStrategyMenu = async () => {
   if (tv._settingsMethod !== null && tv._settingsMethod !== 'setMenu')
     return false
-  const strategyCaptionEl = page.$(SEL.strategyCaption)
+  const strategyCaptionEl = await page.waitForSelector(SEL.strategyCaption, 1000)
   if (!strategyCaptionEl)
     return false
   page.mouseClick(strategyCaptionEl)
@@ -380,9 +379,9 @@ tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = fal
     isOpened = await tv._openStrategyParamsByStrategyDoubleClickBy(indicatorTitle)
     tv._settingsMethod = null
   } else if (!isOpened) {
-    isOpened = await tv._openStrategyByButtonNearTitle()
-    if (!isOpened)
-      isOpened = await tv._openStrategyParamsByStrategyMenu()
+    // isOpened = await tv._openStrategyByButtonNearTitle() // 2026-01-14 Disabled due changed in new UI
+    // if (!isOpened)
+    isOpened = await tv._openStrategyParamsByStrategyMenu()
     if (!isOpened) {
       if (!indicatorTitle) {
         const curStrategyCaptionEl = page.$(SEL.strategyCaption)
@@ -418,64 +417,6 @@ tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = fal
   return true
 }
 
-tv.setDeepTest = async (isDeepTest, deepStartDate = null) => {
-  function isTurnedOn() {
-    return page.$(SEL.strategyDeepTestCheckboxChecked)
-  }
-
-  function isTurnedOff() {
-    return page.$(SEL.strategyDeepTestCheckboxUnchecked)
-  }
-
-  async function turnDeepModeOn() {
-    const switchTurnedOffEl = isTurnedOff()
-    if (switchTurnedOffEl)
-      switchTurnedOffEl.click() // page.mouseClick(switchTurnedOffEl)
-    const el = await page.waitForSelector(SEL.strategyDeepTestCheckboxChecked)
-    if (!el)
-      throw new Error('Can not switch to deep backtesting mode')
-  }
-
-  async function turnDeepModeOff() {
-    const switchTurnedOnEl = isTurnedOn()
-    if (switchTurnedOnEl)
-      switchTurnedOnEl.click() //page.mouseClick(switchTurnedOnEl) // // switchTurnedOnEl.click()
-    const el = await page.waitForSelector(SEL.strategyDeepTestCheckboxUnchecked)
-    if (!el)
-      throw new Error('Can not switch off from deep backtesting mode')
-  }
-
-  if ((typeof selStatus.userDoNotHaveDeepBacktest === 'undefined' || selStatus.userDoNotHaveDeepBacktest) && !isDeepTest)
-    return // Do not check if user do not have userDoNotHaveDeepBacktest switch
-
-  if (selStatus.isNewVersion === false) {
-    console.log('[INFO] FOR PREVIOUS VERSION (Feb of 2025) DEEP BACKTEST SHOULD BE SET MANUALLY')
-    return
-  }
-
-  let deepCheckboxEl = await page.waitForSelector(SEL.strategyDeepTestCheckbox)
-  if (!deepCheckboxEl) {
-    selStatus.userDoNotHaveDeepBacktest = true
-    if (isDeepTest)
-      throw new Error('Deep Backtesting mode switch not found. Do you have Premium subscription or may be TV UI changed?')
-    return
-  } else {
-    selStatus.userDoNotHaveDeepBacktest = false
-  }
-
-  if (!isDeepTest) {
-    await turnDeepModeOff()
-    return
-  }
-  if (isTurnedOff())
-    await turnDeepModeOn()
-  if (deepStartDate) {
-    const startDateEl = await page.waitForSelector(SEL.strategyDeepTestStartDate)
-    if (startDateEl) {
-      page.setInputElementValue(startDateEl, deepStartDate)
-    }
-  }
-}
 
 tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
   let indicatorTitleEl = page.$(SEL.indicatorTitle)
@@ -505,22 +446,25 @@ tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
 }
 
 tv.checkIsNewVersion = async (timeout = 1000) => {
-  // check by deepHistory element if it's present
-  if (typeof selStatus === 'undefined' || selStatus.isNewVersion !== null) // Already checked
-    return
-  let element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
-  if (element) { // Old versions
-    selStatus.isNewVersion = false
-    console.log('[INFO] Prev TV UI by performance tab')
-    return
-  }
   selStatus.isNewVersion = true
-  element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
-  if (element) { // New versions
-    console.log('[INFO] New TV UI by performance tab')
-    return
-  }
-  console.warn('[WARN] Can able to detect current TV UI changes. Probably Deep mode set. Set it to new one')
+  return
+  // turned off 2026-01-14 because of new version with joined Performance tab
+  // check by deepHistory element if it's present
+  // if (typeof selStatus === 'undefined' || selStatus.isNewVersion !== null) // Already checked
+  //   return
+  // let element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
+  // if (element) { // Old versions
+  //   selStatus.isNewVersion = false
+  //   console.log('[INFO] Prev TV UI by performance tab')
+  //   return
+  // }
+  // selStatus.isNewVersion = true
+  // element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
+  // if (element) { // New versions
+  //   console.log('[INFO] New TV UI by performance tab')
+  //   return
+  // }
+  // console.warn('[WARN] Can able to detect current TV UI changes. Probably Deep mode set. Set it to new one')
 }
 
 tv.openStrategyTab = async (isDeepTest = false) => {
@@ -539,31 +483,28 @@ tv.openStrategyTab = async (isDeepTest = false) => {
   if (!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
     throw new Error('There is not strategy name element on "Strategy Tester" tab.' + SUPPORT_TEXT)
   }
-  await tv.checkIsNewVersion()
-  let stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
-  if (!stratSummaryEl) {
-    // await tv.setDeepTest(isDeepTest)
-    // if (isDeepTest) {
-    //   const generateBtnEl = page.$(SEL.strategyDeepTestGenerateBtn)
-    //   if (generateBtnEl)
-    //     page.mouseClick(generateBtnEl)
-    // }
-    stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
-    if (!stratSummaryEl)
-      throw new Error('There is not "Performance" tab on the page. Open correct page.' + SUPPORT_TEXT)
+  // await tv.checkIsNewVersion()
+  let metricsTabActive = await page.waitForSelector(SEL.metricsTab, 1000)
+  // let stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
+  if (!metricsTabActive) {
+
+    // stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
+    if (!metricsTabActive)
+      throw new Error('There is not "Metrics" tab on the page. Open correct page.' + SUPPORT_TEXT)
 
   }
-  if (!page.$(SEL.strategyPerformanceTabActive))
-    stratSummaryEl.click()
-  const isActive = await page.waitForSelector(SEL.strategyPerformanceTabActive, 1000)
+  if (!page.$(SEL.metricsTabActive))
+    metricsTabActive.click()
+  const isActive = await page.waitForSelector(SEL.metricsTabActive, 1000)
   if (!isActive) {
-    console.error('The "Performance summary" tab is not active after click')
+    console.error('The "Metrics" tab is not active after click')
   }
   return true
 }
 
 tv.switchToStrategyTabAndSetObserveForReport = async (isDeepTest = false) => {
-  await tv.openStrategyTab(isDeepTest)
+  // 2026-01-14 Not used anymore because of joining all tabs in one Performance tab in new UI
+    // await tv.openStrategyTab(isDeepTest)
 
   const testResults = {}
   testResults.ticker = await tvChart.getTicker()
@@ -571,45 +512,45 @@ tv.switchToStrategyTabAndSetObserveForReport = async (isDeepTest = false) => {
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
   testResults.name = strategyCaptionEl.getAttribute('data-strategy-title') //strategyCaptionEl.innerText
 
-  const reportEl = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
-  if (!tv.reportNode) {
-    // TODO When user switch to deep backtest or minimize window - it should be deleted and created again. Or delete observer after every test
-    tv.reportNode = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
-    if (tv.reportNode) {
-      const reportObserver = new MutationObserver(() => {
-        tv.isReportChanged = true
-      });
-      reportObserver.observe(tv.reportNode, {
-        childList: true,
-        subtree: true,
-        attributes: false,
-        characterData: false
-      });
-      console.log('[INFO] Observer added to tv.reportNode')
-    } else {
-      throw new Error('The strategy report did not found.' + SUPPORT_TEXT)
-    }
-  }
+  // const reportEl = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
+  // if (!tv.reportNode) {
+  //   // TODO When user switch to deep backtest or minimize window - it should be deleted and created again. Or delete observer after every test
+  //   tv.reportNode = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
+  //   if (tv.reportNode) {
+  //     const reportObserver = new MutationObserver(() => {
+  //       tv.isReportChanged = true
+  //     });
+  //     reportObserver.observe(tv.reportNode, {
+  //       childList: true,
+  //       subtree: true,
+  //       attributes: false,
+  //       characterData: false
+  //     });
+  //     console.log('[INFO] Observer added to tv.reportNode')
+  //   } else {
+  //     throw new Error('The strategy report did not found.' + SUPPORT_TEXT)
+  //   }
+  // }
 
-  if (isDeepTest) {
-    if (!tv.reportDeepNode) {
-      tv.reportDeepNode = await page.waitForSelector(SEL.strategyReportDeepTestObserveArea, 5000)
-      if (tv.reportDeepNode) {
-        const reportObserver = new MutationObserver(() => {
-          tv.isReportChanged = true
-        });
-        reportObserver.observe(tv.reportDeepNode, {
-          childList: true,
-          subtree: true,
-          attributes: false,
-          characterData: false
-        });
-        console.log('[INFO] Observer added to tv.reportDeepNode')
-      } else {
-        console.error('[INFO] The strategy deep report did not found.')
-      }
-    }
-  }
+  // if (isDeepTest) {
+  //   if (!tv.reportDeepNode) {
+  //     tv.reportDeepNode = await page.waitForSelector(SEL.strategyReportDeepTestObserveArea, 5000)
+  //     if (tv.reportDeepNode) {
+  //       const reportObserver = new MutationObserver(() => {
+  //         tv.isReportChanged = true
+  //       });
+  //       reportObserver.observe(tv.reportDeepNode, {
+  //         childList: true,
+  //         subtree: true,
+  //         attributes: false,
+  //         characterData: false
+  //       });
+  //       console.log('[INFO] Observer added to tv.reportDeepNode')
+  //     } else {
+  //       console.error('[INFO] The strategy deep report did not found.')
+  //     }
+  //   }
+  // }
   return testResults
 }
 
@@ -622,7 +563,6 @@ tv.dialogHandler = async () => {
     let timeFrameEl = document.querySelector(SEL.timeFrameActive)
     if (!timeFrameEl)
       timeFrameEl = document.querySelector(SEL.timeFrame)
-
 
     let timeFrameText = timeFrameEl.innerText
     if (!tickerText || !timeFrameText)
@@ -791,85 +731,54 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
 }
 
 
-tv.parseReportTable = async (isDeepTest) => {
-  // const selHeader = isDeepTest ? SEL.strategyReportDeepTestHeader : SEL.strategyReportHeader
-  const selHeader = SEL.strategyReportHeader
-  // const selRow = isDeepTest ? SEL.strategyReportDeepTestRow : SEL.strategyReportRow
-  const selRow = SEL.strategyReportRow
-  await page.waitForSelector(selHeader, 2500)
+tv.parseReportTable = async () => {
+  for (const groupButton of [
+    [SEL.metricPerformanceGroup, SEL.metricPerformanceGroupExpanded],
+    [SEL.metricTradeAnalysisGroup, SEL.metricTradeAnalysisGroupExpanded],
+    [SEL.metricCapitalEfficiencyGroup, SEL.metricCapitalEfficiencyGroupExpanded],
+    [SEL.metricRunUpsGroup, SEL.metricRunUpsGroupExpanded],
 
-  let allHeadersEl = document.querySelectorAll(selHeader)
-  if (!allHeadersEl || !(allHeadersEl.length === 4 || allHeadersEl.length === 5)) { // 5 - Extra column for full screen
-    if (!tv.isParsed)
-      throw new Error('Can\'t get performance headers.' + SUPPORT_TEXT)
-    else
-      return {}
-  }
-  let strategyHeaders = []
-  for (let headerEl of allHeadersEl) {
-    if (headerEl)
-      strategyHeaders.push(headerEl.innerText)
-  }
-  let report = {}
-  await page.waitForSelector(selRow, 2500)
-  let allReportRowsEl = document.querySelectorAll(selRow)
-  if (!allReportRowsEl || allReportRowsEl.length === 0) {
-    if (!tv.isParsed)
-      throw new Error('Can\'t get performance rows.' + SUPPORT_TEXT)
-  } else {
-    tv.isParsed = true
-  }
-  report = tv._parseRows(allReportRowsEl, strategyHeaders, report)
-  if (selStatus.isNewVersion) {
-    const tabs = [
-      [SEL.strategyTradeAnalysisTab, SEL.strategyTradeAnalysisTabActive],
-      [SEL.strategyRatiosTab, SEL.strategyRatiosTabActive]]
-    for (const sel of tabs) {
-      page.mouseClickSelector(sel[0])
-      const tabEl = await page.waitForSelector(sel[1], 1000)
-      if (tabEl) {
-        strategyHeaders = []
-        allHeadersEl = document.querySelectorAll(selHeader)
-        for (let headerEl of allHeadersEl) {
-          if (headerEl)
-            strategyHeaders.push(headerEl.innerText)
-        }
-        await page.waitForSelector(selRow, 2500)
-        let allReportRowsEl = document.querySelectorAll(selRow)
-        if (allReportRowsEl && allReportRowsEl.length !== 0) {
-          report = tv._parseRows(allReportRowsEl, strategyHeaders, report)
-        }
+  ]) {
+    const groupBtnEl = page.$(groupButton[0])
+    if (groupBtnEl) {
+      const isExpanded = page.$(groupButton[1])
+      if (!isExpanded) {
+        page.mouseClick(groupBtnEl)
+        await page.waitForSelector(groupButton[1], 1000)
       }
     }
-    page.mouseClickSelector(SEL.strategyPerformanceTab)
-    await page.waitForSelector(SEL.strategyPerformanceTabActive, 1000)
+  }
+
+  let report = {}
+  for (const sel of [
+    SEL.metricPerformanceReturnsTable,
+    SEL.metricBenchmarkingTable,
+    SEL.metricRatiosTable,
+    SEL.metricTradeAnalysisTable,
+    SEL.metricCapitalEfficiencyTable,
+    SEL.metricMarginEfficiencyTable,
+    SEL.metricRunUpsTable,
+    SEL.metricDrawdownsTable
+  ]) {
+    const tabElActive = page.$(sel)
+    if (!tabElActive)
+      continue
+    selHeader = sel + ' ' + SEL.strategyReportHeaderBase
+    selRow = sel + ' ' + SEL.strategyReportRowBase
+    strategyHeaders = []
+    allHeadersEl = document.querySelectorAll(selHeader)
+    for (let headerEl of allHeadersEl) {
+      if (headerEl)
+        strategyHeaders.push(headerEl.innerText)
+    }
+    await page.waitForSelector(selRow, 2500)
+    let allReportRowsEl = document.querySelectorAll(selRow)
+    if (allReportRowsEl && allReportRowsEl.length !== 0) {
+      report = tv._parseRows(allReportRowsEl, strategyHeaders, report)
+    }
   }
   return report
 }
-
-tv.generateDeepTestReport = async () => { //loadingTime = 60000) => {
-  // let generateBtnEl = await page.waitForSelector(SEL.strategyDeepTestGenerateBtn)
-  let generateBtnEl = await page.waitForSelector(SEL.strategyReportUpdate)
-  if (generateBtnEl) {
-    // page.mouseClick(generateBtnEl) // // generateBtnEl.click()
-    generateBtnEl.click()
-    await page.waitForSelector(SEL.strategyReportUpdate, 1000, true) // Some times is not started
-    // await page.waitForSelector(SEL.strategyDeepTestGenerateBtnDisabled, 1000) // Some times is not started
-    // let progressEl = await page.waitForSelector(SEL.strategyReportDeepTestInProcess, 1000)
-    // generateBtnEl = await page.$(SEL.strategyDeepTestGenerateBtn)
-    // if (!progressEl && generateBtnEl) { // Some time button changed, but returned
-    //   generateBtnEl.click()
-    // }
-
-  // } else if (page.$(SEL.strategyDeepTestGenerateBtnDisabled)) {
-  //   return 'Deep backtesting strategy parameters are not changed'
-  }
-  // else {
-  //   throw new Error('Error for generate deep backtesting report due the button is not exist.' + SUPPORT_TEXT)
-  // }
-  return ''
-}
-
 
 tv.getPerformance = async (testResults, isIgnoreError = false) => {
   let reportData = {}
@@ -879,31 +788,14 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
   let selReady = SEL.strategyReportReady
   const dataWaitingTime = testResults.isDeepTest ? testResults.dataLoadingTime * 2000 : testResults.dataLoadingTime * 1000
 
-  if (testResults.isDeepTest) {
-    await tv.generateDeepTestReport() //testResults.dataLoadingTime * 2000)
-  } else if (page.$(SEL.strategyReportUpdate)) {
-    const generateBtnEl = await page.$(SEL.strategyReportUpdate)
-    if(!testResults.isDeepTest)
-      console.log('[WARNING] Deep test activated, but not detected')
-    testResults.isDeepTest = true
-    generateBtnEl.click()
-    await page.waitForSelector(SEL.strategyReportUpdate, 1000, true)
-  }
-  //   if (testResults.isDeepTest) {
-  //   message = await tv.generateDeepTestReport() //testResults.dataLoadingTime * 2000)
-  //   if (message)
-  //     isProcessError = true
-  //   // selProgress = SEL.strategyReportDeepTestInProcess
-  //   // selReady = SEL.strategyReportDeepTestReady
-  // }
 
   let isProcessStart = await page.waitForSelector(selProgress, 2500)
-  let isProcessEnd = tv.isReportChanged
+  let isProcessEnd = page.$(selReady)
   if (isProcessStart) {
     const tick = 100
     for (let i = 0; i < 5000 / tick; i++) { // Waiting for an error 5000 ms      // isProcessEnd = await page.waitForSelector(SEL.strategyReportError, 5000)
       isProcessError = await page.waitForSelector(SEL.strategyReportError, tick)
-      isProcessEnd = page.$(selReady)
+      isProcessEnd = !!page.$(selReady)
       if (isProcessError || isProcessEnd) {
         break
       }
@@ -914,11 +806,12 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
     isProcessStart = true
 
   isProcessError = isProcessError || document.querySelector(SEL.strategyReportError)
-  await page.waitForTimeout(250) // Waiting for update digits. 150 is enough but 250 for reliable TODO Another way?
+  await page.waitForTimeout(250) // Waiting for update numbers in table. 150 is enough but 250 for reliable TODO Another way?
 
   if (!isProcessError)
-    reportData = await tv.parseReportTable(testResults.isDeepTest)
-  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length && !testResults.isDeepTest) {
+    reportData = await tv.parseReportTable()
+
+  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if (reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
       reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {

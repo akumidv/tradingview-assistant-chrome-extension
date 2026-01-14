@@ -1,6 +1,5 @@
 const selStatus = {
   isNewVersion: true,
-  userDoNotHaveDeepBacktest: null
 }
 
 
@@ -26,30 +25,30 @@ const SEL = {
   strategyDialogParam: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"]  > div:nth-child(2) > button:nth-child(1)',
   // strategySummary: selStatus.isNewVersion ?  '[id="Performance"]' : '[id="Performance Summary"]',
   // strategySummaryActive: selStatus.isNewVersion ? '[id="Performance"][class*="selected"]' : '[id="Performance Summary"][class*="selected"]',
-  get strategyPerformanceTab() {
-    return selStatus.isNewVersion ? '[id="Performance"]' : '[id="Performance Summary"]'
-  },
+  metricsTab: '[id="Strategy report"]',
+  metricsTabActive: '[id="Strategy report"][class*="selected"]',
+  tradesTab: '[id="List of Trades"]',
+  tradesTabActive: '[id="List of Trades"][class*="selected"]',
   goproPopupCloseButton: '[data-dialog-name="gopro"][class^="dialog"] button[class*="close"]',
-  get strategyPerformanceTabActive() {
-    return selStatus.isNewVersion ? '[id="Performance"][class*="selected"]' : '[id="Performance Summary"][class*="selected"]'
-  },
-    get strategyTradeAnalysisTab() {
-    return selStatus.isNewVersion ? '[id="Trades Analysis"]' : '[id="Trade Analysis"]'
-  },
-    get strategyTradeAnalysisTabActive() {
-    return selStatus.isNewVersion ? '[id="Trades Analysis"][class*="selected"]' : '[id="Trade Analysis"][class*="selected"]'
-  },
-      get strategyRatiosTab() {
-    return selStatus.isNewVersion ? '[id="Ratios"]' : '[id="Ratios"]'
-  },
-    get strategyRatiosTabActive() {
-    return selStatus.isNewVersion ? '[id="Ratios"][class*="selected"]' : '[id="Ratios"][class*="selected"]'
-  },
-  get strategyReportObserveArea() {
-    return selStatus.isNewVersion ?
-      '#bottom-area div[class*="backtesting"] div[class^="ka-table-wrapper"]' :
-      '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]'
-  },
+  metricPerformanceGroup: '[data-qa-id="Performance-button"]',
+  metricPerformanceGroupExpanded: '[data-qa-id="Performance-button"][aria-expanded="true"]',
+  metricTradeAnalysisGroup: '[data-qa-id="Trades analysis-button"]',
+  metricTradeAnalysisGroupExpanded: '[data-qa-id="Trades analysis-button"][aria-expanded="true"]',
+  metricCapitalEfficiencyGroup: '[data-qa-id="Capital efficiency-button"]',
+  metricCapitalEfficiencyGroupExpanded: '[data-qa-id="Capital efficiency-button"][aria-expanded="true"]',
+  metricRunUpsGroup: '[data-qa-id="Run-ups and drawdowns-button"]',
+  metricRunUpsGroupExpanded: '[data-qa-id="Run-ups and drawdowns-button"][aria-expanded="true"]',
+
+
+  metricPerformanceReturnsTable: '[data-qa-id="returns-summary-table"]',
+  metricBenchmarkingTable: '[data-qa-id="benchmarking-table"]',
+  metricRatiosTable: '[data-qa-id="ratios-table"]',
+  metricTradeAnalysisTable: '[data-qa-id="trades-analysis-table"]',
+  metricCapitalEfficiencyTable: '[data-qa-id="capital-efficiency-table"]',
+  metricMarginEfficiencyTable: '[data-qa-id="margin-efficiency-table"]',
+  metricRunUpsTable: '[data-qa-id="run-ups-table"]',
+  metricDrawdownsTable: '[data-qa-id="drawdowns-table"]',
+
   get strategyReportInProcess() {
     return selStatus.isNewVersion ?
       '[id="snackbar-container"] [data-qa-id^="backtesting-loading-report-snackbar"]' :
@@ -57,13 +56,11 @@ const SEL = {
   },
   get strategyReportReady() {
     return selStatus.isNewVersion ?
-      // '[class="backtesting deep-history"] > div:nth-child(1) > div[class^="wrapper"] div[class^="ka root"]' :
       '[id="snackbar-container"] [data-qa-id^="backtesting-success-report-snackbar"]' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] [class*="root"]'
   },
   get strategyReportUpdate() {
     return selStatus.isNewVersion ?
-      // '[class="backtesting deep-history"] > div:nth-child(1) > div[class^="wrapper"] div[class^="ka root"]' :
       '[id="snackbar-container"] [data-qa-id^="backtesting-updated-report-snackbar"] button' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] [class*="root"]'
   },
@@ -73,6 +70,9 @@ const SEL = {
       '#bottom-area div[class*="backtesting"] div[class^="wrapper-"] [class*=emptyStateIcon]' :
       '#bottom-area div[class^="backtesting"] div[class^="container"] [class*=emptyStateIcon]'
   },
+
+  strategyReportHeaderBase: 'div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th',
+  strategyReportRowBase: ' div[class^="wrapper-"] div[class^="ka root"] table tbody > tr',
   get strategyReportHeader() {
     return selStatus.isNewVersion ?
       '#bottom-area div[class*="backtesting"] div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th' :
@@ -84,62 +84,6 @@ const SEL = {
       '#bottom-area  div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] table tbody > tr'
   },
 
-  get strategyDeepTestCheckbox() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="switchGroup"] [class^="switcher"] input' :
-      '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
-  },
-    get strategyDeepTestCheckboxUnchecked() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="switchGroup"] [class^="switcher"] input:not([aria-checked="true"])' :
-      '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
-  },
-  get strategyDeepTestCheckboxChecked() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="switchGroup"] [class^="switcher"] input[aria-checked="true"]' :
-      '#bottom-area div[class^="backtesting"]  [class^="deepHistoryContainer"]  [class^="switcher"] input'
-  },
-  get strategyDeepTestStartDate() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="historyParams"] [class^="container"] div:nth-child(1) [class^="pickerInput"] input' :
-      '#bottom-area div[class^="backtesting"]  [class^="historyParams"]  [class^="container" ]> div:nth-child(1) div[class^="pickerInput"] input'
-  },
-  get strategyDeepTestGenerateBtn() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="historyParams"] button[class^="generateReportBtn"]:not([aria-disabled="true"])' :
-      '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"]:not([disabled])'
-  },
-  get strategyDeepTestGenerateBtnDisabled() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] [class^="historyParams"] button[class^="generateReportBtn"][aria-disabled="true"]' :
-      '#bottom-area div[class^="backtesting"]  [class^="historyParams"] button[class^="generateReportBtn"][disabled]'
-  },
-  get strategyReportDeepTestObserveArea() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"]' :
-      '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"]'
-  },
-  get strategyReportDeepTestInProcess() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="deepHistory-"] div[role="progressbar"]' :
-      '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[role="progressbar"]'
-  },
-  get strategyReportDeepTestReady() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"]' :
-      '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] [class*="root"]'
-  },
-  get strategyReportDeepTestHeader() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th' :
-      '#bottom-area div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] table thead > tr > th'
-  },
-  get strategyReportDeepTestRow() {
-    return selStatus.isNewVersion ?
-      '.bottom-widgetbar-content.backtesting div[class^="wrapper-"] div[class^="ka root"] table tbody > tr' :
-      '#bottom-area  div[class^="backtesting"] div[class^="backtesting-content-wrapper"] div[class^="reportContainer"] table tbody > tr'
-  },
-
   strategyTabPeriodDD: '[class^="dateRangeMenuWrapper"] button',
   strategyTabPeriodEntyreHistory: '[class^="eventWrapper"] [role="group"] > div:nth-child(5) > div[aria-checked="true"]',
 
@@ -148,15 +92,11 @@ const SEL = {
 
   strategyImportExport: '#iondvImportExport',
 
-  chartTicker: '#header-toolbar-symbol-search > div[class*="text-"]',
+  chartTicker: '#header-toolbar-symbol-search > div',
   chartTimeframeFavorite: '#header-toolbar-intervals button[data-value]',
   chartTimeframeActive: '#header-toolbar-intervals button[data-value][aria-checked="true"]',
   chartTimeframeMenuOrSingle: '#header-toolbar-intervals button[class^="menu"]',
 
-
-  // chartTimeframeFavorite: '#header-toolbar-intervals div[data-role="button"][data-value]',
-  // chartTimeframeActive: '#header-toolbar-intervals div[data-role="button"][data-value][class*="isActive"]',
-  // chartTimeframeMenuOrSingle: '#header-toolbar-intervals div[data-role="button"][class^="menu"]',
   chartTimeframeMenuItem: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[data-value]",
   chartTimeframeMenuInput: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[class^=\"form\"] > input",
   chartTimeframeMenuType: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[class^=\"form\"] > div[class^=\"menu\"]",
