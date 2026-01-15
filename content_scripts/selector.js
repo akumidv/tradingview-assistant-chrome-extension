@@ -49,6 +49,8 @@ const SEL = {
   metricRunUpsTable: '[data-qa-id="run-ups-table"]',
   metricDrawdownsTable: '[data-qa-id="drawdowns-table"]',
 
+  metricsValueCell: '[class^="reportContainer-"] [class^="containerCell"]',
+
   get strategyReportInProcess() {
     return selStatus.isNewVersion ?
       '[id="snackbar-container"] [data-qa-id^="backtesting-loading-report-snackbar"]' :
@@ -64,6 +66,7 @@ const SEL = {
       '[id="snackbar-container"] [data-qa-id^="backtesting-updated-report-snackbar"] button' :
       '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] [class*="root"]'
   },
+  // strategyUpdateButton: '[id="snackbar-container"]  button'
   // strategyReportTransitionReady: '#bottom-area div.backtesting-content-wrapper > div:not(.opacity-transition).reports-content',
   get strategyReportError() {
     return selStatus.isNewVersion ?
@@ -97,16 +100,15 @@ const SEL = {
   chartTimeframeActive: '#header-toolbar-intervals button[data-value][aria-checked="true"]',
   chartTimeframeMenuOrSingle: '#header-toolbar-intervals button[class^="menu"]',
 
-  chartTimeframeMenuItem: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[data-value]",
-  chartTimeframeMenuInput: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[class^=\"form\"] > input",
-  chartTimeframeMenuType: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[class^=\"form\"] > div[class^=\"menu\"]",
-  chartTimeframeMenuAdd: "#overlap-manager-root div[data-name=\"menu-inner\"] div[class^=\"dropdown\"] div[class^=\"form\"] > div[class^=\"add\"]",
-  chartTimeframeMenuTypeItems: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]",
-  chartTimeframeMenuTypeItemsMin: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(1)",
-  chartTimeframeMenuTypeItemsHours: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(2)",
-  chartTimeframeMenuTypeItemsDays: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(3)",
-  chartTimeframeMenuTypeItemsWeeks: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(4)",
-  chartTimeframeMenuTypeItemsMonth: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(5)",
-  chartTimeframeMenuTypeItemsRange: "#overlap-manager-root div[data-name=\"menu-inner\"] > div[class^=\"item\"]:nth-child(6)",
-
+  chartTimeframeMenuItem: '#overlap-manager-root div[data-name="popup-menu-container"] div[class^="dropdown"] div[data-value]',
+  chartTimeframeMenuInput: '#overlap-manager-root div[data-name="menu-inner"] div[class^="dropdown"] div[class^="form"] > input',
+  chartTimeframeMenuType: '#overlap-manager-root div[data-name="menu-inner"] div[class^="dropdown"] div[class^="form"] > div[class^="menu"]',
+  chartTimeframeMenuAdd: '#overlap-manager-root div[data-name="menu-inner"] div[class^="dropdown"] div[class^="form"] > div[class^="add"]',
+  chartTimeframeMenuTypeItems: '#overlap-manager-root div[data-name="menu-inner"] > div[class^="item"]',
+  chartTimeframeMenuTypeItemsMin: '#overlap-manager-root div[data-name="menu-inner"] > div[class^="item"]:nth-child(1)',
+  chartTimeframeMenuTypeItemsHours: '#overlap-manager-root div[data-name="menu-inner"] > div[class^="item"]:nth-child(2)',
+  chartTimeframeMenuTypeItemsDays: '#overlap-manager-root div[data-name="menu-inner"] > div[class^="item"]:nth-child(3)',
+  chartTimeframeMenuTypeItemsWeeks: '#overlap-manager-root div[data-name="menu-inner"] > div[class^="item"]:nth-child(4)',
+  chartTimeframeMenuTypeItemsMonth: '#overlap-manager-root div[data-name="menu-inner"] > div[class^="item"]:nth-child(5)',
+  chartTimeframeMenuTypeItemsRange: '#overlap-manager-root div[data-name="menu-inner"] > div[class^="item"]:nth-child(6)',
 }

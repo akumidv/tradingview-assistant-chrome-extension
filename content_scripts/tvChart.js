@@ -39,6 +39,19 @@ tvChart.getCurrentTimeFrame = async () => {
   return curTimeFrameText
 }
 
+tvChart._waitUntilTimeFrameChanged = async (newTF) => {
+  let maxTry = 10
+  let curTF = newTF
+  while (maxTry > 0) {
+    await page.waitForTimeout(1000)
+    curTF = await tvChart.getCurrentTimeFrame()
+    if (curTF === newTF)
+      return curTF
+    maxTry--
+  }
+  throw new Error(`Timeframe did not change from "${curTF}" to ${newTF} after waiting`)
+}
+
 tvChart.changeTimeFrame = async (setTF) => {
   const strategyTF = tvChart.correctTF(setTF)
 
@@ -56,6 +69,7 @@ tvChart.changeTimeFrame = async (setTF) => {
       const tfVal = !tfEl || !tfEl.innerText ? '' : tvChart.correctTF(tfEl.innerText)
       if(tfVal === strategyTF) {
         tfEl.click() // Timeframe changed
+        await tvChart._waitUntilTimeFrameChanged(strategyTF)
         return
       }
     }
@@ -73,51 +87,54 @@ tvChart.changeTimeFrame = async (setTF) => {
   let foundTF = await tvChart.selectTimeFrameMenuItem(strategyTF)
   if(foundTF) {
     curTimeFrameText = await tvChart.getCurrentTimeFrame()
-    if(strategyTF !== curTimeFrameText)
-      throw new Error(`Failed to set the timeframe value to "${strategyTF}", the current "${curTimeFrameText}"`)
+    await tvChart._waitUntilTimeFrameChanged(strategyTF)
+    // if(strategyTF !== curTimeFrameText)
+    //   throw new Error(`Failed to set the timeframe value to "${strategyTF}", the current "${curTimeFrameText}"`)
     return //`Timeframe changed to ${alertTF}`
   }
+  // Below is irrelevant code due changes in menu - now it created by popup
+  throw new Error(`The timeframe "${strategyTF}" is not found in timeframes menu, please add it manually`)
+  // const tfValueEl = document.querySelector(SEL.chartTimeframeMenuInput)
+  // if(!tfValueEl)
+  //   throw new Error(`There is no input element to set value of timeframe`)
+  // tfValueEl.scrollIntoView()
+  // page.setInputElementValue(tfValueEl, strategyTF.substr(0, strategyTF.length - 1))
 
-  const tfValueEl = document.querySelector(SEL.chartTimeframeMenuInput)
-  if(!tfValueEl)
-    throw new Error(`There is no input element to set value of timeframe`)
-  tfValueEl.scrollIntoView()
-  page.setInputElementValue(tfValueEl, strategyTF.substr(0, strategyTF.length - 1))
-
-  page.mouseClickSelector(SEL.chartTimeframeMenuType)
-  const isTFTypeEl = page.waitForSelector(SEL.chartTimeframeMenuTypeItems, 1500)
-  if(!isTFTypeEl)
-    throw new Error(`The elements of the timeframe type did not appear while adding it`)
-  switch (strategyTF[strategyTF.length-1]) {
-    case 'm':
-      page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsMin)
-      break;
-    case 'h':
-      page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsHours)
-      break;
-    case 'D':
-      page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsDays)
-      break;
-    case 'W':
-      page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsWeeks)
-      break;
-    case 'M':
-      page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsMonth)
-      break;
-    case 'r':
-      page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsRange)
-      break;
-    default:
-      return {error: 7, message: `Unknown timeframe type in "${strategyTF}"`}
-  }
-  page.mouseClickSelector(SEL.chartTimeframeMenuAdd)
-  await page.waitForTimeout(1000)
-  foundTF = await tvChart.selectTimeFrameMenuItem(strategyTF)
-  curTimeFrameText = await tvChart.getCurrentTimeFrame()
-  if (!foundTF)
-    throw new Error( `Failed to add a timeframe "${strategyTF}" to the list`)
-  else if(strategyTF !== curTimeFrameText)
-    throw new Error(`Failed to set the timeframe value to "${strategyTF}" after adding it to timeframe list, the current "${curTimeFrameText}"`)
+  // page.mouseClickSelector(SEL.chartTimeframeMenuType)
+  // const isTFTypeEl = page.waitForSelector(SEL.chartTimeframeMenuTypeItems, 1500)
+  // if(!isTFTypeEl)
+  //   throw new Error(`The elements of the timeframe type did not appear while adding it`)
+  // switch (strategyTF[strategyTF.length-1]) {
+  //   case 'm':
+  //     page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsMin)
+  //     break;
+  //   case 'h':
+  //     page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsHours)
+  //     break;
+  //   case 'D':
+  //     page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsDays)
+  //     break;
+  //   case 'W':
+  //     page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsWeeks)
+  //     break;
+  //   case 'M':
+  //     page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsMonth)
+  //     break;
+  //   case 'r':
+  //     page.mouseClickSelector(SEL.chartTimeframeMenuTypeItemsRange)
+  //     break;
+  //   default:
+  //     return {error: 7, message: `Unknown timeframe type in "${strategyTF}"`}
+  // }
+  // page.mouseClickSelector(SEL.chartTimeframeMenuAdd)
+  // await page.waitForTimeout(1000)
+  // foundTF = await tvChart.selectTimeFrameMenuItem(strategyTF)
+  // // curTimeFrameText = await tvChart.getCurrentTimeFrame()
+  // if (!foundTF)
+  //   throw new Error( `Failed to add a timeframe "${strategyTF}" to the list`)
+  // await tvChart._waitUntilTimeFrameChanged(strategyTF)
+  // else if(strategyTF !== curTimeFrameText)
+  //   throw new Error(`Failed to set the timeframe value to "${strategyTF}" after adding it to timeframe list, the current "${curTimeFrameText}"`)
 }
 
 

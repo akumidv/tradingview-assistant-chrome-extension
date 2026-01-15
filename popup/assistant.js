@@ -138,11 +138,11 @@ function setPopupInputsByOptions(getResults) {
 function getOptions(signal) {
   const iondvOptions = {}
   iondvOptions.isMaximizing = document.getElementById('optMinmax').checked
-  iondvOptions.optParamName = document.getElementById('optParamName').value || 'Net P&L: All'
+  iondvOptions.optParamName = document.getElementById('optParamName').value || 'Total P&L'
   iondvOptions.optMethod = document.getElementById('optMethod').value || 'random'
 
   iondvOptions.isMaximizing = document.getElementById('optMinmax').checked
-  iondvOptions.optParamName = document.getElementById('optParamName').value || 'Net P&L: All'
+  iondvOptions.optParamName = document.getElementById('optParamName').value || 'Total P&L'
   iondvOptions.optMethod = document.getElementById('optMethod').value || 'random'
 
   iondvOptions.optFilterAscending  = document.getElementById('optFilterMore').checked ? true : document.getElementById('optFilterLess').checked ? false : null

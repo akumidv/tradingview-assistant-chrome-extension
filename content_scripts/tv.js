@@ -4,7 +4,8 @@ const tv = {
   timeFrameTextPrev: null,
   isReportChanged: false,
   _settingsMethod: null,
-  lastSetStrategyResult: null
+  lastSetStrategyResult: null,
+  // isParsed: false,
 }
 
 
@@ -293,7 +294,8 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
   const appliedKeys = Object.keys(setPropertiesNames)
   const missingKeys = propKeys.filter(key => !setPropertiesNames[key])
 
-  return {
+
+return {
     success: missingKeys.length === 0,
     applied: appliedKeys,
     missing: missingKeys
@@ -449,16 +451,6 @@ tv.checkIsNewVersion = async (timeout = 1000) => {
   selStatus.isNewVersion = true
   return
   // turned off 2026-01-14 because of new version with joined Performance tab
-  // check by deepHistory element if it's present
-  // if (typeof selStatus === 'undefined' || selStatus.isNewVersion !== null) // Already checked
-  //   return
-  // let element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
-  // if (element) { // Old versions
-  //   selStatus.isNewVersion = false
-  //   console.log('[INFO] Prev TV UI by performance tab')
-  //   return
-  // }
-  // selStatus.isNewVersion = true
   // element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
   // if (element) { // New versions
   //   console.log('[INFO] New TV UI by performance tab')
@@ -478,17 +470,13 @@ tv.openStrategyTab = async (isDeepTest = false) => {
       throw new Error('There is not "Strategy Tester" tab on the page. Open correct page.' + SUPPORT_TEXT)
     }
   }
-  // let strategyCaptionEl = document.querySelector(SEL.strategyCaption) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
   let strategyCaptionEl = await page.waitForSelector(SEL.strategyCaption, 2500) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
   if (!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
     throw new Error('There is not strategy name element on "Strategy Tester" tab.' + SUPPORT_TEXT)
   }
   // await tv.checkIsNewVersion()
   let metricsTabActive = await page.waitForSelector(SEL.metricsTab, 1000)
-  // let stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
   if (!metricsTabActive) {
-
-    // stratSummaryEl = await page.waitForSelector(SEL.strategyPerformanceTab, 1000)
     if (!metricsTabActive)
       throw new Error('There is not "Metrics" tab on the page. Open correct page.' + SUPPORT_TEXT)
 
@@ -532,25 +520,7 @@ tv.switchToStrategyTabAndSetObserveForReport = async (isDeepTest = false) => {
   //   }
   // }
 
-  // if (isDeepTest) {
-  //   if (!tv.reportDeepNode) {
-  //     tv.reportDeepNode = await page.waitForSelector(SEL.strategyReportDeepTestObserveArea, 5000)
-  //     if (tv.reportDeepNode) {
-  //       const reportObserver = new MutationObserver(() => {
-  //         tv.isReportChanged = true
-  //       });
-  //       reportObserver.observe(tv.reportDeepNode, {
-  //         childList: true,
-  //         subtree: true,
-  //         attributes: false,
-  //         characterData: false
-  //       });
-  //       console.log('[INFO] Observer added to tv.reportDeepNode')
-  //     } else {
-  //       console.error('[INFO] The strategy deep report did not found.')
-  //     }
-  //   }
-  // }
+
   return testResults
 }
 
@@ -625,31 +595,9 @@ tv.dialogHandler = async () => {
 
 const paramNamePrevVersionMap = {
   // Prev version: New version from set parameters
-  'Net Profit': 'Net profit',
-  'Gross Profit': 'Gross profit',
-  'Gross Loss': 'Gross loss',
-  'Max Drawdown': 'Max equity drawdown',
-  'Buy & Hold Return': 'Buy & hold return',
-  'Sharpe Ratio': 'Sharpe ratio',
-  'Sortino Ratio': 'Sortino ratio',
-  'Max Contracts Held': 'Max contracts held',
-  'Open PL': 'Open P&L',
-  'Commission Paid': 'Commission paid',
-  'Total Closed Trades': 'Total trades',
-  'Total Open Trades': 'Total open trades',
-  'Number Winning Trades': 'Winning trades',
-  'Number Losing Trades': 'Losing trades',
-  'Avg Trade': 'Avg P&L',
-  'Avg Winning Trade': 'Avg winning trade',
-  'Avg Losing Trade': 'Avg losing trade',
-  'Ratio Avg Win / Avg Loss': 'Ratio avg win / avg loss',
-  'Largest Winning Trade': 'Largest winning trade',
-  'Percent Profitable': 'Percent profitable',
-  'Largest Losing Trade': 'Largest losing trade',
-  'Avg # Bars in Trades': 'Avg # bars in trades',
-  'Avg # Bars in Winning Trades': 'Avg # bars in winning trades',
-  'Avg # Bars in Losing Trades': 'Avg # bars in losing trades',
-  'Margin Calls': 'Margin calls',
+  // 'Net Profit': 'Net profit',
+  // 'Gross Profit': 'Gross profit',
+  // 'Gross Loss': 'Gross loss',
 }
 
 tv.convertParameterName = (field) => {
@@ -661,8 +609,6 @@ tv.convertParameterName = (field) => {
 }
 
 
-tv.isParsed = false
-
 tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
   function parseNumTypeByRowName(rowName, value) {
     const digitalValues = value.replaceAll(/([\-\d\.\n])|(.)/g, (a, b) => b || '')
@@ -671,6 +617,28 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
       : parseFloat(digitalValues)
   }
 
+  const firstColumnValues = ['Initial capital', 'Open P&L', 'Buy & hold return',
+        'Buy & hold % gain', 'Strategy outperformance', 'Sharpe ratio', 'Sortino ratio',
+        'Account size required', 'Max margin used', 'Margin efficiency', 'Margin calls',
+        'Avg equity run-up duration (close-to-close)', 'Avg equity run-up (close-to-close)',
+        'Max equity run-up (close-to-close)',  'Max equity run-up (intrabar)',
+        'Max equity run-up as % of initial capital (intrabar)',
+        'Avg equity drawdown duration (close-to-close)', 'Avg equity drawdown (close-to-close)',
+        'Max equity drawdown (close-to-close)', 'Max equity drawdown (intrabar)',
+        'Max equity drawdown as % of initial capital (intrabar)',
+        'Return of max equity drawdown'
+      ]
+  const negativeValues = ['Gross loss', 'Commission paid',
+      'Avg equity run-up duration (close-to-close)', 'Avg equity run-up (close-to-close)',
+        'Max equity run-up (close-to-close)',  'Max equity run-up (intrabar)',
+        'Max equity run-up as % of initial capital (intrabar)',
+        'Avg equity drawdown duration (close-to-close)', 'Avg equity drawdown (close-to-close)',
+        'Max equity drawdown (close-to-close)', 'Max equity drawdown (intrabar)',
+        'Max equity drawdown as % of initial capital (intrabar)',
+          'Losing trades', 'Avg losing trade', 'Largest losing trade', 'Largest losing trade percent',
+          'Avg # bars in losing trades', 'Margin calls'
+        ]
+
   for (let rowEl of allReportRowsEl) {
     if (rowEl) {
       const allTdEl = rowEl.querySelectorAll('td')
@@ -678,24 +646,20 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
         continue
       }
       let paramName = allTdEl[0].innerText || ''
-      paramName = tv.convertParameterName(paramName)
-      let isSingleValue = allTdEl.length === 3 || ['Buy & hold return', 'Max equity run-up', 'Max equity drawdown',
-        'Open P&L', 'Sharpe ratio', 'Sortino ratio'
-      ].includes(paramName)
+      // paramName = tv.convertParameterName(paramName)
+      let isSingleValue = allTdEl.length === 3 || firstColumnValues.includes(paramName)
       for (let i = 1; i < allTdEl.length; i++) {
         if (isSingleValue && i >= 2)
           continue
         let values = allTdEl[i].innerText
-        const isNegative = ['Gross loss', 'Commission paid', 'Max equity run-up', 'Max equity drawdown',
-          'Losing trades', 'Avg losing trade', 'Largest losing trade', 'Largest losing trade percent',
-          'Avg # bars in losing trades', 'Margin calls'
-        ].includes(paramName.toLowerCase())// && allTdEl[i].querySelector('[class^="negativeValue"]')
+        const isNegative = negativeValues.includes(paramName.toLowerCase())// && allTdEl[i].querySelector('[class^="negativeValue"]')
         if (values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
           const digitalValues = values.replaceAll(/([\-\d\.\n])|(.)/g, (a, b) => b || '')
           let digitOfValues = digitalValues.match(/-?\d+\.?\d*/)
           const nameDigits = isSingleValue ? paramName : `${paramName}: ${strategyHeaders[i]}`
           const namePercents = isSingleValue ? `${paramName} %` : `${paramName} %: ${strategyHeaders[i]}`
+
           if ((values.includes('\n') && values.endsWith('%'))) {
             const valuesPair = values.split('\n', 3)
             if (valuesPair && valuesPair.length >= 2) {
@@ -731,13 +695,56 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
 }
 
 
+tv._parseMetrics = async (report) => {
+  const matricsValuesEls = document.querySelectorAll(SEL.metricsValueCell)
+  for (let metricEl of matricsValuesEls) {
+    if (!metricEl)
+      continue
+    const metricNameAndValEls = metricEl.querySelectorAll('div[class^="container-"]')
+    if (metricNameAndValEls && metricNameAndValEls.length < 2)
+      continue
+    let metricName = metricNameAndValEls[0].innerText || ''
+    let metricValue = metricNameAndValEls[1].innerText || ''
+    // metricName = tv.convertParameterName(metricName)
+    if (metricValue && typeof metricValue === 'string') {
+      metricValue = metricValue.replaceAll(' ', ' ').replaceAll('−', '-').trim()
+      const digitalValues = metricValue.replaceAll(/([\/\-\d\.\n%])|(.)/g, (a, b) => b || '')
+      let digitOfValuesArr = digitalValues.split('\n')
+      let value0 = null
+      let value1 = null
+      let name1 = null
+      if (digitOfValuesArr.length === 1) {
+        value0 = digitOfValuesArr[0].match(/-?\d+\.?\d*/g)
+      } else {
+          value0 = digitOfValuesArr[0].match(/-?\d+\.?\d*/g)
+        const lastIdx = digitOfValuesArr.length - 1
+        if (digitOfValuesArr[lastIdx].includes('/')) {
+          value1 = digitOfValuesArr[lastIdx]
+          name1 = `${metricName} ratio`
+        } else {
+          value1 = digitOfValuesArr[digitOfValuesArr.length - 1].match(/-?\d+\.?\d*/g)
+          name1 = digitOfValuesArr[digitOfValuesArr.length - 1].endsWith('%') ? `${metricName} %` : `${metricName}_1`
+          if (['Max equity drawdown'].includes(name1))
+            value1 = -1 * value1
+        }
+      }
+      if (Boolean(value0))
+        report[metricName] = parseFloat(value0)
+      else
+        report[metricName] = metricValue
+      if(Boolean(value1) && name1)
+        report[name1] =  (value1.includes('/')) ? value1 : parseFloat(value1)
+    }
+  }
+  return report
+}
+
 tv.parseReportTable = async () => {
   for (const groupButton of [
     [SEL.metricPerformanceGroup, SEL.metricPerformanceGroupExpanded],
     [SEL.metricTradeAnalysisGroup, SEL.metricTradeAnalysisGroupExpanded],
     [SEL.metricCapitalEfficiencyGroup, SEL.metricCapitalEfficiencyGroupExpanded],
     [SEL.metricRunUpsGroup, SEL.metricRunUpsGroupExpanded],
-
   ]) {
     const groupBtnEl = page.$(groupButton[0])
     if (groupBtnEl) {
@@ -750,6 +757,9 @@ tv.parseReportTable = async () => {
   }
 
   let report = {}
+  report = tv._parseMetrics(report)
+
+
   for (const sel of [
     SEL.metricPerformanceReturnsTable,
     SEL.metricBenchmarkingTable,
@@ -786,10 +796,26 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
   let isProcessError = null
   let selProgress = SEL.strategyReportInProcess
   let selReady = SEL.strategyReportReady
+
+  // let isProcessStart = await page.waitForSelector(selProgress, 500)
+  let isProcessStart = false
+  const tikTime = 50
+  let iter = 0
+  do {
+    await page.waitForTimeout(tikTime)
+    isProcessStart = !!page.$(selProgress)
+    const isDeepTestUpdateEl = page.$(SEL.strategyReportUpdate)
+    if (isDeepTestUpdateEl) {
+      testResults.isDeepTest = true
+      page.mouseClick(isDeepTestUpdateEl)
+      await page.waitForSelector(SEL.strategyReportUpdate, 2500, true)
+    }
+    iter += 1
+  } while (tikTime * iter <= 5000 && !isProcessStart)
+
   const dataWaitingTime = testResults.isDeepTest ? testResults.dataLoadingTime * 2000 : testResults.dataLoadingTime * 1000
-
-
-  let isProcessStart = await page.waitForSelector(selProgress, 2500)
+  if(!isProcessStart)
+     await page.waitForSelector(selProgress, 1500)
   let isProcessEnd = page.$(selReady)
   if (isProcessStart) {
     const tick = 100
