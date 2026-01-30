@@ -95,7 +95,7 @@ const SEL = {
 
   strategyImportExport: '#iondvImportExport',
 
-  chartTicker: '#header-toolbar-symbol-search > div',
+  chartTicker: '#header-toolbar-symbol-search',
   chartTimeframeFavorite: '#header-toolbar-intervals button[data-value]',
   chartTimeframeActive: '#header-toolbar-intervals button[data-value][aria-checked="true"]',
   chartTimeframeMenuOrSingle: '#header-toolbar-intervals button[class^="menu"]',
