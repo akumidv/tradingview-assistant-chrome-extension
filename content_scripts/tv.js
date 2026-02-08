@@ -61,7 +61,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest =
   const dialogTitle = await page.waitForSelector(SEL.indicatorTitle)
   if (!dialogTitle || dialogTitle.innerText === null)
     throw new Error('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
-  const indicatorName = tv.getStrategyNameFromPopup()
+  const indicatorName = await tv.getStrategyNameFromPopup()
   if (!await tv.changeDialogTabToInput())
     throw new Error(`Can\'t activate input tab in strategy parameters` + SUPPORT_TEXT)
 
@@ -367,15 +367,17 @@ tv._openStrategyParamsByStrategyMenu = async () => {
   return true
 }
 
-tv.getStrategyNameFromPopup = () => {
-  const strategyTitleEl = page.$(SEL.indicatorTitle)
+tv.getStrategyNameFromPopup = async () => {
+
+  // const strategyTitleEl = page.$(SEL.indicatorTitle)
+  const strategyTitleEl = await page.waitForSelector(SEL.indicatorTitle, 1000)
   if (strategyTitleEl)
     return strategyTitleEl.innerText
   return null
 }
 
 tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = false) => {
-  const curStrategyTitle = tv.getStrategyNameFromPopup()
+  const curStrategyTitle = await tv.getStrategyNameFromPopup()
   let isOpened = !!curStrategyTitle
   if (!isOpened && (indicatorTitle && indicatorTitle !== curStrategyTitle) && searchAgainstStrategies) {
     isOpened = await tv._openStrategyParamsByStrategyDoubleClickBy(indicatorTitle)
@@ -645,9 +647,9 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
       if (!allTdEl || allTdEl.length < 2 || !allTdEl[0]) {
         continue
       }
-      let paramName = allTdEl[0].innerText || ''
+      let paramName = (allTdEl[0].innerText || '').trim()
       // paramName = tv.convertParameterName(paramName)
-      let isSingleValue = allTdEl.length === 3 || firstColumnValues.includes(paramName)
+      let isSingleValue = firstColumnValues.includes(paramName)
       for (let i = 1; i < allTdEl.length; i++) {
         if (isSingleValue && i >= 2)
           continue
@@ -695,7 +697,7 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
 }
 
 
-tv._parseMetrics = async (report) => {
+tv._parseMetrics = (report) => {
   const matricsValuesEls = document.querySelectorAll(SEL.metricsValueCell)
   for (let metricEl of matricsValuesEls) {
     if (!metricEl)
@@ -776,6 +778,7 @@ tv.parseReportTable = async () => {
     selHeader = sel + ' ' + SEL.strategyReportHeaderBase
     selRow = sel + ' ' + SEL.strategyReportRowBase
     strategyHeaders = []
+    await page.waitForSelector(selHeader, 1000)
     allHeadersEl = document.querySelectorAll(selHeader)
     for (let headerEl of allHeadersEl) {
       if (headerEl)

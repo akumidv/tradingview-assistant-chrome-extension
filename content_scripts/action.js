@@ -205,10 +205,10 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
   let paramSpaceNumber = 0
   let isSequential = false
   if (['sequential'].includes(testMethod)) {
-    paramSpaceNumber = Object.keys(allRangeParams).reduce((sum, param) => sum += allRangeParams[param].length, 0)
+    paramSpaceNumber = Object.keys(allRangeParams).reduce((accumulator, param) => accumulator + allRangeParams[param].length, 0)
     isSequential = true
   } else {
-    paramSpaceNumber = Object.keys(allRangeParams).reduce((mult, param) => mult *= allRangeParams[param].length, 1)
+    paramSpaceNumber = Object.keys(allRangeParams).reduce((accumulator, param) => accumulator * (allRangeParams[param].length || 1), 1)
   }
   console.log('paramSpaceNumber', paramSpaceNumber)
 

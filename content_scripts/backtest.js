@@ -36,7 +36,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     testResults.bestPropVal = initRes.bestPropVal
     testResults.perfomanceSummary.push(initRes.data)
     try {
-      ui.statusMessage(`<p>From default and previous test. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`)
+      ui.statusMessage(`<p>From default and previous tests. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`)
       console.log('Init best value', testResults.bestValue)
       // console.log(testResults.perfomanceSummary)
     } catch {
