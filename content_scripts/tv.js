@@ -793,54 +793,82 @@ tv.parseReportTable = async () => {
   return report
 }
 
-tv.getPerformance = async (testResults, isIgnoreError = false) => {
+tv.backtestDelay = async (backtestDelay = 0, isRandom = true) => {
+  let delayTime = backtestDelay * 1000
+  const minimalDelay = 0.2 * 1000//, backtestDelay/2) // 20%
+  if (backtestDelay) {
+    if (isRandom) {
+      const delayCorrection = delayTime/2 > minimalDelay ? delayTime/2 : minimalDelay * 1.1
+      delayTime = randomInteger(Math.max(minimalDelay, delayTime/2), delayTime + delayCorrection) // from 0.1 value to 2x value - in average ~ delay == value
+    }
+    await page.waitForTimeout(delayTime)
+  }
+}
+
+tv.getPerformance = async (testResults, ignoreWaiting = false) => {
   let reportData = {}
   let message = ''
-  let isProcessError = null
-  let selProgress = SEL.strategyReportInProcess
-  let selReady = SEL.strategyReportReady
 
-  // let isProcessStart = await page.waitForSelector(selProgress, 500)
   let isProcessStart = false
-  const tikTime = 50
-  let iter = 0
-  do {
-    await page.waitForTimeout(tikTime)
-    isProcessStart = !!page.$(selProgress)
-    const isDeepTestUpdateEl = page.$(SEL.strategyReportUpdate)
-    if (isDeepTestUpdateEl) {
-      testResults.isDeepTest = true
-      page.mouseClick(isDeepTestUpdateEl)
-      await page.waitForSelector(SEL.strategyReportUpdate, 2500, true)
-    }
-    iter += 1
-  } while (tikTime * iter <= 5000 && !isProcessStart)
-
+  let isProcessEnd = false
+  let isPrevMessageShowing = !!page.$(SEL.strategyProcessMessage) && !page.$(SEL.strategyReportNeedUpdate)
+  let isProcessError = null
+  const isStartProcessError = page.$(SEL.strategyReportError)
   const dataWaitingTime = testResults.isDeepTest ? testResults.dataLoadingTime * 2000 : testResults.dataLoadingTime * 1000
-  if(!isProcessStart)
-     await page.waitForSelector(selProgress, 1500)
-  let isProcessEnd = page.$(selReady)
-  if (isProcessStart) {
-    const tick = 100
-    for (let i = 0; i < 5000 / tick; i++) { // Waiting for an error 5000 ms      // isProcessEnd = await page.waitForSelector(SEL.strategyReportError, 5000)
-      isProcessError = await page.waitForSelector(SEL.strategyReportError, tick)
-      isProcessEnd = !!page.$(selReady)
+  let tikTime = 50
+  let cycles = Math.ceil(5000 / tikTime)
+  for (let i = 0; i < cycles; i++) {
+    if (isPrevMessageShowing)
+      isProcessStart = !!page.$(SEL.strategyReportInProcess) || !!page.$(SEL.strategyReportNeedUpdate)
+    else
+      isProcessStart = !!page.$(SEL.strategyProcessMessage) || !!page.$(SEL.strategyReportNeedUpdate)
+    if (ignoreWaiting || isProcessStart)
+      break
+    await page.waitForTimeout(tikTime)
+  }
+  let isDeepTestUpdateClicked = false
+  let isNewUpdate = false
+  if (ignoreWaiting) {
+    isProcessStart = true
+    isProcessEnd = true
+  } else if (isProcessStart) {
+    tikTime = 100
+    const cycles = Math.ceil(dataWaitingTime / tikTime)
+    for (let i = 0; i < cycles; i++) { // Waiting for an error 5000 ms
+      const isDeepTestUpdateEl = page.$(SEL.strategyReportNeedUpdate)
+      if (!isDeepTestUpdateClicked && isDeepTestUpdateEl !== null) {
+        page.mouseClick(isDeepTestUpdateEl)
+        await page.waitForSelector(SEL.strategyReportUpdate, 10000, true) // It shows succed some times (for current strategy update during deep test calculating)
+        await page.waitForSelector(SEL.strategyReportInProcess, 1000, true)
+        isDeepTestUpdateClicked = true
+        testResults.isDeepTest = true
+      }
+      if (!isStartProcessError || i * tikTime >= 5000)
+        isProcessError = !!page.$(SEL.strategyReportError) && !page.$(SEL.strategyReportInProcess)
+      isProcessEnd = !!page.$(SEL.strategyReportReady)
+      if (isProcessEnd && isDeepTestUpdateClicked && !isNewUpdate) {
+        isNewUpdate = !!(await page.waitForSelector(SEL.strategyReportInProcess, 1000))
+        isProcessEnd = !isNewUpdate
+      } else {
+        const isNotProcessMessage = !page.$(SEL.strategyProcessMessage) // it blinked after click on update or change stage
+        if (isNotProcessMessage) {
+          await page.waitForTimeout(1000) // waiting for process end message to disappear after update or stage change
+          isProcessEnd = !page.$(SEL.strategyProcessMessage)
+        }
+      }
       if (isProcessError || isProcessEnd) {
         break
       }
+      await page.waitForTimeout(tikTime)
     }
-    if (isProcessError == null)
-      isProcessEnd = await page.waitForSelector(selReady, dataWaitingTime)
-  } else if (isProcessEnd)
-    isProcessStart = true
-
-  isProcessError = isProcessError || document.querySelector(SEL.strategyReportError)
-  await page.waitForTimeout(250) // Waiting for update numbers in table. 150 is enough but 250 for reliable TODO Another way?
-
-  if (!isProcessError)
-    reportData = await tv.parseReportTable()
-
-  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) {
+  }
+  const startTime = new Date()
+  if(!ignoreWaiting && isProcessStart)
+    await tv.backtestDelay(Math.max(testResults.backtestDelay, 0.25), testResults.randomDelay)
+  let _waitTime = new Date() - startTime
+  isProcessError = !!document.querySelector(SEL.strategyReportError)
+  reportData = await tv.parseReportTable()
+  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) { // Checking by changes in data
     const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
     if (reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
       reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {
@@ -848,6 +876,10 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
       isProcessStart = true
     }
   }
+  try {
+    if (testResults.perfomanceSummary.length && !isProcessError)
+      console.log('#', testResults.perfomanceSummary.length, testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1][testResults.optParamName], '->', reportData[testResults.optParamName])
+  } catch {}
   if (reportData['comment'])
     message += '. ' + reportData['comment']
   const comment = message ? message : testResults.isDeepTest ? 'Deep BT. ' : null
@@ -861,7 +893,8 @@ tv.getPerformance = async (testResults, isIgnoreError = false) => {
   return {
     error: isProcessError ? 2 : !isProcessStart ? 1 : !isProcessEnd ? 3 : null,
     message: message,
-    data: reportData
+    data: reportData,
+    _waitTime: _waitTime
   }
   // return await tv.parseReportTable()
   // TODO change the object to get data

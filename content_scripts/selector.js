@@ -38,7 +38,8 @@ const SEL = {
   metricCapitalEfficiencyGroupExpanded: '[data-qa-id="Capital efficiency-button"][aria-expanded="true"]',
   metricRunUpsGroup: '[data-qa-id="Run-ups and drawdowns-button"]',
   metricRunUpsGroupExpanded: '[data-qa-id="Run-ups and drawdowns-button"][aria-expanded="true"]',
-
+//backtesting-loading-report-snackbar
+//backtesting-success-report-snackbar
 
   metricPerformanceReturnsTable: '[data-qa-id="returns-summary-table"]',
   metricBenchmarkingTable: '[data-qa-id="benchmarking-table"]',
@@ -51,28 +52,12 @@ const SEL = {
 
   metricsValueCell: '[class^="reportContainer-"] [class^="containerCell"]',
 
-  get strategyReportInProcess() {
-    return selStatus.isNewVersion ?
-      '[id="snackbar-container"] [data-qa-id^="backtesting-loading-report-snackbar"]' :
-      '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"]  div[role="progressbar"]'
-  },
-  get strategyReportReady() {
-    return selStatus.isNewVersion ?
-      '[id="snackbar-container"] [data-qa-id^="backtesting-success-report-snackbar"]' :
-      '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] [class*="root"]'
-  },
-  get strategyReportUpdate() {
-    return selStatus.isNewVersion ?
-      '[id="snackbar-container"] [data-qa-id^="backtesting-updated-report-snackbar"] button' :
-      '#bottom-area div[class^="backtesting"] div[class^="widgetContainer"] div[class^="reportContainer"] [class*="root"]'
-  },
-  // strategyUpdateButton: '[id="snackbar-container"]  button'
-  // strategyReportTransitionReady: '#bottom-area div.backtesting-content-wrapper > div:not(.opacity-transition).reports-content',
-  get strategyReportError() {
-    return selStatus.isNewVersion ?
-      '#bottom-area div[class*="backtesting"] div[class^="wrapper-"] [class*=emptyStateIcon]' :
-      '#bottom-area div[class^="backtesting"] div[class^="container"] [class*=emptyStateIcon]'
-  },
+  strategyProcessMessage: '[id="snackbar-container"] [data-qa-id]',
+  strategyReportInProcess: '[id="snackbar-container"] [data-qa-id^="backtesting-loading-report-snackbar"]',
+  strategyReportReady: '[id="snackbar-container"] [data-qa-id^="backtesting-success-report-snackbar"]',
+  // strategyReportNeedUpdate: '[id="snackbar-container"] [data-qa-id^="backtesting-updated-report-snackbar"] button',
+  strategyReportNeedUpdate: '[id="snackbar-container"] [data-qa-id] button',
+  strategyReportError: '#bottom-area div[class*="backtesting"] div[class^="wrapper-"] [class*=emptyStateIcon]',
 
   strategyReportHeaderBase: 'div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th',
   strategyReportRowBase: ' div[class^="wrapper-"] div[class^="ka root"] table tbody > tr',

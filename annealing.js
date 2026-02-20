@@ -1,6 +1,6 @@
 const MAX_PARAM_NAME = 'test'
 function randomInteger (min = 0, max = 10) {
-  return Math.floor( min + Math.random() * (max + 1 - min))
+  return Math.floor(min + Math.random() * (max + 1 - min))
 }
 
 function randomNormalDistribution(min, max) {
