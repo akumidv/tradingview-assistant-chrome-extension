@@ -18,8 +18,8 @@ const SEL = {
   indicatorProperty: 'div[data-name="indicator-properties-dialog"] div[class^="content-"] div[class^="cell-"]',
   okBtn: 'div[data-name="indicator-properties-dialog"] div[class^="footer-"] button[name="submit"]',
   cancelBtn: 'div[data-name="indicator-properties-dialog"] span[data-name="close"][data-role="button"]',
-  strategyTesterTab: '[data-name="backtesting"]', // 2023-10-19 #footer-chart-panel  or #bottom-area
-  strategyTesterTabActive: '[data-name="backtesting"][data-active="true"]', // 2023-10-19 #footer-chart-panel  or #bottom-area
+  strategyTesterTab: '[data-qa-id="backtesting"]', // 2023-10-19 #footer-chart-panel  or #bottom-area
+  strategyTesterTabActive: '[data-qa-id="backtesting"][data-active="true"]', // 2023-10-19 #footer-chart-panel  or #bottom-area
   strategyCaption: '#bottom-area  [class^="strategyGroup"] [data-strategy-title]',
   strategyMenuItemSettings: '[role="menu"] [role="menuitem"][aria-label^="Settings"]',
   strategyDialogParam: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"]  > div:nth-child(2) > button:nth-child(1)',

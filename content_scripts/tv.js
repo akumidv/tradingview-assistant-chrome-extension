@@ -171,7 +171,7 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
         dialogPrepared = await tv.changeDialogTabToInput()
       }
     } catch (err) {
-      console.warn('[TV-ASS] Unable to prepare strategy dialog for API setter.', err)
+      console.warn('[TV] Unable to prepare strategy dialog for API setter.', err)
       dialogPrepared = false
     }
   }
