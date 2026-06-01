@@ -6,12 +6,11 @@
 
 
 document.addEventListener('DOMContentLoaded', () => {
-  // chrome.storage.local.get('tabId', (getResults) => {
+  METRICS.populate(document.getElementById('optParamName'))
+  METRICS.populate(document.getElementById('optFilterParamName'))
   checkIsTVChart()
   setPopupInputsByOptions()
-
   setClickEvents()
-
   setOptionsEvents()
 });
 
@@ -77,8 +76,10 @@ function setPopupInputsByOptions(getResults) {
       tabId = iondvOptions['tabId'] ? iondvOptions['tabId'] : 1
       if (document.getElementById('optMinmax') && iondvOptions.hasOwnProperty('isMaximizing'))
         document.getElementById('optMinmax').checked = iondvOptions.isMaximizing
-      if (document.getElementById('optParamName') && iondvOptions.hasOwnProperty('optParamName'))
-        document.getElementById('optParamName').value = iondvOptions.optParamName
+      if (document.getElementById('optParamName') && iondvOptions.hasOwnProperty('optParamName')) {
+        const saved = iondvOptions.optParamName
+        document.getElementById('optParamName').value = METRICS.isValid(saved) ? saved : METRICS.DEFAULT_OPT_PARAM
+      }
       if (document.getElementById('optMethod') && iondvOptions.hasOwnProperty('optMethod'))
         document.getElementById('optMethod').value = iondvOptions.optMethod
 
@@ -100,8 +101,10 @@ function setPopupInputsByOptions(getResults) {
       }
       if (document.getElementById('optFilterValue') && iondvOptions.hasOwnProperty('optFilterValue'))
         document.getElementById('optFilterValue').value = iondvOptions.optFilterValue
-      if (document.getElementById('optFilterParamName') && iondvOptions.hasOwnProperty('optFilterParamName'))
-        document.getElementById('optFilterParamName').value = iondvOptions.optFilterParamName
+      if (document.getElementById('optFilterParamName') && iondvOptions.hasOwnProperty('optFilterParamName')) {
+        const saved = iondvOptions.optFilterParamName
+        document.getElementById('optFilterParamName').value = METRICS.isValid(saved) ? saved : METRICS.DEFAULT_FILTER_PARAM
+      }
 
       if(document.getElementById('deepStartDate') && iondvOptions.hasOwnProperty('deepStartDate'))
         document.getElementById('deepStartDate').value = iondvOptions.deepStartDate
@@ -138,16 +141,16 @@ function setPopupInputsByOptions(getResults) {
 function getOptions(signal) {
   const iondvOptions = {}
   iondvOptions.isMaximizing = document.getElementById('optMinmax').checked
-  iondvOptions.optParamName = document.getElementById('optParamName').value || 'Total P&L'
+  iondvOptions.optParamName = document.getElementById('optParamName').value || METRICS.DEFAULT_OPT_PARAM
   iondvOptions.optMethod = document.getElementById('optMethod').value || 'random'
 
   iondvOptions.isMaximizing = document.getElementById('optMinmax').checked
-  iondvOptions.optParamName = document.getElementById('optParamName').value || 'Total P&L'
+  iondvOptions.optParamName = document.getElementById('optParamName').value || METRICS.DEFAULT_OPT_PARAM
   iondvOptions.optMethod = document.getElementById('optMethod').value || 'random'
 
   iondvOptions.optFilterAscending  = document.getElementById('optFilterMore').checked ? true : document.getElementById('optFilterLess').checked ? false : null
   iondvOptions.optFilterValue = document.getElementById('optFilterValue').value || '50'
-  iondvOptions.optFilterParamName = document.getElementById('optFilterParamName').value || 'Total Closed Trades: All'
+  iondvOptions.optFilterParamName = document.getElementById('optFilterParamName').value || METRICS.DEFAULT_FILTER_PARAM
   const deepStartDateEl = document.getElementById('deepStartDate')
   if (deepStartDateEl) {
     if (deepStartDateEl.value === '' || (deepStartDateEl.value && deepStartDateEl.value.match(/^20\d{2}-[0-1][0-9]-[0-3][0-9]/))) {

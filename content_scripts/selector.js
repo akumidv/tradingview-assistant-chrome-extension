@@ -20,9 +20,10 @@ const SEL = {
   cancelBtn: 'div[data-name="indicator-properties-dialog"] span[data-name="close"][data-role="button"]',
   strategyTesterTab: '[data-qa-id="backtesting"]', // 2023-10-19 #footer-chart-panel  or #bottom-area
   strategyTesterTabActive: '[data-qa-id="backtesting"][data-active="true"]', // 2023-10-19 #footer-chart-panel  or #bottom-area
-  strategyCaption: '#bottom-area  [class^="strategyGroup"] [data-strategy-title]',
+  strategyCaption: '[data-qa-id="backtesting"][data-active="true"] [class*=titleText]',
+  strategyCaptionSettings: '[data-qa-id="backtesting-open-context-menu"] button',
   strategyMenuItemSettings: '[role="menu"] [role="menuitem"][aria-label^="Settings"]',
-  strategyDialogParam: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"]  > div:nth-child(2) > button:nth-child(1)',
+  // strategyDialogParam: '#bottom-area div[class^="backtesting"]  [class^="strategyGroup"]  > div:nth-child(2) > button:nth-child(1)',
   // strategySummary: selStatus.isNewVersion ?  '[id="Performance"]' : '[id="Performance Summary"]',
   // strategySummaryActive: selStatus.isNewVersion ? '[id="Performance"][class*="selected"]' : '[id="Performance Summary"][class*="selected"]',
   metricsTab: '[id="Strategy report"]',
@@ -30,27 +31,20 @@ const SEL = {
   tradesTab: '[id="List of Trades"]',
   tradesTabActive: '[id="List of Trades"][class*="selected"]',
   goproPopupCloseButton: '[data-dialog-name="gopro"][class^="dialog"] button[class*="close"]',
-  metricPerformanceGroup: '[data-qa-id="Performance-button"]',
-  metricPerformanceGroupExpanded: '[data-qa-id="Performance-button"][aria-expanded="true"]',
-  metricTradeAnalysisGroup: '[data-qa-id="Trades analysis-button"]',
-  metricTradeAnalysisGroupExpanded: '[data-qa-id="Trades analysis-button"][aria-expanded="true"]',
-  metricCapitalEfficiencyGroup: '[data-qa-id="Capital efficiency-button"]',
-  metricCapitalEfficiencyGroupExpanded: '[data-qa-id="Capital efficiency-button"][aria-expanded="true"]',
-  metricRunUpsGroup: '[data-qa-id="Run-ups and drawdowns-button"]',
-  metricRunUpsGroupExpanded: '[data-qa-id="Run-ups and drawdowns-button"][aria-expanded="true"]',
+  // Key stats overview: 4 cards at the top (Total P&L, Max drawdown, Profitable trades, Profit factor)
+  reportContent: '[class^="backtestingReport"] [class^="container"] [class^="reportContainer"]',
+  metricsValueCell: '[class^="reportContainer-"] [class^="containerCell"]',
+
+  // Section groups (as of 2026-06): each tableWrapper contains tabs + table
+  // Groups: "Return details", "Trades analysis", "Equity run-ups and drawdowns", "Capital Efficiency"
+  // Tab buttons within each group (button[id][aria-selected]); skip id="strategy-report-summary" (shows cards, not table)
+  metricSectionGroup: '[class^="backtestingReport"] [class^="tableWrapper"]',
+  metricOverviewTab: 'button#strategy-report-summary',
+  // Tab button IDs for reference: returns-summary-table, benchmarking-table, risk-adjusted-performance-table,
+  //   trades-analysis-table, run-ups-table, drawdowns-table, capital-usage-table, margin-usage-table
+
 //backtesting-loading-report-snackbar
 //backtesting-success-report-snackbar
-
-  metricPerformanceReturnsTable: '[data-qa-id="returns-summary-table"]',
-  metricBenchmarkingTable: '[data-qa-id="benchmarking-table"]',
-  metricRatiosTable: '[data-qa-id="ratios-table"]',
-  metricTradeAnalysisTable: '[data-qa-id="trades-analysis-table"]',
-  metricCapitalEfficiencyTable: '[data-qa-id="capital-efficiency-table"]',
-  metricMarginEfficiencyTable: '[data-qa-id="margin-efficiency-table"]',
-  metricRunUpsTable: '[data-qa-id="run-ups-table"]',
-  metricDrawdownsTable: '[data-qa-id="drawdowns-table"]',
-
-  metricsValueCell: '[class^="reportContainer-"] [class^="containerCell"]',
 
   strategyProcessMessage: '[id="snackbar-container"] [data-qa-id]',
   strategyReportInProcess: '[id="snackbar-container"] [data-qa-id^="backtesting-loading-report-snackbar"]',

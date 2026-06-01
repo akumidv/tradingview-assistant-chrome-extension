@@ -54,9 +54,10 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest =
     isOpened = await tv.openStrategyParameters(strategyName, true)
   else
     isOpened = await tv.openStrategyParameters(null, false)
-  if (!isOpened) {
+  if (isOpened === null)
+    return null  // openStrategyParameters already showed error popup
+  if (!isOpened)
     throw new Error('It was not possible open strategy. Add it to the chart and try again.')
-  }
 
   const dialogTitle = await page.waitForSelector(SEL.indicatorTitle)
   if (!dialogTitle || dialogTitle.innerText === null)
@@ -314,16 +315,16 @@ tv.changeDialogTabToInput = async () => {
   return !!isInputTabActive
 }
 
-tv._openStrategyByButtonNearTitle = async () => {
-  if (tv._settingsMethod !== null && tv._settingsMethod !== 'setButton')
-    return false
-  const stratParamEl = page.$(SEL.strategyDialogParam) // Version before 2025.02.21 with param button near title
-  if (!stratParamEl)
-    return false
-  tv._settingsMethod = 'setButton'
-  page.mouseClick(stratParamEl) // stratParamEl.click()
-  return true
-}
+// tv._openStrategyByButtonNearTitle = async () => { // No button after 2026 year
+//   if (tv._settingsMethod !== null && tv._settingsMethod !== 'setButton')
+//     return false
+//   const stratParamEl = page.$(SEL.strategyDialogParam) // Version before 2025.02.21 with param button near title
+//   if (!stratParamEl)
+//     return false
+//   tv._settingsMethod = 'setButton'
+//   page.mouseClick(stratParamEl) // stratParamEl.click()
+//   return true
+// }
 
 tv._openStrategyParamsByStrategyDoubleClickBy = async (indicatorTitle) => {
   if ((tv._settingsMethod !== null && tv._settingsMethod !== 'indName') || !indicatorTitle)
@@ -355,15 +356,19 @@ tv._openStrategyParamsByStrategyDoubleClickBy = async (indicatorTitle) => {
 tv._openStrategyParamsByStrategyMenu = async () => {
   if (tv._settingsMethod !== null && tv._settingsMethod !== 'setMenu')
     return false
-  const strategyCaptionEl = await page.waitForSelector(SEL.strategyCaption, 1000)
+  // Both real and fakeTabs have the button — filter by visibility and non-fake ancestor
+  const allBtnEls = [...document.querySelectorAll(SEL.strategyCaptionSettings)]
+  const strategyCaptionEl = allBtnEls.find(
+    el => !el.closest('[class*="fake"]') && el.getBoundingClientRect().width > 0
+  )
   if (!strategyCaptionEl)
     return false
-  page.mouseClick(strategyCaptionEl)
-  const menuItemSettingsEl = await page.waitForSelector(SEL.strategyMenuItemSettings)
+  page.mouseClick(strategyCaptionEl) // pointer events needed for menu trigger
+  const menuItemSettingsEl = await page.waitForSelector(SEL.strategyMenuItemSettings, 2000)
   if (!menuItemSettingsEl)
     return false
+  menuItemSettingsEl.click() // native click needed for menu items
   tv._settingsMethod = 'setMenu'
-  page.mouseClick(menuItemSettingsEl)
   return true
 }
 
@@ -400,7 +405,7 @@ tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = fal
     await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
     return null
   }
-  const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 2000)
+  const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 5000)
   if (!stratIndicatorEl) {
     await ui.showErrorPopup('There is not strategy parameters popup. If was not opened, probably TV UI changes. ' +
       'Reload page and try again. Test stopped. Open correct page please')
@@ -411,7 +416,7 @@ tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = fal
     await ui.showErrorPopup('There is not strategy parameters input tab. Test stopped. Open correct page please')
     return null
   }
-  page.mouseClick(tabInputEl) //tabInputEl.click()
+  page.mouseClick(tabInputEl)
 
   const tabInputActiveEl = await page.waitForSelector(SEL.tabInputActive)
   if (!tabInputActiveEl) {
@@ -500,7 +505,7 @@ tv.switchToStrategyTabAndSetObserveForReport = async (isDeepTest = false) => {
   testResults.ticker = await tvChart.getTicker()
   testResults.timeFrame = await tvChart.getCurrentTimeFrame()
   let strategyCaptionEl = document.querySelector(SEL.strategyCaption)
-  testResults.name = strategyCaptionEl.getAttribute('data-strategy-title') //strategyCaptionEl.innerText
+  testResults.name = strategyCaptionEl?.innerText || strategyCaptionEl?.getAttribute('data-strategy-title')
 
   // const reportEl = await page.waitForSelector(SEL.strategyReportObserveArea, 10000)
   // if (!tv.reportNode) {
@@ -595,21 +600,6 @@ tv.dialogHandler = async () => {
   }
 }
 
-const paramNamePrevVersionMap = {
-  // Prev version: New version from set parameters
-  // 'Net Profit': 'Net profit',
-  // 'Gross Profit': 'Gross profit',
-  // 'Gross Loss': 'Gross loss',
-}
-
-tv.convertParameterName = (field) => {
-  if (selStatus.isNewVersion)  // new version
-    return field
-  if (Object.hasOwn(paramNamePrevVersionMap, field))
-    return paramNamePrevVersionMap[field]
-  return field
-}
-
 
 tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
   function parseNumTypeByRowName(rowName, value) {
@@ -647,8 +637,7 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
       if (!allTdEl || allTdEl.length < 2 || !allTdEl[0]) {
         continue
       }
-      let paramName = (allTdEl[0].innerText || '').trim()
-      // paramName = tv.convertParameterName(paramName)
+      const paramName = (allTdEl[0].innerText || '').trim()
       let isSingleValue = firstColumnValues.includes(paramName)
       for (let i = 1; i < allTdEl.length; i++) {
         if (isSingleValue && i >= 2)
@@ -705,9 +694,8 @@ tv._parseMetrics = (report) => {
     const metricNameAndValEls = metricEl.querySelectorAll('div[class^="container-"]')
     if (metricNameAndValEls && metricNameAndValEls.length < 2)
       continue
-    let metricName = metricNameAndValEls[0].innerText || ''
+    const metricName = (metricNameAndValEls[0].innerText || '').trim()
     let metricValue = metricNameAndValEls[1].innerText || ''
-    // metricName = tv.convertParameterName(metricName)
     if (metricValue && typeof metricValue === 'string') {
       metricValue = metricValue.replaceAll(' ', ' ').replaceAll('−', '-').trim()
       const digitalValues = metricValue.replaceAll(/([\/\-\d\.\n%])|(.)/g, (a, b) => b || '')
@@ -742,56 +730,34 @@ tv._parseMetrics = (report) => {
 }
 
 tv.parseReportTable = async () => {
-  for (const groupButton of [
-    [SEL.metricPerformanceGroup, SEL.metricPerformanceGroupExpanded],
-    [SEL.metricTradeAnalysisGroup, SEL.metricTradeAnalysisGroupExpanded],
-    [SEL.metricCapitalEfficiencyGroup, SEL.metricCapitalEfficiencyGroupExpanded],
-    [SEL.metricRunUpsGroup, SEL.metricRunUpsGroupExpanded],
-  ]) {
-    const groupBtnEl = page.$(groupButton[0])
-    if (groupBtnEl) {
-      const isExpanded = page.$(groupButton[1])
-      if (!isExpanded) {
-        page.mouseClick(groupBtnEl)
-        await page.waitForSelector(groupButton[1], 1000)
-      }
-    }
-  }
-
   let report = {}
   report = tv._parseMetrics(report)
 
+  for (const group of document.querySelectorAll(SEL.metricSectionGroup)) {
+    const tabButtons = [...group.querySelectorAll('button[id][aria-selected]')]
+      .filter(btn => btn.id !== 'strategy-report-summary')
 
-  for (const sel of [
-    SEL.metricPerformanceReturnsTable,
-    SEL.metricBenchmarkingTable,
-    SEL.metricRatiosTable,
-    SEL.metricTradeAnalysisTable,
-    SEL.metricCapitalEfficiencyTable,
-    SEL.metricMarginEfficiencyTable,
-    SEL.metricRunUpsTable,
-    SEL.metricDrawdownsTable
-  ]) {
-    const tabElActive = page.$(sel)
-    if (!tabElActive)
-      continue
-    selHeader = sel + ' ' + SEL.strategyReportHeaderBase
-    selRow = sel + ' ' + SEL.strategyReportRowBase
-    strategyHeaders = []
-    await page.waitForSelector(selHeader, 1000)
-    allHeadersEl = document.querySelectorAll(selHeader)
-    for (let headerEl of allHeadersEl) {
-      if (headerEl)
-        strategyHeaders.push(headerEl.innerText)
-    }
-    await page.waitForSelector(selRow, 2500)
-    let allReportRowsEl = document.querySelectorAll(selRow)
-    if (allReportRowsEl && allReportRowsEl.length !== 0) {
-      report = tv._parseRows(allReportRowsEl, strategyHeaders, report)
+    for (const tabBtn of tabButtons) {
+      if (tabBtn.getAttribute('aria-selected') !== 'true') {
+        page.mouseClick(tabBtn)
+        await page.waitForTimeout(120)
+      }
+
+      const table = group.querySelector('table')
+      if (!table)
+        continue
+
+      const headerEls = table.querySelectorAll('thead > tr > th')
+      const strategyHeaders = [...headerEls].map(h => (h?.innerText || '').trim())
+      const rowEls = table.querySelectorAll('tbody > tr')
+      if (rowEls.length)
+        report = tv._parseRows(rowEls, strategyHeaders, report)
     }
   }
+
   return report
 }
+
 
 tv.backtestDelay = async (backtestDelay = 0, isRandom = true) => {
   let delayTime = backtestDelay * 1000

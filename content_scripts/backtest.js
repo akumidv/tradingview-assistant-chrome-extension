@@ -1,5 +1,5 @@
 const backtest = {
-  DEF_MAX_PARAM_NAME: 'Net profit: All'
+  DEF_MAX_PARAM_NAME: 'Total PnL'
 }
 
 
@@ -158,13 +158,22 @@ async function getInitBestValues(testResults) {
   if (res['error'] === null)
     resData = calculateAdditionValuesToReport(resData)
 
-  if (resData && resData.hasOwnProperty(testResults.optParamName)) {
+  if (resData && !Object.hasOwn(resData, testResults.optParamName)) {
+    const numericKeys = Object.keys(resData).filter(k => !k.startsWith('_') && typeof resData[k] === 'number')
+    await ui.showErrorPopup(
+      `Optimization parameter "${testResults.optParamName}" was not found in the report.\n\n` +
+      `Please update settings — choose one of the available metrics:\n${numericKeys.slice(0, 12).join('\n')}`
+    )
+    return null
+  }
+
+  if (resData && Object.hasOwn(resData, testResults.optParamName)) {
     console.log(`Init from current "${testResults.optParamName}":`, resData[testResults.optParamName])
     // resVal = resData[testResults.optParamName]
     resData['comment'] = resData['comment'] ? `Current parameters. ${resData['comment']}` : 'Current parameters.'
     Object.keys(resPropVal).forEach(key => resData[`__${key}`] = resPropVal[key])
     const curPropVal = expandPropVal(testResults.startParams.current, resPropVal)
-    setBestVal(res.data[testResults.optParamName], curPropVal, res.data)
+    setBestVal(resData[testResults.optParamName], curPropVal, res.data)
   }
 
   if (testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
@@ -172,7 +181,7 @@ async function getInitBestValues(testResults) {
     if (resPropVal === null || Object.keys(resPropVal).some(key => resPropVal[key] !== defPropVal[key])) {
       await page.waitForTimeout(testResults.backtestDelay * 1000)
       const res = await backtest.getTestIterationResult(testResults, defPropVal, true) // Ignore error because propValues can be the same
-      if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
+      if (res && res.data && Object.hasOwn(res.data, testResults.optParamName)) {
         console.log(`Init from default "${testResults.optParamName}":`, res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
         Object.keys(defPropVal).forEach(key => res.data[`__${key}`] = defPropVal[key])
@@ -190,7 +199,7 @@ async function getInitBestValues(testResults) {
       const bestPropVal = expandPropVal(testResults.startParams.best, resPropVal)
       await page.waitForTimeout(testResults.backtestDelay * 1000)
       const res = await backtest.getTestIterationResult(testResults, bestPropVal, true)  // Ignore error because propValues can be the same
-      if (res && res.data && res.data.hasOwnProperty(testResults.optParamName)) {
+      if (res && res.data && Object.hasOwn(res.data, testResults.optParamName)) {
         console.log(`Init from best "${testResults.optParamName}":`, res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
         Object.keys(bestPropVal).forEach(key => res.data[`__${key}`] = bestPropVal[key])
@@ -249,11 +258,16 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 
 async function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
   res = !res ? {} : res
-  if ((!Object.hasOwn(res, 'error') || res.error === null) && (!Object.hasOwn(res, 'data') || !Object.hasOwn(res.data, testResults.optParamName))) {
+  const hasOptMetric = res.data && Object.hasOwn(res.data, testResults.optParamName)
+  if ((!Object.hasOwn(res, 'error') || res.error === null) && (!Object.hasOwn(res, 'data') || !hasOptMetric)) {
     res.bestValue = bestValue
     res.bestPropVal = bestPropVal
+    const availableMetrics = res.data
+      ? Object.keys(res.data).filter(k => !k.startsWith('_') && typeof res.data[k] === 'number').slice(0, 8).join(', ')
+      : 'report is empty'
     res.currentValue = `${testResults.optParamName} missed in data`
-    res.message = `Missed "${testResults.optParamName}". Add group with this parameter to metrics report.`
+    res.message = `Parameter "${testResults.optParamName}" not found in report. ` +
+      `Please update settings.\nAvailable metrics: ${availableMetrics}`
     res.forceStop = true
     testResults.filteredSummary.push(res.data)
     return res
@@ -281,7 +295,7 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
   else
     testResults.perfomanceSummary.push(res.data)
   await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
-  if (Object.hasOwn(res.data, testResults.optParamName))
+  if (hasOptMetric)
     res.currentValue = res.data[testResults.optParamName]
   else
     res.currentValue = null //`${testResults.optParamName} missed in data`
