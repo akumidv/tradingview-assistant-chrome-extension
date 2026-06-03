@@ -107,7 +107,7 @@ page.setSelByText = async (selector, textValue) => {
       const normalizedItem = itemValue ? itemValue.trim().toLowerCase() : ''
       const normalizedTarget = textValue ? textValue.trim().toLowerCase() : ''
       if (normalizedItem && normalizedTarget && (normalizedItem === normalizedTarget || normalizedItem.startsWith(normalizedTarget))) {
-        page.mouseClick(optionsEl)
+        optionsEl.click() // Native click selects the option; synthetic mouseClick is ignored by menu items
         await page.waitForSelector(selector, 1000, true)
         isSet = true
         break
@@ -115,7 +115,7 @@ page.setSelByText = async (selector, textValue) => {
       if (!normalizedItem && optionsEl.textContent) {
         const fallback = optionsEl.textContent.trim().toLowerCase()
         if (fallback && normalizedTarget && (fallback === normalizedTarget || fallback.startsWith(normalizedTarget))) {
-          page.mouseClick(optionsEl)
+          optionsEl.click() // Native click selects the option; synthetic mouseClick is ignored by menu items
           await page.waitForSelector(selector, 1000, true)
           isSet = true
           break

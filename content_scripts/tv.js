@@ -267,7 +267,7 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
         } else {
           let buttonEl = indicProperties[i].querySelector('button[role="combobox"]')
           if (buttonEl?.innerText) {
-            buttonEl.click()
+            page.mouseClick(buttonEl) // Pointer events open the menu; native click() no longer does
             buttonEl = null
             await page.setSelByText(SEL.strategyListOptions, propVal[propText])
           }
