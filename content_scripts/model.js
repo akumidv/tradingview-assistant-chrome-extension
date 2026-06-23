@@ -154,7 +154,7 @@ model.getParamPriorityList = (paramRange) => {
 }
 
 model.getStartParamValues = async (paramRange, strategyData) => {
-  const currenPropVal = getCurrentPropValues(strategyData)
+  const currenPropVal = getCurrentPropValues(strategyData, paramRange)
   const startValues = {'default': {}, 'current': currenPropVal}
 
   Object.keys(paramRange).forEach(key => {
@@ -181,9 +181,12 @@ model.getStartParamValues = async (paramRange, strategyData) => {
   return startValues
 }
 
-function getCurrentPropValues(strategyData) {
+function getCurrentPropValues(strategyData, paramRange = null) {
   const propVal = {}
-  Object.keys(strategyData.properties).forEach(key => {
+  const keys = paramRange
+    ? Object.keys(strategyData.properties).filter(key => Object.hasOwn(paramRange, key))
+    : Object.keys(strategyData.properties)
+  keys.forEach(key => {
     if (typeof strategyData.properties[key] === 'string' && strategyData.properties[key].includes(';'))
       propVal[key] = strategyData.properties[key].split(';')[0]
     else

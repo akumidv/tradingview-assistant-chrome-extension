@@ -231,6 +231,16 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
   return legacySuccess
 }
 
+// TradingView renders numbers/bools as text and dropdown labels may differ only by surrounding
+// whitespace (incl. zero-width spaces), so compare trimmed/lowercased — same as setSelByText.
+tv._isSameParamValue = (currentRaw, desiredRaw) => {
+  if (currentRaw === null || currentRaw === undefined || desiredRaw === null || desiredRaw === undefined)
+    return false
+  const cur = String(currentRaw).replaceAll('​', '').trim().toLowerCase()
+  const want = String(desiredRaw).replaceAll('​', '').trim().toLowerCase()
+  return cur === want
+}
+
 tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStrategyParamOpen = false) => {
   const indicatorTitleEl = await tv.checkAndOpenStrategy(name, isDeepTest) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
   if (!indicatorTitleEl)
@@ -262,14 +272,20 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
         i++
         let inputEl = indicProperties[i].querySelector('input')
         if (inputEl) {
-          page.setInputElementValue(inputEl, propVal[propText])
+          if (!tv._isSameParamValue(inputEl.value, propVal[propText]))
+            page.setInputElementValue(inputEl, propVal[propText])
           inputEl = null
         } else {
           let buttonEl = indicProperties[i].querySelector('button[role="combobox"]')
           if (buttonEl?.innerText) {
-            page.mouseClick(buttonEl) // Pointer events open the menu; native click() no longer does
+            // The selected dropdown option is shown as the button text; re-selecting the same
+            // option still triggers a strategy recalculation, so skip when it already matches.
+            if (!tv._isSameParamValue(buttonEl.innerText, propVal[propText])) {
+              page.mouseClick(buttonEl) // Pointer events open the menu; native click() no longer does
+              buttonEl = null
+              await page.setSelByText(SEL.strategyListOptions, propVal[propText])
+            }
             buttonEl = null
-            await page.setSelByText(SEL.strategyListOptions, propVal[propText])
           }
         }
       } else if (propClassName.includes('fill-')) {
@@ -759,6 +775,26 @@ tv.parseReportTable = async () => {
 }
 
 
+tv._getLastStoredReport = (testResults) => {
+  const perf = testResults && Array.isArray(testResults.perfomanceSummary) ? testResults.perfomanceSummary : []
+  const filtered = testResults && Array.isArray(testResults.filteredSummary) ? testResults.filteredSummary : []
+  const lastPerf = perf.length ? perf[perf.length - 1] : null
+  const lastFiltered = filtered.length ? filtered[filtered.length - 1] : null
+  if (!lastPerf)
+    return lastFiltered
+  return lastPerf
+}
+
+tv._getReportDataHash = (reportData) => {
+  // `_`-prefixed fields are timings that always change, `comment` is a message, not a result.
+  if (!reportData || typeof reportData !== 'object')
+    return ''
+  const keys = Object.keys(reportData).filter(k => !k.startsWith('_') && k !== 'comment').sort()
+  if (!keys.length)
+    return ''
+  return keys.map(k => `${k}=${reportData[k]}`).join('|')
+}
+
 tv.backtestDelay = async (backtestDelay = 0, isRandom = true) => {
   let delayTime = backtestDelay * 1000
   const minimalDelay = 0.2 * 1000//, backtestDelay/2) // 20%
@@ -777,10 +813,18 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
 
   let isProcessStart = false
   let isProcessEnd = false
+  let isDataChanged = false
+  let sawStageSelector = false
   let isPrevMessageShowing = !!page.$(SEL.strategyProcessMessage) && !page.$(SEL.strategyReportNeedUpdate)
   let isProcessError = null
   const isStartProcessError = page.$(SEL.strategyReportError)
   const dataWaitingTime = testResults.isDeepTest ? testResults.dataLoadingTime * 2000 : testResults.dataLoadingTime * 1000
+  // TradingView markup is a moving target, so changed report values are used as a
+  // stage-selector-independent signal that the computation finished.
+  const prevReport = tv._getLastStoredReport(testResults)
+  const prevDataHash = tv._getReportDataHash(prevReport)
+  let lastDataCheckTime = new Date()
+  const dataCheckIntervalMs = 500
   let tikTime = 50
   let cycles = Math.ceil(5000 / tikTime)
   for (let i = 0; i < cycles; i++) {
@@ -812,6 +856,17 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
       if (!isStartProcessError || i * tikTime >= 5000)
         isProcessError = !!page.$(SEL.strategyReportError) && !page.$(SEL.strategyReportInProcess)
       isProcessEnd = !!page.$(SEL.strategyReportReady)
+      if (!!page.$(SEL.strategyReportInProcess) || isProcessEnd)
+        sawStageSelector = true
+      if (!isProcessEnd && !isProcessError && prevDataHash &&
+          (new Date() - lastDataCheckTime) >= dataCheckIntervalMs) {
+        lastDataCheckTime = new Date()
+        const tickHash = tv._getReportDataHash(await tv.parseReportTable())
+        if (tickHash && tickHash !== prevDataHash) {
+          isDataChanged = true
+          isProcessEnd = true
+        }
+      }
       if (isProcessEnd && isDeepTestUpdateClicked && !isNewUpdate) {
         isNewUpdate = !!(await page.waitForSelector(SEL.strategyReportInProcess, 1000))
         isProcessEnd = !isNewUpdate
@@ -834,18 +889,24 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
   let _waitTime = new Date() - startTime
   isProcessError = !!document.querySelector(SEL.strategyReportError)
   reportData = await tv.parseReportTable()
-  if (!isProcessError && !isProcessEnd && testResults.perfomanceSummary.length) { // Checking by changes in data
-    const lastRes = testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1] // (!) Previous value maybe in testResults.filteredSummary
-    if (reportData.hasOwnProperty(testResults.optParamName) && lastRes.hasOwnProperty(testResults.optParamName) &&
-      reportData[testResults.optParamName] !== lastRes[testResults.optParamName]) {
-      isProcessEnd = true
-      isProcessStart = true
-    }
+  const finalDataHash = tv._getReportDataHash(reportData)
+  if (prevDataHash && finalDataHash && finalDataHash !== prevDataHash)
+    isDataChanged = true
+  if (!isProcessError && !isProcessEnd && isDataChanged) {
+    isProcessEnd = true
+    isProcessStart = true
   }
+  // Report data did not change vs the previous iteration and no genuine completion was detected
+  // (TradingView did not recompute — typically because the candidate equals what is already set,
+  // or the computation never started / timed out). The table still holds the previous numbers,
+  // so this value is stale and must be marked, not trusted as a fresh result.
+  const isStaleUnchanged = !isProcessError && !isDataChanged && !!prevDataHash && finalDataHash === prevDataHash
   try {
     if (testResults.perfomanceSummary.length && !isProcessError)
       console.log('#', testResults.perfomanceSummary.length, testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1][testResults.optParamName], '->', reportData[testResults.optParamName])
   } catch {}
+  if (isStaleUnchanged)
+    message += `${message ? '. ' : ''}WARNING: report not updated — value may be stale (TV did not recompute, parameters likely unchanged)`
   if (reportData['comment'])
     message += '. ' + reportData['comment']
   const comment = message ? message : testResults.isDeepTest ? 'Deep BT. ' : null
@@ -860,6 +921,9 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
     error: isProcessError ? 2 : !isProcessStart ? 1 : !isProcessEnd ? 3 : null,
     message: message,
     data: reportData,
+    isDataChanged: isDataChanged,
+    isStaleUnchanged: isStaleUnchanged,
+    sawStageSelector: sawStageSelector,
     _waitTime: _waitTime
   }
   // return await tv.parseReportTable()

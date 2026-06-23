@@ -1,5 +1,6 @@
 const backtest = {
-  DEF_MAX_PARAM_NAME: 'Total PnL'
+  DEF_MAX_PARAM_NAME: 'Total PnL',
+  DEF_MAX_MISSING_OPT_PARAM_STREAK: 3
 }
 
 
@@ -93,6 +94,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
       try {
         let text = `<p>Cycle: ${i + 1}/${testResults.cycles} (${durationTime}[${setTime}/${parseTime}]/${avgTime} sec). Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`
         text += optRes.hasOwnProperty('currentValue') ? `<p>Current "${testResults.optParamName}": ${backtest.convertValue(optRes.currentValue)}</p>` : ''
+        text += backtest._getMissingOptParamStreakHtml(testResults)
         text += optRes.error !== null ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
       } catch  {
@@ -101,6 +103,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
       try {
         let text = `<p>Cycle: ${i + 1}/${testResults.cycles}. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`
         text += `<p>Current "${testResults.optParamName}": ${backtest.convertValue(optRes.currentValue)}</p>`
+        text += backtest._getMissingOptParamStreakHtml(testResults)
         text += optRes.error !== null ? `<p style="color: red">${optRes.message}</p>` : optRes.message ? `<p>${optRes.message}</p>` : ''
         ui.statusMessage(text)
       } catch  {
@@ -124,6 +127,51 @@ backtest.convertValue = (value) => {
   }
   return value
 
+}
+
+backtest._handleMissingOptParam = async (res, testResults, { isDegenerate, availableMetricKeys }) => {
+  if (!Object.hasOwn(testResults, 'missingOptParamStreak') || typeof testResults.missingOptParamStreak !== 'number')
+    testResults.missingOptParamStreak = 0
+  const availableMetrics = availableMetricKeys.length ? availableMetricKeys.slice(0, 8).join(', ') : 'report is empty'
+  const maxMissingStreak = Number.isFinite(testResults.maxMissingOptParamStreak)
+    ? testResults.maxMissingOptParamStreak
+    : backtest.DEF_MAX_MISSING_OPT_PARAM_STREAK
+
+  if (isDegenerate) {
+    res.currentValue = `${testResults.optParamName} missed in data`
+    res.message = `Parameter "${testResults.optParamName}" not found in report. ` +
+      `Available metrics: ${availableMetrics}. Iteration skipped.`
+    res.forceStop = false
+    res.isFiltered = true
+    testResults.filteredSummary.push(res.data)
+    await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
+    return res
+  }
+
+  testResults.missingOptParamStreak += 1
+  const baseMessage = `No report data for "${testResults.optParamName}" (${availableMetrics})`
+  if (testResults.missingOptParamStreak >= maxMissingStreak) {
+    res.currentValue = `${testResults.optParamName} missed in data`
+    res.message = `${baseMessage}. Missing output in ${testResults.missingOptParamStreak} consecutive iterations. ` +
+      `Please update settings.`
+    res.forceStop = true
+  } else {
+    res.currentValue = `missed in data (${testResults.missingOptParamStreak}/${maxMissingStreak})`
+    res.message = `${baseMessage}. Iteration skipped (${testResults.missingOptParamStreak}/${maxMissingStreak}).`
+    res.forceStop = false
+  }
+  testResults.filteredSummary.push(res.data)
+  await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
+  return res
+}
+
+backtest._getMissingOptParamStreakHtml = (testResults) => {
+  if (!testResults || typeof testResults.missingOptParamStreak !== 'number' || testResults.missingOptParamStreak <= 0)
+    return ''
+  const maxMissingStreak = Number.isFinite(testResults.maxMissingOptParamStreak)
+    ? testResults.maxMissingOptParamStreak
+    : backtest.DEF_MAX_MISSING_OPT_PARAM_STREAK
+  return `<p style="color: #b26a00">Missing report metric streak: ${testResults.missingOptParamStreak}/${maxMissingStreak}</p>`
 }
 
 
@@ -259,19 +307,37 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 async function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
   res = !res ? {} : res
   const hasOptMetric = res.data && Object.hasOwn(res.data, testResults.optParamName)
-  if ((!Object.hasOwn(res, 'error') || res.error === null) && (!Object.hasOwn(res, 'data') || !hasOptMetric)) {
+  const hasNoError = !Object.hasOwn(res, 'error') || res.error === null
+  const availableMetricKeys = res.data
+    ? Object.keys(res.data).filter(k => !k.startsWith('_') && typeof res.data[k] === 'number')
+    : []
+  const isStaleUnchanged = Boolean(res.isStaleUnchanged)
+  const isEmptyReport = hasNoError && (!Object.hasOwn(res, 'data') || availableMetricKeys.length === 0)
+  const isDegenerate = hasNoError && !isEmptyReport && !hasOptMetric
+
+  // Stale (TV did not recompute, value unchanged): record the result but flag it, keep the run
+  // going, and do NOT count it as a missing-data miss (the data exists, it is just not fresh).
+  if (isStaleUnchanged && !isEmptyReport) {
+    testResults.missingOptParamStreak = 0
     res.bestValue = bestValue
     res.bestPropVal = bestPropVal
-    const availableMetrics = res.data
-      ? Object.keys(res.data).filter(k => !k.startsWith('_') && typeof res.data[k] === 'number').slice(0, 8).join(', ')
-      : 'report is empty'
-    res.currentValue = `${testResults.optParamName} missed in data`
-    res.message = `Parameter "${testResults.optParamName}" not found in report. ` +
-      `Please update settings.\nAvailable metrics: ${availableMetrics}`
-    res.forceStop = true
+    res.isFiltered = true
+    res.forceStop = false
+    res.currentValue = hasOptMetric ? `${res.data[testResults.optParamName]} (stale, not recomputed)` : 'stale, not recomputed'
+    const warn = 'WARNING: report not updated — value may be stale (TV did not recompute, parameters likely unchanged)'
+    res.data['comment'] = res.data['comment'] ? `${warn}. ${res.data['comment']}` : warn
+    res.message = res.data['comment']
     testResults.filteredSummary.push(res.data)
+    await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
     return res
   }
+
+  if (isEmptyReport || isDegenerate) {
+    res.bestValue = bestValue
+    res.bestPropVal = bestPropVal
+    return await backtest._handleMissingOptParam(res, testResults, { isDegenerate, availableMetricKeys })
+  }
+  testResults.missingOptParamStreak = 0
   let isFiltered = false
   if (res.error === null) {
     if (testResults.filterAscending !== null &&

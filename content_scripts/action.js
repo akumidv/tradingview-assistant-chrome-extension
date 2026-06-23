@@ -244,6 +244,10 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
     testParams.shouldSkipInitBestResult = request.options.hasOwnProperty('shouldSkipInitBestResult') ? Boolean(request.options['shouldSkipInitBestResult']) : false
     testParams.shouldSkipWaitingForDownload = request.options.hasOwnProperty('shouldSkipWaitingForDownload') ? Boolean(request.options['shouldSkipWaitingForDownload']) : false
     testParams.dataLoadingTime = request.options.hasOwnProperty('dataLoadingTime') && !isNaN(parseInt(request.options['dataLoadingTime'])) ? request.options['dataLoadingTime'] : 30
+    const maxMissingOptParamStreak = Number.parseInt(request.options['maxMissingOptParamStreak'])
+    testParams.maxMissingOptParamStreak = request.options.hasOwnProperty('maxMissingOptParamStreak') && !Number.isNaN(maxMissingOptParamStreak)
+      ? Math.max(1, maxMissingOptParamStreak)
+      : backtest.DEF_MAX_MISSING_OPT_PARAM_STREAK
   }
 
   return testParams
