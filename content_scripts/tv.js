@@ -738,33 +738,204 @@ tv._parseMetrics = (report) => {
   return report
 }
 
+tv._getMetricGroupTitle = (group) => {
+  const titleEl = [...(group?.children || [])]
+    .find(child => child.matches?.('p[class^="title"], p[class*=" title"]'))
+  return (titleEl?.innerText || '').trim()
+}
+
+tv.REPORT_PARSER_VERSION = '2026-06-23-lazy-report-sections-v4'
+
+tv._getMetricSectionRoot = (el, requireTable = false) => {
+  const reportRoot = page.$('[class^="backtestingReport"]') || page.$('#bottom-area')
+  for (let node = el; node && node !== reportRoot; node = node.parentElement) {
+    if (tv._getMetricGroupTitle(node) && (!requireTable || node.querySelector('table')))
+      return node
+  }
+  return null
+}
+
+tv._getMetricSectionGroups = () => {
+  const sections = new Set()
+  document.querySelectorAll('[class^="backtestingReport"] table, #bottom-area table')
+    .forEach(table => {
+      const section = tv._getMetricSectionRoot(table, true)
+      if (section)
+        sections.add(section)
+    })
+  document.querySelectorAll('[class^="backtestingReport"] button[id][aria-selected], #bottom-area button[id][aria-selected]')
+    .forEach(button => {
+      const section = tv._getMetricSectionRoot(button)
+      if (section)
+        sections.add(section)
+    })
+  return [...sections]
+}
+
+tv._getReportScrollRoots = () => {
+  const reportRoot = page.$('[class^="backtestingReport"]') || page.$('#bottom-area')
+  const candidates = [
+    ...document.querySelectorAll('#bottom-area *'),
+    reportRoot,
+    page.$('#bottom-area'),
+    document.scrollingElement,
+  ].filter(Boolean)
+
+  return [...new Set(candidates)]
+    .filter(el =>
+      el.scrollHeight > el.clientHeight + 50 &&
+      (el === document.scrollingElement ||
+        el.contains?.(reportRoot) ||
+        el.querySelector?.(SEL.metricSectionGroup) ||
+        el.querySelector?.(SEL.metricsValueCell))
+    )
+    .sort((a, b) => (b.scrollHeight - b.clientHeight) - (a.scrollHeight - a.clientHeight))
+}
+
+tv._getMetricSectionDebug = () => tv._getMetricSectionGroups().map(group => ({
+  title: tv._getMetricGroupTitle(group),
+  tabs: [...group.querySelectorAll('button[id][aria-selected]')]
+    .filter(btn => btn.id !== 'strategy-report-summary')
+    .map(btn => ({
+      id: btn.id,
+      text: (btn.innerText || '').trim(),
+      selected: btn.getAttribute('aria-selected'),
+    })),
+  table: (group.querySelector('table')?.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+}))
+
+tv._nudgeReportScrollRoot = async (scrollRoot, deltaY) => {
+  const target = scrollRoot === document.scrollingElement ? document : scrollRoot
+  const event = new WheelEvent('wheel', {
+    bubbles: true,
+    cancelable: true,
+    view: window,
+    deltaY,
+    deltaMode: 0,
+  })
+
+  target.dispatchEvent(event)
+  scrollRoot.scrollTop += deltaY
+  await page.waitForTimeout(180)
+}
+
+tv._parseVisibleMetricSectionGroups = async (report, parsedTabs, debugLabel = '') => {
+  const visibleSections = tv._getMetricSectionDebug()
+  for (const group of tv._getMetricSectionGroups())
+    report = await tv._parseMetricSectionGroup(group, report, parsedTabs)
+
+  if (tv.lastReportParseDebug)
+    tv.lastReportParseDebug.passes.push({
+      label: debugLabel,
+      visibleSections,
+      parsedTabsCount: parsedTabs.size,
+      metricCount: Object.keys(report).filter(key => !key.startsWith('_') && key !== 'comment').length,
+    })
+
+  return report
+}
+
+tv._parseMetricSectionGroup = async (group, report, parsedTabs) => {
+  const groupTitle = tv._getMetricGroupTitle(group)
+  const tabButtons = [...group.querySelectorAll('button[id][aria-selected]')]
+    .filter(btn => btn.id !== 'strategy-report-summary')
+
+  for (const tabBtn of tabButtons) {
+    const tabKey = `${groupTitle}::${tabBtn.id}::${(tabBtn.innerText || '').trim()}`
+    if (parsedTabs.has(tabKey))
+      continue
+
+    tabBtn.scrollIntoView({ block: 'center' })
+    await page.waitForTimeout(80)
+
+    if (tabBtn.getAttribute('aria-selected') !== 'true') {
+      page.mouseClick(tabBtn)
+      await page.waitForTimeout(180)
+    }
+
+    let table = group.querySelector('table')
+    if (!table) {
+      await page.waitForTimeout(250)
+      table = group.querySelector('table')
+    }
+    if (!table)
+      continue
+
+    const headerEls = table.querySelectorAll('thead > tr > th')
+    const strategyHeaders = [...headerEls].map(h => (h?.innerText || '').trim())
+    const rowEls = table.querySelectorAll('tbody > tr')
+    if (rowEls.length)
+      report = tv._parseRows(rowEls, strategyHeaders, report)
+
+    parsedTabs.add(tabKey)
+  }
+
+  return report
+}
+
 tv.parseReportTable = async () => {
   let report = {}
   report = tv._parseMetrics(report)
+  const parsedTabs = new Set()
+  const scrollRoots = tv._getReportScrollRoots()
+  tv.lastReportParseDebug = {
+    scrollRoots: scrollRoots.map((el, idx) => ({
+      idx,
+      tag: el.tagName,
+      className: String(el.className || '').slice(0, 160),
+      id: el.id || '',
+      scrollTop: el.scrollTop,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+    })),
+    passes: [],
+  }
 
-  for (const group of document.querySelectorAll(SEL.metricSectionGroup)) {
-    const tabButtons = [...group.querySelectorAll('button[id][aria-selected]')]
-      .filter(btn => btn.id !== 'strategy-report-summary')
+  report = await tv._parseVisibleMetricSectionGroups(report, parsedTabs, 'initial')
 
-    for (const tabBtn of tabButtons) {
-      if (tabBtn.getAttribute('aria-selected') !== 'true') {
-        page.mouseClick(tabBtn)
-        await page.waitForTimeout(120)
-      }
+  for (const scrollRoot of scrollRoots) {
+    scrollRoot.scrollTop = 0
+    await page.waitForTimeout(120)
 
-      const table = group.querySelector('table')
-      if (!table)
-        continue
+    for (let pass = 0; pass < 25; pass++) {
+      report = await tv._parseVisibleMetricSectionGroups(report, parsedTabs, `root:${scrollRoots.indexOf(scrollRoot)} pass:${pass}`)
 
-      const headerEls = table.querySelectorAll('thead > tr > th')
-      const strategyHeaders = [...headerEls].map(h => (h?.innerText || '').trim())
-      const rowEls = table.querySelectorAll('tbody > tr')
-      if (rowEls.length)
-        report = tv._parseRows(rowEls, strategyHeaders, report)
+      const prevScrollTop = scrollRoot.scrollTop
+      await tv._nudgeReportScrollRoot(scrollRoot, Math.max(500, scrollRoot.clientHeight || 500))
+
+      if (scrollRoot.scrollTop === prevScrollTop)
+        break
     }
   }
 
   return report
+}
+
+tv._getReportEmptyState = () => {
+  const emptyStateEl = page.$(SEL.strategyReportEmptyState)
+  const reportRoot = emptyStateEl || page.$(SEL.reportContent) || page.$('#bottom-area')
+  const reportText = (reportRoot?.innerText || '').replace(/\s+/g, ' ').trim()
+  if (!reportText)
+    return null
+
+  if (emptyStateEl)
+    return {
+      type: 'no_trade_data',
+      message: reportText
+    }
+
+  const knownNoDataMessages = [
+    'This report requires trade data',
+    'Not enough data to show'
+  ]
+  const matchedMessage = knownNoDataMessages.find(message => reportText.includes(message))
+  if (!matchedMessage)
+    return null
+
+  return {
+    type: 'no_trade_data',
+    message: matchedMessage
+  }
 }
 
 
@@ -880,8 +1051,14 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
   if(!ignoreWaiting && isProcessStart)
     await tv.backtestDelay(Math.max(testResults.backtestDelay, 0.25), testResults.randomDelay)
   let _waitTime = new Date() - startTime
-  isProcessError = !!document.querySelector(SEL.strategyReportError)
+  const emptyState = tv._getReportEmptyState()
+  isProcessError = !!document.querySelector(SEL.strategyReportError) && !emptyState
   reportData = await tv.parseReportTable()
+  if (emptyState && !tv._getReportDataHash(reportData)) {
+    reportData['comment'] = `No report data: ${emptyState.message}`
+    isProcessStart = true
+    isProcessEnd = true
+  }
   const finalDataHash = tv._getReportDataHash(reportData)
   if (prevDataHash && finalDataHash && finalDataHash !== prevDataHash)
     isDataChanged = true
@@ -901,15 +1078,10 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
   if (isStaleUnchanged)
     message += `${message ? '. ' : ''}WARNING: report not updated - value may be stale (TV did not recompute, parameters likely unchanged)`
   if (reportData['comment'])
-    message += '. ' + reportData['comment']
-  const comment = message ? message : testResults.isDeepTest ? 'Deep BT. ' : null
-  if (comment) {
-    if (reportData['comment'])
-      reportData['comment'] = comment ? comment + ' ' + reportData['comment'] : reportData['comment']
-    else {
-      reportData['comment'] = comment
-    }
-  }
+    message += `${message ? '. ' : ''}${reportData['comment']}`
+  const comment = message ? message : null
+  if (comment)
+    reportData['comment'] = comment
   return {
     error: isProcessError ? 2 : !isProcessStart ? 1 : !isProcessEnd ? 3 : null,
     message: message,

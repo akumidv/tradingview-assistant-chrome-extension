@@ -1,0 +1,38 @@
+#!/bin/sh
+set -eu
+
+if git diff --cached --quiet -- manifest.json; then
+  exit 0
+fi
+
+check_result=0
+git show :manifest.json | node -e '
+    const fs = require("fs")
+    let manifest
+    try {
+      manifest = JSON.parse(fs.readFileSync(0, "utf8"))
+    } catch (err) {
+      console.error(`ERROR: manifest.json is not valid JSON: ${err.message}`)
+      process.exit(2)
+    }
+    process.exit(Object.prototype.hasOwnProperty.call(manifest, "key") ? 1 : 0)
+' || check_result=$?
+
+case "$check_result" in
+  0)
+    exit 0
+    ;;
+  1)
+  cat >&2 <<'EOF'
+ERROR: manifest.json contains a top-level "key" field.
+
+Chrome extension keys identify a specific extension build and should not be
+committed to the public repository. Remove "key" from manifest.json before
+committing.
+EOF
+  exit 1
+    ;;
+  *)
+    exit "$check_result"
+    ;;
+esac

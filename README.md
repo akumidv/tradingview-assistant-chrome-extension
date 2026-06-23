@@ -208,6 +208,18 @@ To reduce developing time you can use some my repositories:
 * [tradingview-ta-lib](https://github.com/akumidv/tradingview-ta-lib) - TradingView `ta` lib implementation in python (only for TradingView indicators that have different calculation results with `ta-lib` or `python-ta`) - early developing stage.
 * [catcher-bot](https://github.com/akumidv/catcher-bot) - Bot for screening all symbols on exchanges and catching trade signals - early developing stage.
 
+## Development checks
+
+This repository includes a pre-commit hook that prevents committing
+`manifest.json` with a top-level `key` field. The Chrome extension key identifies
+a specific extension build and should not be committed to the public repository.
+
+Enable repository hooks after cloning:
+
+```sh
+git config core.hooksPath .githooks
+```
+
 ## Contacts
 
 akumidv `[at]` yahoo.com  (Do not send errors to email please, use [github issues](https://github.com/akumidv/tradingview-assistant-chrome-extension/issues) for them)

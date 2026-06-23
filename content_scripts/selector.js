@@ -52,6 +52,7 @@ const SEL = {
   // strategyReportNeedUpdate: '[id="snackbar-container"] [data-qa-id^="backtesting-updated-report-snackbar"] button',
   strategyReportNeedUpdate: '[id="snackbar-container"] [data-qa-id] button',
   strategyReportError: '#bottom-area div[class*="backtesting"] div[class^="wrapper-"] [class*=emptyStateIcon]',
+  strategyReportEmptyState: '#bottom-area [class^="emptyStateBlock"], #bottom-area [class*=" emptyStateBlock"], #bottom-area [class^="notEnoughData"], #bottom-area [class*=" notEnoughData"]',
 
   strategyReportHeaderBase: 'div[class^="wrapper-"] div[class^="ka root"] table thead > tr > th',
   strategyReportRowBase: ' div[class^="wrapper-"] div[class^="ka root"] table tbody > tr',

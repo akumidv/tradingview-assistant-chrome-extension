@@ -132,7 +132,8 @@ backtest.convertValue = (value) => {
 backtest._handleMissingOptParam = async (res, testResults, { isDegenerate, availableMetricKeys }) => {
   if (!Object.hasOwn(testResults, 'missingOptParamStreak') || typeof testResults.missingOptParamStreak !== 'number')
     testResults.missingOptParamStreak = 0
-  const availableMetrics = availableMetricKeys.length ? availableMetricKeys.slice(0, 8).join(', ') : 'report is empty'
+  const reportComment = res?.data && typeof res.data['comment'] === 'string' ? res.data['comment'] : ''
+  const availableMetrics = availableMetricKeys.length ? availableMetricKeys.slice(0, 5).join(', ') : 'report is empty'
   const maxMissingStreak = Number.isFinite(testResults.maxMissingOptParamStreak)
     ? testResults.maxMissingOptParamStreak
     : backtest.DEF_MAX_MISSING_OPT_PARAM_STREAK
@@ -149,7 +150,9 @@ backtest._handleMissingOptParam = async (res, testResults, { isDegenerate, avail
   }
 
   testResults.missingOptParamStreak += 1
-  const baseMessage = `No report data for "${testResults.optParamName}" (${availableMetrics})`
+  const baseMessage = reportComment
+    ? `No report data for "${testResults.optParamName}": ${reportComment}`
+    : `No report data for "${testResults.optParamName}" (${availableMetrics})`
   if (testResults.missingOptParamStreak >= maxMissingStreak) {
     res.currentValue = `${testResults.optParamName} missed in data`
     res.message = `${baseMessage}. Missing output in ${testResults.missingOptParamStreak} consecutive iterations. ` +
@@ -208,10 +211,26 @@ async function getInitBestValues(testResults) {
 
   if (resData && !Object.hasOwn(resData, testResults.optParamName)) {
     const numericKeys = Object.keys(resData).filter(k => !k.startsWith('_') && typeof resData[k] === 'number')
-    await ui.showErrorPopup(
-      `Optimization parameter "${testResults.optParamName}" was not found in the report.\n\n` +
-      `Please update settings - choose one of the available metrics:\n${numericKeys.slice(0, 12).join('\n')}`
-    )
+    if (numericKeys.length) {
+      const visibleMetricKeys = numericKeys.slice(0, 5)
+      console.warn(
+        `Optimization parameter "${testResults.optParamName}" was not found in the report.`,
+        { availableMetrics: numericKeys }
+      )
+      await ui.showErrorPopup(
+        `Optimization parameter "${testResults.optParamName}" was not found in the report.\n\n` +
+        `Please update settings - choose one of the available metrics:\n${visibleMetricKeys.join('\n')}` +
+        `${numericKeys.length > visibleMetricKeys.length ? `\n...and ${numericKeys.length - visibleMetricKeys.length} more. See console for the full list.` : ''}`
+      )
+    } else {
+      console.warn(
+        `No report data for "${testResults.optParamName}".`,
+        { reportComment: resData['comment'] || null, reportData: resData }
+      )
+      await ui.showWarningPopup(
+        `No report data for "${testResults.optParamName}".\n\n${resData['comment'] || 'TradingView did not provide a parseable report table.'}`
+      )
+    }
     return null
   }
 
