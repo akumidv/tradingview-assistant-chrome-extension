@@ -210,7 +210,7 @@ async function getInitBestValues(testResults) {
     const numericKeys = Object.keys(resData).filter(k => !k.startsWith('_') && typeof resData[k] === 'number')
     await ui.showErrorPopup(
       `Optimization parameter "${testResults.optParamName}" was not found in the report.\n\n` +
-      `Please update settings — choose one of the available metrics:\n${numericKeys.slice(0, 12).join('\n')}`
+      `Please update settings - choose one of the available metrics:\n${numericKeys.slice(0, 12).join('\n')}`
     )
     return null
   }
@@ -324,7 +324,7 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
     res.isFiltered = true
     res.forceStop = false
     res.currentValue = hasOptMetric ? `${res.data[testResults.optParamName]} (stale, not recomputed)` : 'stale, not recomputed'
-    const warn = 'WARNING: report not updated — value may be stale (TV did not recompute, parameters likely unchanged)'
+    const warn = 'WARNING: report not updated - value may be stale (TV did not recompute, parameters likely unchanged)'
     res.data['comment'] = res.data['comment'] ? `${warn}. ${res.data['comment']}` : warn
     res.message = res.data['comment']
     testResults.filteredSummary.push(res.data)
@@ -371,9 +371,8 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
     } else if(isFiltered) {
       res.currentValue = `${res.currentValue} filtered`
     } else {
-      res.currentValue = `${res.currentValue} ignored becouse of error`
+      res.currentValue = `${res.currentValue} ignored because of error`
     }
-    res.currentValue = res.data[testResults.optParamName]
     res.isFiltered = true
     return res
   }
@@ -496,7 +495,7 @@ function expandPropVal(propVal, basePropVal) {
 
 // Annealing optimization
 async function optAnnealingIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
-  const initTemp = 1// TODO to param? Find teh best match?
+  const initTemp = 1// TODO to param? Find the best match?
   const isMaximizing = testResults.hasOwnProperty('isMaximizing') ? testResults.isMaximizing : true
   if (!optimizationState.isInit) {
     optimizationState.currentTemp = initTemp
@@ -561,11 +560,11 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
   return res
 }
 
-function optAnnealingGetTemp(prevTemperature, cylces) {
-  return prevTemperature * (1 - 1 / cylces);
+function optAnnealingGetTemp(prevTemperature, cycles) {
+  return prevTemperature * (1 - 1 / cycles);
 }
 
-function optAnnealingGetBoltzmannTemp(initTemperature, iter, cylces, dimensionSize) {
+function optAnnealingGetBoltzmannTemp(initTemperature, iter, cycles, dimensionSize) {
   return iter === 1 ? 1 : initTemperature / Math.log(1 + iter / (dimensionSize * 2));
 }
 
@@ -636,7 +635,7 @@ async function optAnnealingGetEnergy(testResults, propVal) { // TODO 2del test f
 }
 
 
-// rute Force
+// Brute force
 async function optBruteForce(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
   const propVal = {}
   let paramName = ''

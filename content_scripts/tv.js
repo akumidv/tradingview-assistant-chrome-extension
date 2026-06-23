@@ -10,7 +10,7 @@ const tv = {
 
 
 const SUPPORT_TEXT = 'Please retry. <br />If the problem reproduced then it is possible that TV UI changed. Create task on' +
-  '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it isn\'t alredy created)'
+  '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it isn\'t already created)'
 
 // Inject script to get access to TradingView data on page
 const script = document.createElement('script');
@@ -232,7 +232,7 @@ tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyPar
 }
 
 // TradingView renders numbers/bools as text and dropdown labels may differ only by surrounding
-// whitespace (incl. zero-width spaces), so compare trimmed/lowercased — same as setSelByText.
+// whitespace (incl. zero-width spaces), so compare trimmed/lowercased - same as setSelByText.
 tv._isSameParamValue = (currentRaw, desiredRaw) => {
   if (currentRaw === null || currentRaw === undefined || desiredRaw === null || desiredRaw === undefined)
     return false
@@ -372,7 +372,7 @@ tv._openStrategyParamsByStrategyDoubleClickBy = async (indicatorTitle) => {
 tv._openStrategyParamsByStrategyMenu = async () => {
   if (tv._settingsMethod !== null && tv._settingsMethod !== 'setMenu')
     return false
-  // Both real and fakeTabs have the button — filter by visibility and non-fake ancestor
+  // Both real and fakeTabs have the button - filter by visibility and non-fake ancestor
   const allBtnEls = [...document.querySelectorAll(SEL.strategyCaptionSettings)]
   const strategyCaptionEl = allBtnEls.find(
     el => !el.closest('[class*="fake"]') && el.getBoundingClientRect().width > 0
@@ -454,14 +454,14 @@ tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
     }
     const isOpened = await tv.openStrategyParameters(name)
     if (!isOpened) {
-      console.warn('Can able to open current strategy parameters')
-      await ui.showErrorPopup('Can able to open current strategy parameters Reload the page, leave one strategy on the chart and try again.')
+      console.warn('Cannot open current strategy parameters')
+      await ui.showErrorPopup('Cannot open current strategy parameters. Reload the page, leave one strategy on the chart and try again.')
       return null
     }
     if (name) {
       indicatorTitleEl = page.$(SEL.indicatorTitle)
       if (!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-        await ui.showErrorPopup(`The ${name} strategy parameters could not opened. ${indicatorTitleEl.innerText ? 'Opened "' + indicatorTitleEl.innerText + '".' : ''} Reload the page, leave one strategy on the chart and try again.`)
+        await ui.showErrorPopup(`The ${name} strategy parameters could not be opened. ${indicatorTitleEl.innerText ? 'Opened "' + indicatorTitleEl.innerText + '".' : ''} Reload the page, leave one strategy on the chart and try again.`)
         return null
       }
     }
@@ -473,13 +473,6 @@ tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
 tv.checkIsNewVersion = async (timeout = 1000) => {
   selStatus.isNewVersion = true
   return
-  // turned off 2026-01-14 because of new version with joined Performance tab
-  // element = await page.waitForSelector(SEL.strategyPerformanceTab, timeout)
-  // if (element) { // New versions
-  //   console.log('[INFO] New TV UI by performance tab')
-  //   return
-  // }
-  // console.warn('[WARN] Can able to detect current TV UI changes. Probably Deep mode set. Set it to new one')
 }
 
 tv.openStrategyTab = async (isDeepTest = false) => {
@@ -574,7 +567,7 @@ tv.dialogHandler = async () => {
       return
     }
 
-    console.log("Tradingview indicator parameters window opened for ticker:", tickerText);
+    console.log("TradingView indicator parameters window opened for ticker:", tickerText);
     const tsData = await storage.getKey(`${storage.SIGNALS_KEY_PREFIX}_${tickerText}::${timeFrameText}`.toLowerCase())
     if (tsData === null) {
       await ui.showErrorPopup(`No data was loaded for the ${tickerText} and timeframe ${timeFrameText}.\n\n` +
@@ -897,7 +890,7 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
     isProcessStart = true
   }
   // Report data did not change vs the previous iteration and no genuine completion was detected
-  // (TradingView did not recompute — typically because the candidate equals what is already set,
+  // (TradingView did not recompute - typically because the candidate equals what is already set,
   // or the computation never started / timed out). The table still holds the previous numbers,
   // so this value is stale and must be marked, not trusted as a fresh result.
   const isStaleUnchanged = !isProcessError && !isDataChanged && !!prevDataHash && finalDataHash === prevDataHash
@@ -906,7 +899,7 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
       console.log('#', testResults.perfomanceSummary.length, testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1][testResults.optParamName], '->', reportData[testResults.optParamName])
   } catch {}
   if (isStaleUnchanged)
-    message += `${message ? '. ' : ''}WARNING: report not updated — value may be stale (TV did not recompute, parameters likely unchanged)`
+    message += `${message ? '. ' : ''}WARNING: report not updated - value may be stale (TV did not recompute, parameters likely unchanged)`
   if (reportData['comment'])
     message += '. ' + reportData['comment']
   const comment = message ? message : testResults.isDeepTest ? 'Deep BT. ' : null

@@ -1,5 +1,5 @@
 # About
-An assistant for backtesting trading strategies and checking (showing) external signals in Tradingview implemented as a 
+An assistant for backtesting trading strategies and checking (showing) external signals in TradingView implemented as a
 Chrome browser extension.
 
 Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingview-assistant/pfbdfjaonemppanfnlmliafffahlohfg)
@@ -8,76 +8,87 @@ Add to Chrome from [webstore](https://chrome.google.com/webstore/detail/tradingv
 
 Video [how to install extension](https://www.youtube.com/watch?v=FH7dI4K8w5k)
 
-## Disclaimer
-**Attention!** 
+## Engineering highlights
 
-Active use of the extension can cause detection by the TradingView as using a bot for backtesting and lead to the ban 
+- Chrome MV3 extension that coordinates popup UI, content scripts, page-context injection, local storage, CSV import/export, and Plotly-based result visualization.
+- TradingView integration is isolated in a dedicated content-script boundary because the project depends on a third-party UI that can change without notice.
+- Strategy optimization supports random search, random improvements, sequential improvements, brute force, and simulated annealing.
+- Long-running backtests persist intermediate results after each iteration, so a page reload or UI error does not necessarily lose the whole run.
+- The code handles several failure modes explicitly: stale TradingView reports, missing optimization metrics, unsupported strategy inputs, and changed settings dialogs.
+
+For a short implementation overview, see [Architecture Notes](docs/ARCHITECTURE.md).
+
+
+## Disclaimer
+**Attention!**
+
+Active use of the extension can cause detection by the TradingView as using a bot for backtesting and lead to the ban
 of the user's account.
 
-Although the extension is not a bot (i.e. it does not work independently of the user in the cloud). The main idea of 
-this extension to help Tradingview community to have tools and functionality that not provided by Tradingview itself. 
-So as extension developing have no intention to break Tradingview rules, in result it does not 
-call the TradingView API, does not interfere with data transmission, and doesn't (and won't) parse/save/send any marker 
-(charts/news) data and other financial information, but only automates user behavior through the UI and provide some
-additional information. 
+Although the extension is not a bot (i.e. it does not work independently of the user in the cloud). The main idea of
+this extension to help TradingView community to have tools and functionality that not provided by TradingView itself.
+So as extension developing have no intention to break TradingView rules, in result it does not
+call the TradingView API, does not bypass any protective mechanisms, does not interfere with data transmission, and
+doesn't (and won't) parse/save/send any marker (charts/news) data and other financial information, but only automates
+user behavior through the UI and provide some additional information.
 
 But still usage of extensions and all risks remain with the users.
 
-The Tradingview support mention this rule for banned users
+TradingView support mentions this rule for banned users
 
-> TradingView is dedicated to providing users with a secure and accessible platform for the display of market data, 
-> charts, news, and other financial information. As such, users are strictly prohibited from employing any automated 
-> data collection methods, including but not limited to scripts, APIs, screen scraping, data mining, robots, or other 
-> data gathering and extraction tools, regardless of their intended purposes. The use of any technology to circumvent 
-> protective mechanisms designed to prevent unauthorized reproduction or distribution of TradingView content is 
+> TradingView is dedicated to providing users with a secure and accessible platform for the display of market data,
+> charts, news, and other financial information. As such, users are strictly prohibited from employing any automated
+> data collection methods, including but not limited to scripts, APIs, screen scraping, data mining, robots, or other
+> data gathering and extraction tools, regardless of their intended purposes. The use of any technology to circumvent
+> protective mechanisms designed to prevent unauthorized reproduction or distribution of TradingView content is
 > expressly forbidden."
 
-They have an obligation to their data providers and won't risk violating this agreement and of course won't 
+They have an obligation to their data providers and won't risk violating this agreement and of course won't
 provide services at a loss.
 
 Most cases of banned users are due to the use of extensions for a long time on a few browsers/tabs with a single account and IP.
 
-It is important to note that any changes to strategy parameters require a request to the Tradingview servers, and this
-costs money. 
+It is important to note that any changes to strategy parameters require a request to TradingView servers, and this
+costs money.
 
-To estimate how much your backtesting optimization cost for Tradingview you can use as basis of price
-for 1 second of backtesting as $0.0001 (AWS Lambda cost fo 5GB-sec). So 10 seconds strategy backtesting calculation with 
-1000 by changing parameters requests will demand servers for $1. If you are doing this everyday - it will cost $20 a month. 
-Of course if you are using free account, Essential($12 a month) or Plus ($24 a month) - you will generate lost for 
-Tradingview and they won't like this. If you backtest all night for 10,000 requests every day, then you high-load 
-Tradingview servers for $300 a month or more.
+To estimate how much your backtesting optimization costs TradingView you can use as basis of price
+for 1 second of backtesting as $0.0001 (AWS Lambda cost fo 5GB-sec). So 10 seconds strategy backtesting calculation with
+1000 by changing parameters requests will demand servers for $1. If you are doing this everyday - it will cost $20 a month.
+Of course if you are using free account, Essential($12 a month) or Plus ($24 a month) - you will generate lost for
+TradingView and they won't like this. If you backtest all night for 10,000 requests every day, then you high-load
+TradingView servers for $300 a month or more.
 
 In that case if you have real good strategy it may be good idea to convert it to Python and test it
 on your own servers (and it will be in 10-100 times faster)
 
-If your trading strategy is not good, the brute force for millions of combinations will not help. 
+If your trading strategy is not good, the brute force for millions of combinations will not help.
 
-So be carefully and use extension wisely. 
+So be carefully and use extension wisely.
 
-**Disclaimer** 
+**Disclaimer**
 
-The developer of the extension does not response for any possible consequences of its use.
+The developer of the extension is not responsible for any possible consequences of its use.
 
 ## Recommendations
 
-Keep in mind the general rule: the more parameters a trading strategy has and the more precisely they are selected, the 
-better the strategy will be tuned to a specific market situation. In this case, it's not really a trading strategy 
+Keep in mind the general rule: the more parameters a trading strategy has and the more precisely they are selected, the
+better the strategy will be tuned to a specific market situation. In this case, it's not really a trading strategy
 anymore, but rather a filter.
 
-The key recommendation is to focus on the 2-3 most significant parameters that have the most impact on result. These 
-are the parameters that are important for optimizing your strategy (correlated with profit). Instead of looking for 
-the absolute best parameters, look for those that produce an acceptable result across a wide range of market conditions 
+The key recommendation is to focus on the 2-3 most significant parameters that have the most impact on result. These
+are the parameters that are important for optimizing your strategy (correlated with profit). Instead of looking for
+the absolute best parameters, look for those that produce an acceptable result across a wide range of market conditions
 (for example, parameters that work well for multiple instruments and timeframes).
 
-If the strategy generates more revenue than the buy-and-hold strategy on the broad market (S&P for example, alfa), on 
-different instruments and timeframes, during different periods of deep testing, then it is possible that this strategy 
-could be a good one. However, if the strategy generates more than twice the alfa income, it would be wise to understand 
-why this is the case. Most often, this is due to the higher risk (beta) associated with the strategy, as well as the 
+If the strategy generates more revenue than the buy-and-hold strategy on the broad market (S&P for example, alfa), on
+different instruments and timeframes, during different periods of deep testing, then it is possible that this strategy
+could be a good one. However, if the strategy generates more than twice the alfa income, it would be wise to understand
+why this is the case. Most often, this is due to the higher risk (beta) associated with the strategy, as well as the
 historical fit, meaning that it may not work as well in the future.
 
 ## Last version changes
 2.10.x > 2.11.x:
-- fox for splitting of Performance summary to three tabs.
+- fix for splitting of Performance Summary into three tabs.
 
 ## Functionality
 
@@ -91,19 +102,19 @@ historical fit, meaning that it may not work as well in the future.
 * Loading adjusted parameter ranges from a CSV file
 * Configuring the optimisation model:
     * Choosing the type of optimisation: searching for the maximum or minimum values
-    * Selecting an optimised value from the entire list of strategy results in Tradingview (Net Profit, Ratio Avg Win / Avg Loss, Sharpe Ratio, Sortino Ratio, etc.)
+    * Selecting an optimised value from the entire list of strategy results in TradingView (Net Profit, Ratio Avg Win / Avg Loss, Sharpe Ratio, Sortino Ratio, etc.)
     * Choosing a search strategy in the parameter space(random, sequential, annealing method)
 * Filtering of unsuitable results. For example, the number of tradings is less than necessary
 * Setting the number of cycles to search for parameters.
 * Performing automatic selection of parameters with storing all the results in the browser storage and the ability to save them as CSV files after testing, including in case of an error or page reloading
-* Showing backtesting results on 3d chartto analyze the effect of various parameters on the result.
+* Showing backtesting results on a 3D chart to analyze the effect of various parameters on the result.
 ![](docs/Screenshot3.png)
 
 #### Optimization Methods
-The **sequential improvements** optimization method is implement adjusting the best value already found. It does not perform a complete search of the entire parameter space.
+The **sequential improvements** optimization method adjusts the best value already found. It does not perform a complete search of the entire parameter space.
 The logic of it work is as follows. The current best state (parameters for max results) is taken. The first parameter is taken and all its values in the range are checked sequentially. If the best result is found, then further verification is carried out from this state. Then the next parameter is taken and all its values in the range are checked and etc.
 
-The **brute force** optimization method implement backtesting all values in strategy space of parameters.
+The **brute force** optimization method tests all values in the strategy parameter space.
 
 The **annealing** method is an optimization method in which the search for the maximum possible result is carried out in fewer steps https://en.wikipedia.org/wiki/Simulated_annealing
 The method works this way: first, the best state and its parameters are determined. One parameter is randomly determined, then its value from range of possible values is randomly selected. The status in this value is checked. If it is better, then it is remembered and further parameter changes are made from it.
@@ -150,7 +161,7 @@ The signals are stored in the browser, to activate them, open the properties of 
 ## Browser configuration
 If Chrome tab that have your backtest running is not active or minimized the backtest will stop working till the tab is active again.
 To avoid this :
-* Main Menu > More tools > Perfomance > Always keep these sites active > Add Button (Add TV domain)
+* Main Menu > More tools > Performance > Always keep these sites active > Add Button (Add TV domain)
 * Close all other tabs (except TV) > goto [chrome://discards/](chrome://discards/) > Find TV Tab(s) > Toggle Auto Discardable from ✔ to ❌
 
 
@@ -175,27 +186,27 @@ Go to the extensions tab by following the link `chrome://extensions`. Click the 
 ### Issues
 Please add issues in this repository by following [link](https://github.com/akumidv/tradingview-assistant-chrome-extension/issues).
 
-Very helpfull will be if you can attach full screenshot with tradingview page and errors. And also with open command tab in browser developer mode (please press F12 to open developer mode and click on console tab)
+It is very helpful if you attach a full screenshot with the TradingView page and errors. Also attach the browser console output if possible (press F12 and open the Console tab).
 
 
 ## Translating the code into Python.
 
-If your strategy requires a large amount of testing, it is recommended to order its conversion into python and perform 
-backtesting and hyperoptimization of parameters using resources, such as Google Collab or your computer. In addition, it significantly speeds up the search for parameters (in 5-10 times per cycle) and history deep. Examples in Jupyter Notebooks in repository [trade-strategies-backtesting-optimization](https://github.com/akumidv/trade-strategies-backtesting-optimization). You can run examples in Google Collab, it's free. You would just upload files  with extension `*.ipynb` to your Google Drive and open these files.
+If your strategy requires a large amount of testing, it is recommended to order its conversion into python and perform
+backtesting and hyperoptimization of parameters using resources, such as Google Colab or your computer. In addition, it significantly speeds up the search for parameters (in 5-10 times per cycle) and history depth. Examples in Jupyter Notebooks in repository [trade-strategies-backtesting-optimization](https://github.com/akumidv/trade-strategies-backtesting-optimization). You can run examples in Google Colab, it's free. You would just upload files with extension `*.ipynb` to your Google Drive and open these files.
 
-Where transfering from TradingViews scripts usually developer should solve some promblems:
+When transferring from TradingView scripts, the developer usually has to solve several problems:
 * Trading view indicators – some of them have different formulas to calculate results, for example supertrend, ta.RMA and more others. They need additional implementation and in results they calculated more slowly than if python script would use `ta-lib`.
 * Implementation of the data parsing. If the data for the crypt is mostly free, but the data of low timeframes is usually paid (for example, eodhistoricaldata). Developer need to implement an interface to them and some process to store and reuse local(cloud) stored data.
-- Difference in data for stock or forex exchanges from Tradingview. Also, for some cryptocurrency exchanges.
+- Difference in data for stock or forex exchanges from TradingView. Also, for some cryptocurrency exchanges.
 - Adopt framework of backtesting (backtesting, backtrader, vectorbot, etc.) to work with strategy
-- Wrap this code for frameworks of parameter gyperspace optimization (simple example you can see in [trade-strategies-backtesting-optimization](https://github.com/akumidv/trade-strategies-backtesting-optimization)) and increase speed of backtesting with some methods.
+- Wrap this code for parameter hyperspace optimization frameworks (simple example you can see in [trade-strategies-backtesting-optimization](https://github.com/akumidv/trade-strategies-backtesting-optimization)) and increase speed of backtesting with some methods.
 
 
 From my experience it demands 2-3 minutes developer time for each row of tradingview script. For example if you have 200 line strategy it would demand ~6 hours to conversion. For some complicated strategies it can demand much more.
 
-To reduce developing time you can use some my repositories: 
-* [tradingview-ta-lib](https://github.com/akumidv/tradingview-ta-lib) - Tradingview `ta` lib implementation in python (only for tradingview indecators that have different caclulatoin results with `ta-lib` or `python-ta` - early developing stage.
-* [catcher-bot](https://github.com/akumidv/catcher-bot) - Bot for screening all symbols on excahnges/exchanges and cath trade signals - early developing stage.
+To reduce developing time you can use some my repositories:
+* [tradingview-ta-lib](https://github.com/akumidv/tradingview-ta-lib) - TradingView `ta` lib implementation in python (only for TradingView indicators that have different calculation results with `ta-lib` or `python-ta`) - early developing stage.
+* [catcher-bot](https://github.com/akumidv/catcher-bot) - Bot for screening all symbols on exchanges and catching trade signals - early developing stage.
 
 ## Contacts
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <head>
-        <title>>Tradingview assistant</title>
+        <title>TradingView Assistant</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta http-equiv="content-type" content="text/html; charset=utf-8">
@@ -14,7 +14,7 @@
 <div class="wrapper">
     <div class="content">
         <div class="popup_header">
-            <h2>Tradingview assistant</h2>
+            <h2>TradingView Assistant</h2>
         </div>
 
 
@@ -22,7 +22,7 @@
             <div id="content-1">
                 <div id="warningBacktest" class="subheader">
                     <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English
-                        version</a> of Tradingview</p>
+                        version</a> of TradingView</p>
                 </div>
                 <div class="row">
                     <div class="details">
@@ -91,12 +91,12 @@
                                                 comma)</label>
                                         </div>
                                         <div><input id="listOfTF" type="text" placeholder="1m,2h,1D,2W,1M"
-                                                    title="Set list of timeframes, where symbol format is: 1m - minutes, 2h - hours, 3D - days, 4W - weeks, 5M - month "
+                                                    title="Set list of timeframes, where symbol format is: 1m - minutes, 2h - hours, 3D - days, 4W - weeks, 5M - months"
                                                     style="width: 10em">
                                             <label for="listOfTF" class="disabled"></label></div>
 
                                     </div>
-                                    <span style="font-size: 80%">the recommendation is to use around or less 100-200 cycles per test</span>
+                                    <span style="font-size: 80%">The recommendation is to use around 100-200 cycles or less per test.</span>
                                 </div>
                             </div>
                         </details>
@@ -104,7 +104,7 @@
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>If the range of test parameters is loaded or for automatic testing.</p>
+                        <p>Run a user-controlled strategy test using the loaded or generated parameter range.</p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
@@ -114,7 +114,7 @@
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>Deep backtesting (for TV premium subscription) now working as standart backtesting. Activate it manyally.</p>
+                        <p>Deep backtesting (for TV premium subscription) currently works as standard backtesting. Activate it manually.</p>
 <!--                        <p><label for="deepStartDate">The start date</label>-->
 <!--                            <input id="deepStartDate" type="text" name="deepStartDate"-->
 <!--                                   pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}"-->
@@ -145,7 +145,7 @@
                             <a href="data:text/csv;charset=utf-8,Parameter,From,To,Step,Default,Priority
 SMALong,40,70,5,20,1
 EMAShort,5,15,1,21,2
-%22Check MACD%22,false,tre,,false,3
+%22Check MACD%22,false,true,,false,3
 %22Stop Loss%22,1,5,0.51,4%0A" download="strategy_template.csv">Sample template </a></p>
                     </div>
                     <div class="column right">
@@ -160,7 +160,7 @@ EMAShort,5,15,1,21,2
             <div id="content-2">
                 <div id="warningResults" class="subheader">
                     <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English
-                        version</a> of Tradingview</p>
+                        version</a> of TradingView</p>
                 </div>
                 <div class="row">
                     <div class="column left">
@@ -186,7 +186,7 @@ EMAShort,5,15,1,21,2
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>View 3D char with the results</p>
+                        <p>View a 3D chart with the results</p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
@@ -198,7 +198,7 @@ EMAShort,5,15,1,21,2
             <div id="content-3">
                 <div id="warningSignals" class="subheader">
                     <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English
-                        version</a> of Tradingview</p>
+                        version</a> of TradingView</p>
                 </div>
                 <div class="row">
                     <div class="column left">
@@ -235,8 +235,8 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 <div class="header"></div>
                 <div class="row">
                     <div class="column left">
-                        <p>Delay between backtests to reduce TV API loading and reduce the risk of suspicious
-                            activity.</p>
+                        <p>Delay between backtests to reduce continuous TradingView UI activity and lower the risk of
+                            suspicious account activity.</p>
                         <p><label>Random delay for the specified value</label>
                             <input id="randomDelay" type="checkbox" checked/></p>
                     </div>
@@ -250,7 +250,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                     <div class="column left">
                         <p>The maximum waiting time for data of the strategy, if the results table has not been updated
                             (2 times more if used for deep backtesting). Reduce to speed up on simple strategies,
-                            increase if there is often a data extraction error..</p>
+                            increase it if data extraction errors happen often.</p>
                     </div>
                     <div class="column right">
                         <input id="dataLoadingTime" type="number"
@@ -260,7 +260,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>Should skip init best parameters from previous backtest.</p>
+                        <p>Skip initial best parameters from the previous backtest.</p>
                         <p></p>
                     </div>
                     <div class="column right">
@@ -270,7 +270,7 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>Download results without waiting for click on ok button.</p>
+                        <p>Download results without waiting for a click on the OK button.</p>
                         <p></p>
                     </div>
                     <div class="column right">
@@ -296,15 +296,15 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 <div class="row">
                     <h3>Optimization Methods</h3>
                     <p style="padding: 2px;">The <strong>sequential improvements</strong> optimization method is
-                        implement adjusting the best value already found. It does not perform a complete search of
+                        adjusts the best value already found. It does not perform a complete search of
                         the entire parameter space.
-                        The logic of it work is as follows. The current best state (parameters for max results) is
+                        The logic works as follows. The current best state (parameters for max results) is
                         taken. The first parameter is taken and all its values in the range are checked
                         sequentially. If the best result is found, then further verification is carried out from
                         this state. Then the next parameter is taken and all its values in the range are checked and
                         etc.</p>
-                    <p style="padding: 2px;">The <strong>brute force</strong> optimization method implement
-                        backtesting all values in strategy space of parameters.</p>
+                    <p style="padding: 2px;">The <strong>brute force</strong> optimization method tests all values
+                        in the strategy parameter space.</p>
                     <p style="padding: 2px;">The <strong>annealing</strong> method is an optimization method in
                         which the search for the maximum possible result is carried out in <a
                                 href="https://en.wikipedia.org/wiki/Simulated_annealing" target="_blank">fewer
@@ -316,9 +316,9 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                         As the number of tests increases, the spread of parameter values decreases around those
                         already found. That is, if at the beginning of testing the values are randomly selected from
                         the entire range of possible parameter values, then as optimization is carried out, this
-                        spread decreases ("cools down") near current values. So in first phase of test - this method
-                        is search the most possible state around all space on the finish stage this method trying to
-                        improve found best state.
+                        spread decreases ("cools down") near current values. In the first phase of the test, this
+                        method searches across the parameter space; in the final stage, it tries to improve the best
+                        state already found.
                         So that the system does not get stuck in one parameter area, as it happens with the
                         sequential method, not one random parameter changes periodically, but all at once.
                         .</p>
@@ -353,9 +353,9 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
         </div>
     </div>
     <div class="footer">
-        <p class="footer footer-text">Active use of the extension can cause detection by the TradingView as using a
-            bot
-            for backtesting and lead to the ban of the user's account. Use it on your own risk.
+        <p class="footer footer-text">Active automated use of TradingView may violate TradingView rules and can lead
+            to an account ban. This extension does not bypass TradingView protective mechanisms, but it still performs
+            repeated browser UI actions. Use it carefully and at your own risk.
             Additional <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension" target="_blank">info
                 and contact to developer</a></p>
     </div>

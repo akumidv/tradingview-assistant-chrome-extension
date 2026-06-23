@@ -53,7 +53,7 @@ action.clearAll = async () => {
 
 action.previewStrategyTestResults = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
-  if (!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
+  if (!hasBacktestResults(testResults)) {
     await ui.showWarningPopup(message.errorsNoBacktest)
     return
   }
@@ -67,7 +67,7 @@ action.previewStrategyTestResults = async () => {
 
 action.downloadStrategyTestResults = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
-  if (!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
+  if (!hasBacktestResults(testResults)) {
     await ui.showWarningPopup(message.errorsNoBacktest)
     return
   }
@@ -262,7 +262,7 @@ action._showStartMsg = (paramSpaceNumber, cycles, addInfo) => {
 
 action._saveTestResults = async (testResults, testParams, isFinalTest = true) => {
   console.log('testResults', testResults)
-  if (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length) {
+  if (!hasBacktestResults(testResults)) {
     await ui.showWarningPopup('There is no testing data for saving. Try to do test again')
     return
   }
@@ -294,7 +294,7 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
 
 action.show3DChart = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
-  if (!testResults || (!testResults.perfomanceSummary && !testResults.perfomanceSummary.length)) {
+  if (!hasBacktestResults(testResults)) {
     await ui.showPopup('There is no results data for to show. Try to backtest again')
     return
   }
@@ -310,4 +310,8 @@ async function sendActionMessage(data, action) {
     tvPageMessageData[action] = resolve
     window.postMessage({ name: 'iondvScript', action, data }, url) // TODO wait for data
   })
+}
+
+function hasBacktestResults(testResults) {
+  return Boolean(testResults && Array.isArray(testResults.perfomanceSummary) && testResults.perfomanceSummary.length)
 }
