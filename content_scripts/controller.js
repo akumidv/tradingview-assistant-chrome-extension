@@ -11,7 +11,7 @@
 
   chrome.runtime.onMessage.addListener(
     async function(request, sender, sendResponse) {
-      if(sender.tab || !request.hasOwnProperty('action') || !request.action) {
+      if(sender.id !== chrome.runtime.id || !request.hasOwnProperty('action') || !request.action) {
         console.log('Not for action message received:', request)
         return sendResponse()
       }
