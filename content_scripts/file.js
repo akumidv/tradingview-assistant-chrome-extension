@@ -2,7 +2,8 @@ const file = {}
 
 file.saveAs = (text, filename) => {
   let aData = document.createElement('a');
-  aData.setAttribute('href', 'data:text/plain;charset=urf-8,' + encodeURIComponent(text));
+  // UTF-8 + BOM
+  aData.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent('\uFEFF' + text));
   aData.setAttribute('download', filename);
   aData.click();
   if (aData.parentNode)
