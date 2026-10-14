@@ -3,3 +3,19 @@
 assistant-ext.zip
 tv-page-objects.js
 .raw/
+
+# secrets
+*.env
+!*.env.example
+
+# Node dependencies
+node_modules/
+
+# akmon model routing — per-user/per-session artifacts (never committed)
+.claude/model-routing.local.json
+.claude/model-routing.log
+.claude/second-opinion/
+.claude/agents/k_*.md
+
+# test browser for the tv-browser-test skill — profile (TradingView sign-in), Chrome for Testing, launch state
+_aitna/.browser/

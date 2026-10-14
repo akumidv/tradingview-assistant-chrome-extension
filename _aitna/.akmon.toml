@@ -1,0 +1,13 @@
+# akmon integration record — written by `akmon init`, refreshed on realign.
+# The version this project sits on; a later bump diffs the CHANGELOG window against it.
+mount = "package"
+ecosystem = "node"
+akmon_version = "0.4.0-dev.0"
+attached_archetype = "frontend"
+language = "javascript"
+
+last_realign = "0.4.0-dev.0"
+[test]
+# The project's own test invocation, used verbatim by the release check
+# (BOOTSTRAP §A5). Uncomment and set it to whatever this project already uses:
+# runner = "npm test"

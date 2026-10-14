@@ -1,0 +1,33 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/node_modules/akmon/js/hooks/codex-hook.mjs\" role-on-code",
+            "statusMessage": "Checking akmon role switch"
+          },
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/node_modules/akmon/js/hooks/codex-hook.mjs\" analysis-guard",
+            "statusMessage": "Checking analysis-before-mutation"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/node_modules/akmon/js/hooks/codex-hook.mjs\" session-start",
+            "statusMessage": "Loading akmon session reminders"
+          }
+        ]
+      }
+    ]
+  }
+}

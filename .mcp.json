@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["_aitna/tools/browser/mcp.mjs"]
+    }
+  }
+}

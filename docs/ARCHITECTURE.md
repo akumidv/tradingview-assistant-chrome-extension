@@ -18,23 +18,23 @@ and documents the risk so users can decide whether and how to use it.
 
 ## Runtime Boundaries
 
-- `popup/` renders the extension popup, stores user options, and sends commands
+- `extension/popup/` renders the extension popup, stores user options, and sends commands
   to the active TradingView tab.
-- `content_scripts/controller.js` receives popup commands and serializes
+- `extension/content_scripts/controller.js` receives popup commands and serializes
   long-running actions with `action.workerStatus`.
-- `content_scripts/action.js` orchestrates user workflows: save/load parameters,
+- `extension/content_scripts/action.js` orchestrates user workflows: save/load parameters,
   run backtests, export results, and show charts.
-- `content_scripts/tv.js` is the TradingView UI integration boundary. It opens
+- `extension/content_scripts/tv.js` is the TradingView UI integration boundary. It opens
   strategy dialogs, reads/writes inputs, switches report tabs, and parses report
   data from the page.
-- `content_scripts/backtest.js` owns the optimization loop and result selection.
+- `extension/content_scripts/backtest.js` owns the optimization loop and result selection.
   It supports random search, random improvements, sequential improvements,
   brute force, and simulated annealing.
-- `content_scripts/model.js` converts TradingView strategy inputs into parameter
+- `extension/content_scripts/model.js` converts TradingView strategy inputs into parameter
   ranges, restores saved ranges, and extracts best-known parameter sets.
-- `content_scripts/file.js` and `content_scripts/storage.js` provide CSV
+- `extension/content_scripts/file.js` and `extension/content_scripts/storage.js` provide CSV
   import/export and browser-local persistence.
-- `page-context.js` is injected into the page context for functionality that
+- `extension/page-context.js` is injected into the page context for functionality that
   cannot be accessed directly from an isolated content script, such as rendering
   result previews with Plotly.
 

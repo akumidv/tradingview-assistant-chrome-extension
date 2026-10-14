@@ -1,0 +1,18 @@
+{
+  "name": "tradingview-assistant-chrome-extension",
+  "version": "2.13.3",
+  "description": "An assistant for backtesting trading strategies and showing external signals in Tradingview",
+  "private": true,
+  "license": "GPL-3.0",
+  "scripts": {
+    "browser": "node _aitna/tools/browser/cli.mjs"
+  },
+  "devDependencies": {
+    "akmon": "git+https://github.com/akumidv/ai_akmon.git#3a7c54016e2d1b7771ea02ed578a03dff7db7217",
+    "chrome-devtools-mcp": "1.10.1",
+    "puppeteer": "25.13.0"
+  },
+  "allowScripts": {
+    "puppeteer@25.13.0": true
+  }
+}

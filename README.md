@@ -173,11 +173,11 @@ Or manually add the latest version to chrome based browser from this repository 
 
 Click on the browser's address bar, insert `chrome://extensions` and follow this link. Click on the "Developer mode" switch.
 
-The "Load unpacked" button should appear. Click on it, and in the window that opens, select the folder with the saved
-repository files (you can download them as a zip archive via the
+The "Load unpacked" button should appear. Click on it, and in the window that opens, select the `extension` folder
+inside the saved repository files (you can download them as a zip archive via the
 link https://github.com/akumidv/tradingview-assistant-chrome-extension/archive/refs/heads/main.zip).
 
-The `manifest.json` file is located in the root folder of the extension.
+The `manifest.json` file is located in the `extension` folder of the repository.
 
 ### Update
 Unpack the new version to the same directory as the previous version (it is better to delete the files of the previous version).
@@ -211,7 +211,7 @@ To reduce developing time you can use some my repositories:
 ## Development checks
 
 This repository includes a pre-commit hook that prevents committing
-`manifest.json` with a top-level `key` field. The Chrome extension key identifies
+`extension/manifest.json` with a top-level `key` field. The Chrome extension key identifies
 a specific extension build and should not be committed to the public repository.
 
 Enable repository hooks after cloning:

@@ -1,13 +1,10 @@
 #!/bin/bash
+# Packs the extension (everything under extension/) into assistant-ext.zip at the repository root.
 
 EXT_NAME="assistant-ext"
-
+cd "$(dirname "$0")"
 
 if [ -f ./${EXT_NAME}.zip ]; then
   rm ./${EXT_NAME}.zip
 fi
-zip ${EXT_NAME}.zip content_scripts/* fonts/* images/* lib/* popup/* manifest.json page-context.js
-
-
-
-
+(cd extension && zip -r ../${EXT_NAME}.zip .)
