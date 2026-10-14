@@ -9,7 +9,7 @@ tvChart.detectDeepTest = async () => {
   periodDD.click()
   if(!entireHistoryEl)
     return false
-  console.log('[INFO] Deep mode detected')
+  log.info('Deep mode detected')
   // Otherwise can detect by parsing dates? But for different timeframes it can't be easy
   return true
 }
@@ -17,7 +17,7 @@ tvChart.detectDeepTest = async () => {
 tvChart.getTicker = async () => {
   let tickerEl = document.querySelector(SEL.chartTicker)
   if (!tickerEl)
-    throw new Error(`Can't get TradingView symbol element on chart`)
+    throw new UiChangedError('Cannot find the symbol name on the chart.')
 
   let curTickerName = tickerEl.innerText
   // const fixCurTickerName = curTickerName.includes('\n') ?  curTickerName.split('\n')[1] : curTickerName
@@ -30,7 +30,7 @@ tvChart.getCurrentTimeFrame = async () => {
     await page.waitForSelector(SEL.chartTimeframeMenuOrSingle, 500)
 
   if(!curTimeFrameEl || !curTimeFrameEl.innerText) {
-    throw new Error('There is not timeframe element on page. Open correct page please')
+    throw new UiChangedError('Cannot find the timeframe selector on the chart.')
     // return null
   }
 
@@ -49,7 +49,8 @@ tvChart._waitUntilTimeFrameChanged = async (newTF) => {
       return curTF
     maxTry--
   }
-  throw new Error(`Timeframe did not change from "${curTF}" to ${newTF} after waiting`)
+  throw new Error(`The timeframe did not change from "${curTF}" to "${newTF}" after waiting. ` +
+    'Check that the timeframe is available for this symbol and try again.')
 }
 
 tvChart.changeTimeFrame = async (setTF) => {
@@ -78,11 +79,11 @@ tvChart.changeTimeFrame = async (setTF) => {
   // Search timeframe among timeframes menu items
   const timeFrameMenuEl = await document.querySelector(SEL.chartTimeframeMenuOrSingle)
   if(!timeFrameMenuEl)
-    throw new Error('There is no timeframe selection menu element on the page')
+    throw new UiChangedError('Cannot find the timeframe menu on the chart.')
   page.mouseClick(timeFrameMenuEl)
   const menuTFItem = await page.waitForSelector(SEL.chartTimeframeMenuItem, 1500)
   if(!menuTFItem)
-    throw new Error('There is no items in timeframe menu on the page')
+    throw new UiChangedError('The timeframe menu on the chart has no items.')
 
   let foundTF = await tvChart.selectTimeFrameMenuItem(strategyTF)
   if(foundTF) {
@@ -93,7 +94,7 @@ tvChart.changeTimeFrame = async (setTF) => {
     return //`Timeframe changed to ${alertTF}`
   }
   // Below is irrelevant code due changes in menu - now it created by popup
-  throw new Error(`The timeframe "${strategyTF}" is not found in timeframes menu, please add it manually`)
+  throw new UserActionError(`The timeframe "${strategyTF}" is not in the chart timeframe menu. Add it to the menu manually and try again.`)
   // const tfValueEl = document.querySelector(SEL.chartTimeframeMenuInput)
   // if(!tfValueEl)
   //   throw new Error(`There is no input element to set value of timeframe`)

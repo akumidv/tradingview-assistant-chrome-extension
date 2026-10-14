@@ -12,13 +12,11 @@
   chrome.runtime.onMessage.addListener(
     async function(request, sender, sendResponse) {
       if(sender.tab || !request.hasOwnProperty('action') || !request.action) {
-        console.log('Not for action message received:', request)
+        log.debug('Not for action message received:', request)
         return sendResponse()
       }
       if(action.workerStatus !== null) {
-        const msg = `Waiting for end previous work. Status: ${action.workerStatus}`
-        console.log(msg)
-        ui.autoCloseAlert(msg)
+        ui.autoCloseAlert('The previous task is still running. Wait for it to finish or press Stop.')
         return sendResponse()
       }
 
@@ -62,11 +60,10 @@
             await action.show3DChart()
             break
           default:
-            console.log('None of realisation for signal:', request)
+            log.warn(`Unknown action "${request.action}"`)
         }
       } catch (err) {
-        console.error(err)
-        await ui.showErrorPopup(`An error has occurred.\n\nReload the page and try again.\nYou can describe the problem by following <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues" target="_blank">the link</a>.\n\nError message: ${err.message}`)
+        await ui.showErrorByKind(err, request.action)
       }
       action.workerStatus = null
       ui.statusMessageRemove()
@@ -77,7 +74,6 @@
   const dialogWindowNode = await page.waitForSelector(SEL.tvDialogRoot, 0)
   if(dialogWindowNode) {
     const tvObserver = new MutationObserver(tv.dialogHandler);
-    console.log('[INFO] Observer added to dialogWindowNone')
     tvObserver.observe(dialogWindowNode, {
       childList: true,
       subtree: true,

@@ -9,9 +9,6 @@ const tv = {
 }
 
 
-const SUPPORT_TEXT = 'Please retry. <br />If the problem reproduced then it is possible that TV UI changed. Create task on' +
-  '<a href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues/" target="_blank"> github</a> please (check before if it isn\'t already created)'
-
 // Inject script to get access to TradingView data on page
 const script = document.createElement('script');
 script.src = chrome.runtime.getURL('page-context.js');
@@ -47,7 +44,7 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest =
   try {
     await tv.openStrategyTab(isDeepTest)
   } catch (err) {
-    console.warn('[ERROR]checkAndOpenStrategy', err)
+    log.warn('checkAndOpenStrategy failed:', err)
   }
   let isOpened = false
   if (strategyName)
@@ -57,14 +54,14 @@ tv.getStrategy = async (strategyName = '', isIndicatorSave = false, isDeepTest =
   if (isOpened === null)
     return null  // openStrategyParameters already showed error popup
   if (!isOpened)
-    throw new Error('It was not possible open strategy. Add it to the chart and try again.')
+    throw new UserActionError('Could not open the strategy. Add a strategy to the chart and try again.')
 
   const dialogTitle = await page.waitForSelector(SEL.indicatorTitle)
   if (!dialogTitle || dialogTitle.innerText === null)
-    throw new Error('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
+    throw new UserActionError('It was not possible to find a strategy with parameters among the indicators. Add it to the chart and try again.')
   const indicatorName = await tv.getStrategyNameFromPopup()
   if (!await tv.changeDialogTabToInput())
-    throw new Error(`Can\'t activate input tab in strategy parameters` + SUPPORT_TEXT)
+    throw new UiChangedError('Cannot activate the Inputs tab in the strategy settings dialog.')
 
   const strategyInputs = await tv.getStrategyParams(isIndicatorSave)
   const strategyData = { name: indicatorName, properties: strategyInputs }
@@ -150,79 +147,87 @@ tv.getStrategyParams = async (isIndicatorSave = false) => {
   return strategyInputs
 }
 
+// How a test run sets strategy parameters: through the strategy dialog (default), or - when the user opts in
+// in the popup - through TradingView's public chart API (setInputValues), which skips the dialog. When the API
+// fails or does not apply a value, the run goes on with the dialog until its end; a value the API can not
+// express (e.g. a source taken from another indicator) is set by the dialog for that iteration only.
+tv.paramSetter = {isApi: false}
+
+tv.resetParamSetter = (isApiEnabled = false) => {
+  tv.paramSetter = {isApi: Boolean(isApiEnabled), isUnsupportedLogged: false}
+  if (tv.paramSetter.isApi)
+    log.info('Strategy parameters are set through the TradingView chart API, the dialog is the fallback')
+}
+
+tv._switchParamSetterToDialog = (reason) => {
+  if (!tv.paramSetter.isApi)
+    return
+  tv.paramSetter.isApi = false
+  log.warn(`Setting strategy parameters through the TradingView chart API failed (${reason}), ` +
+    'the strategy dialog is used until the end of this test run. TradingView may have changed its chart API.')
+}
+
+// True when the chart API applied the values; false when the dialog has to set them
+tv._setStrategyParamsByApi = async (name, propVal, isDeepTest = false) => {
+  if (!tv.paramSetter.isApi)
+    return false
+  let response
+  try {
+    response = await tv.callPageAction('setStrategyParams', {strategyName: name, values: propVal}, 1500)
+  } catch (err) {
+    tv._switchParamSetterToDialog(err.message)
+    return false
+  }
+  if (!response?.success) {
+    tv._switchParamSetterToDialog(response?.error || 'no response data')
+    return false
+  }
+  const result = response.data
+  if (result?.missing?.length) {
+    // An input the dialog shows but the API does not name the same way: the same for every iteration
+    tv._switchParamSetterToDialog(`inputs are not found by name: ${result.missing.join(', ')}`)
+    return false
+  }
+  if (result?.unsupported?.length) {
+    // The same inputs are unsupported on every iteration: log them once per run, the rest at debug
+    const unsupportedText = `The strategy dialog sets the inputs the chart API cannot express: ${result.unsupported.join('; ')}`
+    if (tv.paramSetter.isUnsupportedLogged) {
+      log.debug(unsupportedText)
+    } else {
+      tv.paramSetter.isUnsupportedLogged = true
+      log.info(unsupportedText)
+    }
+    return false
+  }
+  tv.lastSetStrategyResult = {method: 'api', response: result}
+  // No dialog opens, so the user sees what changed the strategy
+  if (result?.changed?.length)
+    ui.showToast(`Strategy parameters set by the extension (chart API): ${result.changed.join(', ')}`)
+  // As the dialog path does: the report page and its snackbars belong to the open Strategy Tester tab
+  // (immediate when it is already open); when it can not be opened, the dialog path reports why
+  try {
+    await tv.openStrategyTab(isDeepTest)
+  } catch (err) {
+    log.warn('Unable to open the Strategy Tester tab after setting parameters through the chart API.', err)
+    return false
+  }
+  return true
+}
+
 tv.setStrategyParams = async (name, propVal, isDeepTest = false, keepStrategyParamOpen = false) => {
   tv.lastSetStrategyResult = null
-  let dialogPrepared = false
-  let dialogOpenedForApi = false
+  // Report version before the change: getPerformance waits for TradingView to report a newer one
+  tv.reportStateBeforeChange = await tv.captureReportState(name)
+  // The chart API is used only when the dialog is closed: an open dialog would overwrite the values on "Ok"
+  if (!keepStrategyParamOpen && !page.$(SEL.indicatorTitle) && await tv._setStrategyParamsByApi(name, propVal, isDeepTest))
+    return true
 
   try {
-    const existingDialog = page.$(SEL.indicatorTitle)
-    if (existingDialog) {
-      dialogPrepared = await tv.changeDialogTabToInput()
-    }
-  } catch {
-    dialogPrepared = false
+    if (page.$(SEL.indicatorTitle))
+      await tv.changeDialogTabToInput()
+  } catch (err) {
+    log.warn('Unable to switch the open strategy dialog to the Inputs tab.', err)
   }
-
-  if (!dialogPrepared) {
-    try {
-      const indicatorTitleEl = await tv.checkAndOpenStrategy(name, isDeepTest)
-      if (indicatorTitleEl) {
-        dialogOpenedForApi = true
-        dialogPrepared = await tv.changeDialogTabToInput()
-      }
-    } catch (err) {
-      console.warn('[TV] Unable to prepare strategy dialog for API setter.', err)
-      dialogPrepared = false
-    }
-  }
-
-  let apiSucceeded = false
-  // if (dialogPrepared) { // 2025-12-22 Turned of due changes in api, now schema do not have names, so links keys in_0.. and names should be prepared separatelly
-  //   try {
-  //     const apiEnvelope = await tv.callPageAction('setStrategyParams', { name, values: propVal }, 8000)
-  //     const apiResponse = apiEnvelope && typeof apiEnvelope === 'object' ? apiEnvelope.data : null
-  //     if (apiResponse && typeof apiResponse === 'object') {
-  //       tv.lastSetStrategyResult = { method: 'api', response: apiResponse, raw: apiEnvelope }
-  //       const hasMissing = Array.isArray(apiResponse.missing) && apiResponse.missing.length
-  //       const hasErrors = Array.isArray(apiResponse.errors) && apiResponse.errors.length
-  //       const explicitlyFailed = apiEnvelope && apiEnvelope.success === false
-  //       if (!explicitlyFailed && !hasMissing && !hasErrors)
-  //         apiSucceeded = true
-  //       else
-  //         console.warn('[TV-AS] Strategy parameters API reported issues. Falling back to legacy setter.', apiResponse)
-  //     } else if (apiEnvelope && apiEnvelope.success === false) {
-  //       console.warn('[TV-AS] Strategy parameters API responded with failure.', apiEnvelope.error)
-  //       tv.lastSetStrategyResult = { method: 'api', response: null, raw: apiEnvelope }
-  //     }
-  //   } catch (err) {
-  //     console.warn('[TV-ASS] Strategy parameters API call failed, using legacy setter.', err)
-  //   }
-  // }
-
-  // if (apiSucceeded) {
-  //   console.log('###wait for 5 seconds')
-  //   await page.waitForTimeout(5000)
-  //   if (!keepStrategyParamOpen) {
-  //     const okBtn = page.$(SEL.okBtn)
-  //     if (okBtn)
-  //       okBtn.click()
-  //     else {
-  //       const cancelBtn = page.$(SEL.cancelBtn)
-  //       if (cancelBtn)
-  //         cancelBtn.click()
-  //     }
-  //   }
-  //   return true
-  // }
-
-  // if (dialogOpenedForApi) {
-  //   const cancelBtn = page.$(SEL.cancelBtn)
-  //   if (cancelBtn)
-  //     cancelBtn.click()
-  //   await page.waitForSelector(SEL.cancelBtn, 1000, true)
-  // }
-
   const legacyEnvelope = await tv._setStrategyParamsLegacy(name, propVal, isDeepTest, keepStrategyParamOpen)
   const legacySuccess = !!(legacyEnvelope && legacyEnvelope.success !== false)
   if (!tv.lastSetStrategyResult)
@@ -324,7 +329,9 @@ tv.changeDialogTabToInput = async () => {
   if (isInputTabActive) return true
   const inputTabEl = document.querySelector(SEL.tabInput)
   if (!inputTabEl) {
-    throw new Error('There are no parameters in this strategy that can be optimized (There is no "Inputs" tab with input values)')
+    // TradingView hides the tab for a strategy without inputs, and a UI change hides it too: the code can not tell them apart
+    throw new UiChangedError('The strategy settings dialog has no "Inputs" tab: either the strategy has no input parameters ' +
+      'to optimize, or TradingView changed its UI.')
   }
   inputTabEl.click()
   isInputTabActive = await page.waitForSelector(SEL.tabInputActive, 2000)
@@ -398,7 +405,8 @@ tv.getStrategyNameFromPopup = async () => {
 }
 
 tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = false) => {
-  const curStrategyTitle = await tv.getStrategyNameFromPopup()
+  // Only whether the dialog is already open: waiting for it here cost a second on every iteration
+  const curStrategyTitle = page.$(SEL.indicatorTitle)?.innerText || null
   let isOpened = !!curStrategyTitle
   if (!isOpened && (indicatorTitle && indicatorTitle !== curStrategyTitle) && searchAgainstStrategies) {
     isOpened = await tv._openStrategyParamsByStrategyDoubleClickBy(indicatorTitle)
@@ -418,25 +426,31 @@ tv.openStrategyParameters = async (indicatorTitle, searchAgainstStrategies = fal
   }
 
   if (!isOpened) {
-    await ui.showErrorPopup('There is not strategy param button on the strategy tab. Test stopped. Open correct page please')
+    // TV renders the "Strategy Tester" tab only while a strategy is on the chart, so its absence most likely
+    // means no strategy - but the same symptom appears when TV changes its UI, so the issue block is shown too
+    if (!page.$(SEL.strategyTesterTab))
+      await ui.showIssuePopup('No strategy was found on the chart ("Strategy Tester" panel is missing).\n' +
+        'Add a strategy to the chart and try again.')
+    else
+      await ui.showIssuePopup('Cannot find the strategy settings button on the "Strategy Tester" panel. The test is stopped.')
     return null
   }
   const stratIndicatorEl = await page.waitForSelector(SEL.indicatorTitle, 5000)
   if (!stratIndicatorEl) {
-    await ui.showErrorPopup('There is not strategy parameters popup. If was not opened, probably TV UI changes. ' +
-      'Reload page and try again. Test stopped. Open correct page please')
+    await ui.showIssuePopup('The strategy settings dialog did not open. Reload the page and try again. The test is stopped.')
     return null
   }
+  const inputsTabMissingText = 'The Inputs tab is missing in the strategy settings dialog. The test is stopped.'
   const tabInputEl = document.querySelector(SEL.tabInput)
   if (!tabInputEl) {
-    await ui.showErrorPopup('There is not strategy parameters input tab. Test stopped. Open correct page please')
+    await ui.showIssuePopup(inputsTabMissingText)
     return null
   }
   page.mouseClick(tabInputEl)
 
   const tabInputActiveEl = await page.waitForSelector(SEL.tabInputActive)
   if (!tabInputActiveEl) {
-    await ui.showErrorPopup('There is not strategy parameters active input tab. Test stopped. Open correct page please')
+    await ui.showIssuePopup(inputsTabMissingText)
     return null
   }
   return true
@@ -449,19 +463,22 @@ tv.checkAndOpenStrategy = async (name, isDeepTest = false) => {
     try {
       await tv.openStrategyTab(isDeepTest)
     } catch (err) {
-      console.warn('checkAndOpenStrategy error', err)
+      log.warn('checkAndOpenStrategy failed:', err)
       return null
     }
+    const reloadAdviceText = 'Reload the page, leave only one strategy on the chart and try again.'
     const isOpened = await tv.openStrategyParameters(name)
     if (!isOpened) {
-      console.warn('Cannot open current strategy parameters')
-      await ui.showErrorPopup('Cannot open current strategy parameters. Reload the page, leave one strategy on the chart and try again.')
+      log.warn(`Cannot open the parameters of strategy "${name || ''}"`)
+      await ui.showErrorPopup(`Cannot open the parameters of strategy "${name || ''}".\n${reloadAdviceText}`)
       return null
     }
     if (name) {
       indicatorTitleEl = page.$(SEL.indicatorTitle)
       if (!indicatorTitleEl || indicatorTitleEl.innerText !== name) {
-        await ui.showErrorPopup(`The ${name} strategy parameters could not be opened. ${indicatorTitleEl.innerText ? 'Opened "' + indicatorTitleEl.innerText + '".' : ''} Reload the page, leave one strategy on the chart and try again.`)
+        const openedTitle = indicatorTitleEl?.innerText
+        await ui.showErrorPopup(`The parameters of strategy "${name}" could not be opened.` +
+          `${openedTitle ? ` The dialog of "${openedTitle}" opened instead.` : ''}\n${reloadAdviceText}`)
         return null
       }
     }
@@ -483,25 +500,25 @@ tv.openStrategyTab = async (isDeepTest = false) => {
       strategyTabEl.click()
       await page.waitForSelector(SEL.strategyTesterTabActive)
     } else {
-      throw new Error('There is not "Strategy Tester" tab on the page. Open correct page.' + SUPPORT_TEXT)
+      throw new UiChangedError('Cannot find the "Strategy Tester" panel on the chart page.')
     }
   }
   let strategyCaptionEl = await page.waitForSelector(SEL.strategyCaption, 2500) // 2023-02-24 Changed to more complicated logic - for single and multiple strategies in page
   if (!strategyCaptionEl) { // || !strategyCaptionEl.innerText) {
-    throw new Error('There is not strategy name element on "Strategy Tester" tab.' + SUPPORT_TEXT)
+    throw new UiChangedError('Cannot find the strategy name on the "Strategy Tester" panel.')
   }
   // await tv.checkIsNewVersion()
   let metricsTabActive = await page.waitForSelector(SEL.metricsTab, 1000)
   if (!metricsTabActive) {
     if (!metricsTabActive)
-      throw new Error('There is not "Metrics" tab on the page. Open correct page.' + SUPPORT_TEXT)
+      throw new UiChangedError('Cannot find the "Metrics" tab on the "Strategy Tester" panel.')
 
   }
   if (!page.$(SEL.metricsTabActive))
     metricsTabActive.click()
   const isActive = await page.waitForSelector(SEL.metricsTabActive, 1000)
   if (!isActive) {
-    console.error('The "Metrics" tab is not active after click')
+    log.error('The "Metrics" tab is not active after a click')
   }
   return true
 }
@@ -530,9 +547,8 @@ tv.switchToStrategyTabAndSetObserveForReport = async (isDeepTest = false) => {
   //       attributes: false,
   //       characterData: false
   //     });
-  //     console.log('[INFO] Observer added to tv.reportNode')
   //   } else {
-  //     throw new Error('The strategy report did not found.' + SUPPORT_TEXT)
+  //     throw new Error('The strategy report did not found.')
   //   }
   // }
 
@@ -562,12 +578,12 @@ tv.dialogHandler = async () => {
     tv.timeFrameTextPrev = timeFrameText
 
     if (!await tv.changeDialogTabToInput()) {
-      console.error(`Can't set parameters tab to input`)
+      log.error('Cannot switch the indicator settings dialog to the Inputs tab')
       ui.isMsgShown = true
       return
     }
 
-    console.log("TradingView indicator parameters window opened for ticker:", tickerText);
+    log.debug('Indicator parameters window opened for ticker:', tickerText)
     const tsData = await storage.getKey(`${storage.SIGNALS_KEY_PREFIX}_${tickerText}::${timeFrameText}`.toLowerCase())
     if (tsData === null) {
       await ui.showErrorPopup(`No data was loaded for the ${tickerText} and timeframe ${timeFrameText}.\n\n` +
@@ -598,7 +614,7 @@ tv.dialogHandler = async () => {
     }
     const notFoundParam = propKeys.filter(item => !setResult.includes(item))
     if (notFoundParam && notFoundParam.length) {
-      await ui.showErrorPopup(`One of the parameters named ${notFoundParam} was not found in the window. Check the script.\n`)
+      await ui.showErrorPopup(`The parameters ${notFoundParam.join(', ')} were not found in the indicator settings dialog. Check the script.`)
       ui.isMsgShown = true
       return
     }
@@ -629,16 +645,7 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
         'Max equity drawdown as % of initial capital (intrabar)',
         'Return of max equity drawdown'
       ]
-  const negativeValues = ['Gross loss', 'Commission paid',
-      'Avg equity run-up duration (close-to-close)', 'Avg equity run-up (close-to-close)',
-        'Max equity run-up (close-to-close)',  'Max equity run-up (intrabar)',
-        'Max equity run-up as % of initial capital (intrabar)',
-        'Avg equity drawdown duration (close-to-close)', 'Avg equity drawdown (close-to-close)',
-        'Max equity drawdown (close-to-close)', 'Max equity drawdown (intrabar)',
-        'Max equity drawdown as % of initial capital (intrabar)',
-          'Losing trades', 'Avg losing trade', 'Largest losing trade', 'Largest losing trade percent',
-          'Avg # bars in losing trades', 'Margin calls'
-        ]
+  // Values keep the sign TradingView displays; the parser applies no sign convention of its own
 
   for (let rowEl of allReportRowsEl) {
     if (rowEl) {
@@ -652,7 +659,6 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
         if (isSingleValue && i >= 2)
           continue
         let values = allTdEl[i].innerText
-        const isNegative = negativeValues.includes(paramName.toLowerCase())// && allTdEl[i].querySelector('[class^="negativeValue"]')
         if (values && typeof values === 'string' && strategyHeaders[i]) {
           values = values.replaceAll(' ', ' ').replaceAll('−', '-').trim()
           const digitalValues = values.replaceAll(/([\-\d\.\n])|(.)/g, (a, b) => b || '')
@@ -668,23 +674,17 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
 
               if (Boolean(digitVal0)) {
                 report[nameDigits] = parseNumTypeByRowName(nameDigits, digitVal0)
-                if (report[nameDigits] > 0 && isNegative)
-                  report[nameDigits] = report[nameDigits] * -1
               } else {
                 report[nameDigits] = valuesPair[0]
               }
               if (Boolean(digitVal1)) {
                 report[namePercents] = parseNumTypeByRowName(namePercents, digitVal1)
-                if (report[namePercents] > 0 && isNegative)
-                  report[namePercents] = report[namePercents] * -1
               } else {
                 report[namePercents] = valuesPair[1]
               }
             }
           } else if (Boolean(digitOfValues)) {
             report[nameDigits] = parseNumTypeByRowName(namePercents, digitalValues)
-            if (report[nameDigits] > 0 && isNegative)
-              report[nameDigits] = report[nameDigits] * -1
           } else
             report[nameDigits] = values
         }
@@ -695,10 +695,48 @@ tv._parseRows = (allReportRowsEl, strategyHeaders, report) => {
 }
 
 
-tv._parseMetrics = (report) => {
-  const matricsValuesEls = document.querySelectorAll(SEL.metricsValueCell)
+tv._normalizeReportText = (text) => (text || '').replaceAll(' ', ' ').replaceAll('−', '-').trim()
+
+// "1,946.00" -> 1946, "6 bars" -> 6, "0.19%" -> 0.19; a label such as "January, 41.67% winners" or "—" stays a string
+tv._parseMetricNumber = (text) => {
+  const normalized = tv._normalizeReportText(text)
+  const match = normalized.replaceAll(',', '').match(/^[+-]?\d+(\.\d+)?/)
+  return match ? parseFloat(match[0]) : normalized
+}
+
+// 2026-10 card layout: name in [class^="title"], amount in [class^="value"], optional percent in [class^="change"].
+// Returns false when the card is not in that layout, so the caller falls back to the previous one.
+tv._parseMetricCard = (metricEl, report) => {
+  const nameEl = metricEl.querySelector('[class^="title"], [class*=" title"]')
+  const valueEl = metricEl.querySelector('[class^="value"], [class*=" value"]')
+  const metricName = (nameEl?.innerText || '').trim()
+  if (!metricName || !valueEl)
+    return false
+  report[metricName] = tv._parseMetricNumber(valueEl.innerText)
+  const changeEl = metricEl.querySelector('[class^="change"], [class*=" change"]')
+  const changeText = tv._normalizeReportText(changeEl?.innerText)
+  if (!changeText)
+    return true
+  // "379/1001" (winning/total trades): the legacy ratio string plus both numbers
+  const ratioMatch = changeText.replaceAll(',', '').match(/^(\d+)\s*\/\s*(\d+)$/)
+  if (ratioMatch) {
+    report[`${metricName} ratio`] = `${ratioMatch[1]}/${ratioMatch[2]}`
+    report[`${metricName} count`] = parseInt(ratioMatch[1])
+    report[`${metricName} total`] = parseInt(ratioMatch[2])
+    return true
+  }
+  // "0.78%" or "47.19% winners" -> a percent value
+  const isPercent = /^[+-]?[\d,]+(\.\d+)?%/.test(changeText)
+  report[isPercent ? `${metricName} %` : `${metricName}_1`] = tv._parseMetricNumber(changeText)
+  return true
+}
+
+tv._parseMetrics = (report, root = document, cellSelector = SEL.metricsValueCell) => {
+  const matricsValuesEls = root.querySelectorAll(cellSelector)
   for (let metricEl of matricsValuesEls) {
     if (!metricEl)
+      continue
+    if (tv._parseMetricCard(metricEl, report))
       continue
     const metricNameAndValEls = metricEl.querySelectorAll('div[class^="container-"]')
     if (metricNameAndValEls && metricNameAndValEls.length < 2)
@@ -723,8 +761,6 @@ tv._parseMetrics = (report) => {
         } else {
           value1 = digitOfValuesArr[digitOfValuesArr.length - 1].match(/-?\d+\.?\d*/g)
           name1 = digitOfValuesArr[digitOfValuesArr.length - 1].endsWith('%') ? `${metricName} %` : `${metricName}_1`
-          if (['Max equity drawdown'].includes(name1))
-            value1 = -1 * value1
         }
       }
       if (Boolean(value0))
@@ -744,12 +780,22 @@ tv._getMetricGroupTitle = (group) => {
   return (titleEl?.innerText || '').trim()
 }
 
-tv.REPORT_PARSER_VERSION = '2026-06-23-lazy-report-sections-v4'
+tv.REPORT_PARSER_VERSION = '2026-10-14-metric-cards-v6'
+
+tv._getReportRoot = () => page.$(SEL.reportRoot) || page.$('#bottom-area')
+
+// Data tables only: lightweight-charts renders its canvases inside a <table> as well
+tv._getDataTables = (root) => [...root.querySelectorAll('table')].filter(table => !table.closest('.tv-lightweight-charts'))
+
+// Section sub-tabs. Since 2026-10 the first tab of a group ("Breakdown", "Distribution") reuses the
+// id "strategy-report-summary", so tabs are no longer filtered by id; the overflow "More" button is a fake tab
+tv._getMetricTabButtons = (group) => [...group.querySelectorAll('button[id][aria-selected]')]
+  .filter(btn => btn.getAttribute('aria-hidden') !== 'true' && !String(btn.className).includes('fake'))
 
 tv._getMetricSectionRoot = (el, requireTable = false) => {
-  const reportRoot = page.$('[class^="backtestingReport"]') || page.$('#bottom-area')
+  const reportRoot = tv._getReportRoot()
   for (let node = el; node && node !== reportRoot; node = node.parentElement) {
-    if (tv._getMetricGroupTitle(node) && (!requireTable || node.querySelector('table')))
+    if (tv._getMetricGroupTitle(node) && (!requireTable || tv._getDataTables(node).length))
       return node
   }
   return null
@@ -757,13 +803,13 @@ tv._getMetricSectionRoot = (el, requireTable = false) => {
 
 tv._getMetricSectionGroups = () => {
   const sections = new Set()
-  document.querySelectorAll('[class^="backtestingReport"] table, #bottom-area table')
+  tv._getDataTables(page.$('#bottom-area') || document)
     .forEach(table => {
       const section = tv._getMetricSectionRoot(table, true)
       if (section)
         sections.add(section)
     })
-  document.querySelectorAll('[class^="backtestingReport"] button[id][aria-selected], #bottom-area button[id][aria-selected]')
+  document.querySelectorAll('#bottom-area button[id][aria-selected]')
     .forEach(button => {
       const section = tv._getMetricSectionRoot(button)
       if (section)
@@ -773,7 +819,7 @@ tv._getMetricSectionGroups = () => {
 }
 
 tv._getReportScrollRoots = () => {
-  const reportRoot = page.$('[class^="backtestingReport"]') || page.$('#bottom-area')
+  const reportRoot = tv._getReportRoot()
   const candidates = [
     ...document.querySelectorAll('#bottom-area *'),
     reportRoot,
@@ -794,14 +840,14 @@ tv._getReportScrollRoots = () => {
 
 tv._getMetricSectionDebug = () => tv._getMetricSectionGroups().map(group => ({
   title: tv._getMetricGroupTitle(group),
-  tabs: [...group.querySelectorAll('button[id][aria-selected]')]
-    .filter(btn => btn.id !== 'strategy-report-summary')
+  tabs: tv._getMetricTabButtons(group)
     .map(btn => ({
       id: btn.id,
       text: (btn.innerText || '').trim(),
       selected: btn.getAttribute('aria-selected'),
     })),
-  table: (group.querySelector('table')?.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+  table: (tv._getDataTables(group)[0]?.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+  cards: group.querySelectorAll(SEL.metricCell).length,
 }))
 
 tv._nudgeReportScrollRoot = async (scrollRoot, deltaY) => {
@@ -837,8 +883,7 @@ tv._parseVisibleMetricSectionGroups = async (report, parsedTabs, debugLabel = ''
 
 tv._parseMetricSectionGroup = async (group, report, parsedTabs) => {
   const groupTitle = tv._getMetricGroupTitle(group)
-  const tabButtons = [...group.querySelectorAll('button[id][aria-selected]')]
-    .filter(btn => btn.id !== 'strategy-report-summary')
+  const tabButtons = tv._getMetricTabButtons(group)
 
   for (const tabBtn of tabButtons) {
     const tabKey = `${groupTitle}::${tabBtn.id}::${(tabBtn.innerText || '').trim()}`
@@ -853,25 +898,20 @@ tv._parseMetricSectionGroup = async (group, report, parsedTabs) => {
       await page.waitForTimeout(180)
     }
 
-    let table = group.querySelector('table')
-    if (!table) {
+    // A tab holds metric cards (2026-10 UI) or a table (earlier UI); try both, cards first
+    const isContent = () => group.querySelector(SEL.metricCell) || tv._getDataTables(group).length
+    if (!isContent())
       await page.waitForTimeout(250)
-      table = group.querySelector('table')
+    // Nothing after a fair attempt - a genuine "no data" state or a chart-only tab. Either way the tab is
+    // marked parsed, because retrying it on every later pass/scrollRoot re-clicks it forever and stalls the parse
+    report = tv._parseMetrics(report, group, SEL.metricCell)
+    for (const table of tv._getDataTables(group)) {
+      const headerEls = table.querySelectorAll('thead > tr > th')
+      const strategyHeaders = [...headerEls].map(h => (h?.innerText || '').trim())
+      const rowEls = table.querySelectorAll('tbody > tr')
+      if (rowEls.length)
+        report = tv._parseRows(rowEls, strategyHeaders, report)
     }
-    if (!table) {
-      // No table after a fair attempt - either a genuine "no data" empty state (e.g. "Margin
-      // usage" with nothing to show) or a non-table tab (e.g. "Growth and decline" is a chart,
-      // not a table). Either way retrying it on every later pass/scrollRoot just re-clicks it
-      // forever and stalls the whole parse, so give up on it for good.
-      parsedTabs.add(tabKey)
-      continue
-    }
-
-    const headerEls = table.querySelectorAll('thead > tr > th')
-    const strategyHeaders = [...headerEls].map(h => (h?.innerText || '').trim())
-    const rowEls = table.querySelectorAll('tbody > tr')
-    if (rowEls.length)
-      report = tv._parseRows(rowEls, strategyHeaders, report)
 
     parsedTabs.add(tabKey)
   }
@@ -917,31 +957,52 @@ tv.parseReportTable = async () => {
   return report
 }
 
+tv.REPORT_NO_DATA_MESSAGES = ['This report requires trade data', 'Not enough data to show', 'Not enough data']
+
+// Blocks of the report showing a "no data" placeholder instead of a chart/table, by block title.
+// The placeholder is matched by text (English UI) because its class names are hashed.
+tv._getReportNoDataBlocks = (root = tv._getReportRoot()) => {
+  if (!root)
+    return []
+  const isNoDataText = (el) => tv.REPORT_NO_DATA_MESSAGES.some(message => (el.innerText || '').trim().startsWith(message))
+  return [...root.querySelectorAll('div, p, span')]
+    .filter(el => isNoDataText(el) && ![...el.children].some(isNoDataText))
+    .map(el => {
+      for (let node = el.parentElement; node && node !== root.parentElement; node = node.parentElement) {
+        const titleEl = [...node.children].find(child => child !== el && !child.contains(el) &&
+          /title/i.test(String(child.className)) && (child.innerText || '').trim().length < 80)
+        if (titleEl)
+          return { title: titleEl.innerText.trim(), message: el.innerText.trim(), el }
+      }
+      return { title: '', message: el.innerText.trim(), el }
+    })
+}
+
+// 2026-10 UI: a strategy without closed trades keeps the metric cards (with "—" and 0 values) but the
+// Key stats chart shows "Not enough data to show"; the per-tab charts show the same placeholder on their
+// own whenever one view has nothing to draw - that is not a no-trades state and is ignored here.
+// Earlier UI replaced the whole report by an empty-state block; both are reported as 'no_trade_data'.
 tv._getReportEmptyState = () => {
   const emptyStateEl = page.$(SEL.strategyReportEmptyState)
-  const reportRoot = emptyStateEl || page.$(SEL.reportContent) || page.$('#bottom-area')
-  const reportText = (reportRoot?.innerText || '').replace(/\s+/g, ' ').trim()
-  if (!reportText)
-    return null
-
-  if (emptyStateEl)
+  if (emptyStateEl && !page.$(SEL.metricsValueCell))
     return {
       type: 'no_trade_data',
-      message: reportText
+      message: (emptyStateEl.innerText || '').replace(/\s+/g, ' ').trim() || 'Empty report'
     }
-
-  const knownNoDataMessages = [
-    'This report requires trade data',
-    'Not enough data to show'
-  ]
-  const matchedMessage = knownNoDataMessages.find(message => reportText.includes(message))
-  if (!matchedMessage)
-    return null
-
-  return {
-    type: 'no_trade_data',
-    message: matchedMessage
+  const keyStatsEl = page.$(SEL.reportContent)
+  const keyStatsNoData = keyStatsEl ? tv._getReportNoDataBlocks(keyStatsEl) : []
+  if (keyStatsNoData.length)
+    return {
+      type: 'no_trade_data',
+      message: keyStatsNoData[0].message
+    }
+  if (!keyStatsEl && !page.$(SEL.metricsValueCell)) { // Neither layout found - match the text of the whole report
+    const reportText = (tv._getReportRoot()?.innerText || '').replace(/\s+/g, ' ').trim()
+    const matchedMessage = tv.REPORT_NO_DATA_MESSAGES.find(message => reportText.includes(message))
+    if (matchedMessage)
+      return { type: 'no_trade_data', message: matchedMessage }
   }
+  return null
 }
 
 
@@ -972,10 +1033,197 @@ tv._getReportDataHash = (reportData) => {
 // visibly hammer the tab strip (looked like the UI "hanging" while switching report tabs).
 // It only reads whatever is already rendered, just to notice a change happened.
 tv._getQuickReportSignature = () => {
-  const reportRoot = page.$('[class^="backtestingReport"]') || page.$('#bottom-area')
+  const reportRoot = tv._getReportRoot()
   if (!reportRoot)
     return ''
   return (reportRoot.innerText || '').replace(/\s+/g, ' ').trim()
+}
+
+// TradingView internal report (page-context.js getPerformance) -> metric names of the popup schema
+// ("Net PnL: All", "Gross loss %: Short", ...). Keys missing here keep their TradingView name.
+// Verified 2026-10-14 against strategy source _reportData.performance.
+tv.PAGE_REPORT_SIDES = {all: 'All', long: 'Long', short: 'Short'}
+tv.PAGE_REPORT_SIDE_METRICS = {
+  netProfit: 'Net PnL', netProfitPercent: 'Net PnL %',
+  grossProfit: 'Gross profit', grossProfitPercent: 'Gross profit %',
+  grossLoss: 'Gross loss', grossLossPercent: 'Gross loss %',
+  commissionPaid: 'Commission paid', profitFactor: 'Profit factor',
+  avgTrade: ['Average PnL', 'Expected payoff'], avgTradePercent: 'Average PnL %',
+  avgWinTrade: 'Average profit', avgWinTradePercent: 'Average profit %',
+  avgLosTrade: 'Average loss', avgLosTradePercent: 'Average loss %',
+  ratioAvgWinAvgLoss: 'Average profit / average loss',
+  largestWinTrade: 'Largest profit', largestWinTradePercent: 'Largest profit %',
+  largestLosTrade: 'Largest loss', largestLosTradePercent: 'Largest loss %',
+  avgBarsInTrade: 'Average bars in trades', avgBarsInWinTrade: 'Average bars in winners',
+  avgBarsInLossTrade: 'Average bars in losers',
+  percentProfitable: 'Percent profitable', totalTrades: 'Total trades', totalOpenTrades: 'Total open trades',
+  numberOfWiningTrades: 'Total winners', numberOfLosingTrades: 'Total losers',
+  maxContractsHeld: 'Max contracts held', marginCalls: 'Margin calls',
+}
+tv.PAGE_REPORT_METRICS = {
+  maxStrategyDrawDown: ['Max drawdown', 'Max drawdown (intrabar): All'],
+  maxStrategyDrawDownPercent: ['Max drawdown %', 'Max drawdown as % of initial capital (intrabar): All'],
+  maxStrategyRunUp: 'Max run-up (intrabar): All',
+  maxStrategyRunUpPercent: 'Max run-up as % of initial capital (intrabar): All',
+  openPL: 'Open PnL: All', openPLPercent: 'Open PnL %: All',
+  buyHoldReturn: 'Buy and hold PnL: All', buyHoldReturnPercent: 'Buy and hold PnL %: All',
+  buyHoldGainPercent: 'Buy and hold % gain: All',
+  sharpeRatio: 'Sharpe ratio', sortinoRatio: 'Sortino ratio',
+  maxMarginUsed: 'Max margin used', avgMarginUsed: 'Average margin used: All', openMarginUsed: 'Open margin used',
+}
+tv.lastReportSource = null
+
+// TradingView keeps percents as fractions (0.0078 is shown as 0.78%)
+tv._isPageReportPercentKey = (key) => key.endsWith('Percent') || key.startsWith('percent')
+tv._toPageReportDisplayValue = (key, value) => {
+  if (typeof value !== 'number')
+    return value
+  const displayValue = tv._isPageReportPercentKey(key) ? value * 100 : value
+  return Math.round(displayValue * 1e8) / 1e8
+}
+
+tv._mapPageReport = (performance) => {
+  if (!performance?.all || typeof performance.all !== 'object')
+    throw new Error('the internal report has no "all" performance block')
+  const report = {}
+  for (const [side, sideLabel] of Object.entries(tv.PAGE_REPORT_SIDES)) {
+    for (const [key, value] of Object.entries(performance[side] || {})) {
+      if (value !== null && typeof value === 'object')
+        continue
+      for (const label of [].concat(tv.PAGE_REPORT_SIDE_METRICS[key] || key))
+        report[`${label}: ${sideLabel}`] = tv._toPageReportDisplayValue(key, value)
+    }
+  }
+  for (const [key, value] of Object.entries(performance)) {
+    if (value === null || typeof value === 'object')
+      continue
+    for (const label of [].concat(tv.PAGE_REPORT_METRICS[key] || `${key}: All`))
+      report[label] = tv._toPageReportDisplayValue(key, value)
+  }
+  // Key stats cards: Total PnL includes the open position, as TradingView shows it
+  const all = performance.all
+  if (typeof all.netProfit === 'number')
+    report['Total PnL'] = tv._toPageReportDisplayValue('netProfit', all.netProfit + (performance.openPL || 0))
+  if (typeof all.netProfitPercent === 'number')
+    report['Total PnL %'] = tv._toPageReportDisplayValue('netProfitPercent', all.netProfitPercent + (performance.openPLPercent || 0))
+  if (typeof all.profitFactor === 'number')
+    report['Profit factor'] = tv._toPageReportDisplayValue('profitFactor', all.profitFactor)
+  if (typeof all.percentProfitable === 'number')
+    report['Profitable trades'] = tv._toPageReportDisplayValue('percentProfitable', all.percentProfitable)
+  if (typeof all.numberOfWiningTrades === 'number' && typeof all.totalTrades === 'number') {
+    report['Profitable trades ratio'] = `${all.numberOfWiningTrades}/${all.totalTrades}`
+    report['Profitable trades count'] = all.numberOfWiningTrades
+    report['Profitable trades total'] = all.totalTrades
+  }
+  if (typeof all.marginCalls === 'number')
+    report['Margin calls'] = all.marginCalls
+  return report
+}
+
+// The page parser reads the current UI names, which have no All/Long/Short split; the popup schema
+// names ("Total trades: All") are added as aliases so the optimisation and filter parameters resolve.
+tv._addPopupMetricAliases = (report) => {
+  for (const label of Object.values(tv.PAGE_REPORT_SIDE_METRICS).flat())
+    if (Object.hasOwn(report, label) && !Object.hasOwn(report, `${label}: All`))
+      report[`${label}: All`] = report[label]
+  return report
+}
+
+// Two independent stages, each with its own source: "ready" detects that TradingView finished the report,
+// "read" takes its values. Each prefers TradingView page objects and falls back to the report page alone,
+// so either stage keeps working when the other one's page objects break. A source that failed is not retried
+// until the next test run: a broken path costs one timeout per run, not one per iteration.
+tv.REPORT_SOURCE_OBJECTS = 'page_objects'
+tv.REPORT_SOURCE_DOM = 'page_dom'
+tv.reportSources = {ready: tv.REPORT_SOURCE_OBJECTS, read: tv.REPORT_SOURCE_OBJECTS}
+
+tv.resetReportSources = () => {
+  tv.reportSources = {ready: tv.REPORT_SOURCE_OBJECTS, read: tv.REPORT_SOURCE_OBJECTS}
+  tv.lastReportSource = null
+}
+
+tv._switchReportSourceToDom = (stage, reason) => {
+  if (tv.reportSources[stage] === tv.REPORT_SOURCE_DOM)
+    return
+  tv.reportSources[stage] = tv.REPORT_SOURCE_DOM
+  const fallback = stage === 'ready' ? 'waiting by the report page signals (snackbars)' : 'parsing the report page'
+  log.warn(`TradingView page objects failed for report ${stage} (${reason}), ${fallback} until the end of this test run. ` +
+    'TradingView may have changed its page objects.')
+}
+
+tv.getPageReportState = async (strategyName = '') => {
+  const response = await tv.callPageAction('getReportState', {strategyName}, 500)
+  if (!response?.success)
+    throw new Error(response?.error || 'no response data')
+  return response.data
+}
+
+// Ready stage, page objects source: the report state ({version, isLoading}), or null when this source
+// is switched off for the run - then only the report page signals are watched.
+tv.captureReportState = async (strategyName = '') => {
+  if (tv.reportSources.ready !== tv.REPORT_SOURCE_OBJECTS)
+    return null
+  try {
+    return await tv.getPageReportState(strategyName)
+  } catch (err) {
+    tv._switchReportSourceToDom('ready', err.message)
+    return null
+  }
+}
+
+// Ready stage, page objects source: progress of the report since stateBefore, or null when unavailable
+tv.getReportProgress = async (stateBefore, strategyName = '') => {
+  if (!stateBefore)
+    return null
+  const state = await tv.captureReportState(strategyName)
+  if (!state)
+    return null
+  const isChanged = state.version > stateBefore.version
+  return {isStarted: state.isLoading || isChanged, isReady: !state.isLoading && isChanged}
+}
+
+// Ready stage, report page source: TradingView's snackbars
+tv.getReportProgressBySnackbars = (isPrevMessageShowing = false) => {
+  const isNeedUpdate = !!page.$(SEL.strategyReportNeedUpdate)
+  const isInProcess = !!page.$(SEL.strategyReportInProcess)
+  return {
+    isStarted: isNeedUpdate || (isPrevMessageShowing ? isInProcess : !!page.$(SEL.strategyProcessMessage)),
+    isInProcess,
+    isReady: !!page.$(SEL.strategyReportReady),
+  }
+}
+
+tv.getPageReport = async (testResults) => {
+  const response = await tv.callPageAction('getPerformance', {strategyName: testResults?.shortName || testResults?.name || ''}, 1500)
+  if (!response?.success)
+    throw new Error(response?.error || 'no response data')
+  return tv._mapPageReport(response.data?.performance)
+}
+
+// Read stage: the internal TradingView report first, the report page second. The page adds metrics the internal
+// report lacks (CAGR, expectancy, outliers, streaks, periodical, time patterns) on every tab, including
+// Breakdown and Distribution, so it is parsed whole and only on request: every tab costs a click and a render.
+// Values of the internal report win over the page ones.
+tv.readReport = async (testResults) => {
+  let pageReport = null
+  if (tv.reportSources.read === tv.REPORT_SOURCE_OBJECTS) {
+    try {
+      pageReport = await tv.getPageReport(testResults)
+    } catch (err) {
+      tv._switchReportSourceToDom('read', err.message)
+    }
+  }
+  if (!pageReport) {
+    tv.lastReportSource = tv.REPORT_SOURCE_DOM
+    return tv._addPopupMetricAliases(await tv.parseReportTable())
+  }
+  if (tv.lastReportSource !== tv.REPORT_SOURCE_OBJECTS)
+    log.info('Strategy report is read from TradingView page objects')
+  tv.lastReportSource = tv.REPORT_SOURCE_OBJECTS
+  if (!testResults?.parseExtraReportTabs)
+    return pageReport
+  const extraReport = await tv.parseReportTable()
+  return {...extraReport, ...pageReport}
 }
 
 tv.backtestDelay = async (backtestDelay = 0, isRandom = true) => {
@@ -1011,13 +1259,20 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
   const initialQuickSignature = prevDataHash ? tv._getQuickReportSignature() : ''
   let lastDataCheckTime = new Date()
   const dataCheckIntervalMs = 500
+  // Ready stage: TradingView's own "report changed" counter is checked first, the snackbars second
+  const pageStateBefore = ignoreWaiting ? null : tv.reportStateBeforeChange
+  tv.reportStateBeforeChange = null
+  const strategyName = testResults.shortName || testResults.name || ''
+  let isPageSignal = false
+  let isSnackbarReady = false
   let tikTime = 50
   let cycles = Math.ceil(5000 / tikTime)
   for (let i = 0; i < cycles; i++) {
-    if (isPrevMessageShowing)
-      isProcessStart = !!page.$(SEL.strategyReportInProcess) || !!page.$(SEL.strategyReportNeedUpdate)
-    else
-      isProcessStart = !!page.$(SEL.strategyProcessMessage) || !!page.$(SEL.strategyReportNeedUpdate)
+    if ((await tv.getReportProgress(pageStateBefore, strategyName))?.isStarted) {
+      isProcessStart = true
+      break
+    }
+    isProcessStart = tv.getReportProgressBySnackbars(isPrevMessageShowing).isStarted
     if (ignoreWaiting || isProcessStart)
       break
     await page.waitForTimeout(tikTime)
@@ -1039,10 +1294,18 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
         isDeepTestUpdateClicked = true
         testResults.isDeepTest = true
       }
+      if (!isDeepTestUpdateClicked && (await tv.getReportProgress(pageStateBefore, strategyName))?.isReady) {
+        isProcessEnd = true
+        isPageSignal = true
+        sawStageSelector = true
+        break
+      }
       if (!isStartProcessError || i * tikTime >= 5000)
         isProcessError = !!page.$(SEL.strategyReportError) && !page.$(SEL.strategyReportInProcess)
-      isProcessEnd = !!page.$(SEL.strategyReportReady)
-      if (!!page.$(SEL.strategyReportInProcess) || isProcessEnd)
+      const snackbarProgress = tv.getReportProgressBySnackbars()
+      isProcessEnd = snackbarProgress.isReady
+      isSnackbarReady = isSnackbarReady || snackbarProgress.isReady
+      if (snackbarProgress.isInProcess || isProcessEnd)
         sawStageSelector = true
       if (!isProcessEnd && !isProcessError && prevDataHash &&
           (new Date() - lastDataCheckTime) >= dataCheckIntervalMs) {
@@ -1073,14 +1336,31 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
     }
   }
   const startTime = new Date()
+  // The internal report is complete once TradingView reports success, so only the user's delay applies;
+  // reading the page needs a short render pause on top of it
+  const isPageRenderNeeded = tv.reportSources.read !== tv.REPORT_SOURCE_OBJECTS || testResults.parseExtraReportTabs
   if(!ignoreWaiting && isProcessStart)
-    await tv.backtestDelay(Math.max(testResults.backtestDelay, 0.25), testResults.randomDelay)
+    await tv.backtestDelay(isPageRenderNeeded ? Math.max(testResults.backtestDelay, 0.25) : testResults.backtestDelay, testResults.randomDelay)
   let _waitTime = new Date() - startTime
+  // A silent break of the page objects signal: TradingView finished the report (success snackbar),
+  // but its report-changed counter did not move
+  if (pageStateBefore && !isPageSignal && isSnackbarReady && !isDeepTestUpdateClicked &&
+      tv.reportSources.ready === tv.REPORT_SOURCE_OBJECTS) {
+    const progress = await tv.getReportProgress(pageStateBefore, strategyName)
+    if (progress && !progress.isReady)
+      tv._switchReportSourceToDom('ready', 'the report-changed counter did not change while TradingView showed the report ready')
+  }
   const emptyState = tv._getReportEmptyState()
   isProcessError = !!document.querySelector(SEL.strategyReportError) && !emptyState
-  reportData = await tv.parseReportTable()
-  if (emptyState && !tv._getReportDataHash(reportData)) {
-    reportData['comment'] = `No report data: ${emptyState.message}`
+  reportData = await tv.readReport(testResults)
+  const isNoTrades = tv.lastReportSource === tv.REPORT_SOURCE_OBJECTS
+    ? reportData['Total trades: All'] === 0
+    : emptyState?.type === 'no_trade_data'
+  if (isNoTrades) {
+    const noTradesReason = emptyState?.message || 'no closed trades'
+    reportData['comment'] = tv._getReportDataHash(reportData)
+      ? `No trades for these parameters (TradingView: "${noTradesReason}")`
+      : `No report data: ${noTradesReason}`
     isProcessStart = true
     isProcessEnd = true
   }
@@ -1095,11 +1375,14 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
   // (TradingView did not recompute - typically because the candidate equals what is already set,
   // or the computation never started / timed out). The table still holds the previous numbers,
   // so this value is stale and must be marked, not trusted as a fresh result.
-  const isStaleUnchanged = !isProcessError && !isDataChanged && !!prevDataHash && finalDataHash === prevDataHash
+  // TradingView's own report-changed event proves a recompute, so equal values are then a genuine result
+  const isStaleUnchanged = !isNoTrades && !isProcessError && !isDataChanged && !isPageSignal && !!prevDataHash && finalDataHash === prevDataHash
   try {
     if (testResults.perfomanceSummary.length && !isProcessError)
-      console.log('#', testResults.perfomanceSummary.length, testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1][testResults.optParamName], '->', reportData[testResults.optParamName])
-  } catch {}
+      log.debug('#', testResults.perfomanceSummary.length, testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1][testResults.optParamName], '->', reportData[testResults.optParamName])
+  } catch (err) {
+    log.debug(err)
+  }
   if (isStaleUnchanged)
     message += `${message ? '. ' : ''}WARNING: report not updated - value may be stale (TV did not recompute, parameters likely unchanged)`
   if (reportData['comment'])
@@ -1113,7 +1396,9 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
     data: reportData,
     isDataChanged: isDataChanged,
     isStaleUnchanged: isStaleUnchanged,
+    isNoTrades: isNoTrades,
     sawStageSelector: sawStageSelector,
+    isPageSignal: isPageSignal,
     _waitTime: _waitTime
   }
   // return await tv.parseReportTable()

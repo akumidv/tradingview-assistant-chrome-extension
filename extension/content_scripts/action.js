@@ -3,13 +3,14 @@ const action = {
 }
 
 const message = {
-  errorsNoBacktest: 'There is no backtest data. Try to do a new backtest'
+  noBacktestResults: 'There are no backtest results yet. Run a test first.',
+  noStrategyInputs: 'The strategy on the chart has no inputs that can be saved or optimized. Add a strategy with inputs to the chart, or choose another one.'
 }
 
 action.saveParameters = async () => {
   const strategyData = await tv.getStrategy(null, true)
   if (!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    await ui.showErrorPopup('The current indicator/strategy do not contain inputs that can be saved.')
+    await ui.showErrorPopup(message.noStrategyInputs)
     // await ui.showWarningPopup('Please open the indicator (strategy) parameters window before saving them to a file.')
     return
   }
@@ -35,10 +36,9 @@ action.uploadStrategyTestParameters = async () => {
 action.getStrategyTemplate = async () => {
   const strategyData = await tv.getStrategy()
   if (!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    await ui.showErrorPopup('The current strategy do not contain inputs, than can be saved')
+    await ui.showErrorPopup(message.noStrategyInputs)
   } else {
     const paramRange = model.getStrategyRange(strategyData)
-    console.log(paramRange)
     // await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
     const strategyRangeParamsCSV = model.convertStrategyRangeToTemplate(paramRange)
     await ui.showPopup('The range of parameters is saved for the current strategy.\n\nYou can start optimizing the strategy parameters by clicking on the "Test strategy" button')
@@ -54,10 +54,9 @@ action.clearAll = async () => {
 action.previewStrategyTestResults = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
   if (!hasBacktestResults(testResults)) {
-    await ui.showWarningPopup(message.errorsNoBacktest)
+    await ui.showWarningPopup(message.noBacktestResults)
     return
   }
-  console.log('previewStrategyTestResults', testResults)
   const eventData = await sendActionMessage(testResults, 'previewStrategyTestResults')
   if (eventData.hasOwnProperty('message'))
     await ui.showPopup(eventData.message)
@@ -68,11 +67,10 @@ action.previewStrategyTestResults = async () => {
 action.downloadStrategyTestResults = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
   if (!hasBacktestResults(testResults)) {
-    await ui.showWarningPopup(message.errorsNoBacktest)
+    await ui.showWarningPopup(message.noBacktestResults)
     return
   }
   testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME
-  console.log('downloadStrategyTestResults', testResults)
   const CSVResults = file.convertResultsToCSV(testResults)
   const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
   const propVal = {}
@@ -90,25 +88,26 @@ action.downloadStrategyTestResults = async () => {
 
 
 action.testStrategy = async (request, isDeepTest = false) => {
+  const actionName = isDeepTest ? 'deepTestStrategy' : 'testStrategy'
   try {
     const strategyData = await action._getStrategyData(isDeepTest)
     isDeepTest = await tvChart.detectDeepTest()
     const [allRangeParams, paramRange, cycles] = await action._getRangeParams(strategyData)
     if (allRangeParams !== null) { // click cancel on parameters
       const testParams = await action._getTestParams(request, strategyData, allRangeParams, paramRange, cycles, isDeepTest)
-      console.log('Test parameters', testParams)
       action._showStartMsg(testParams.paramSpace, testParams.cycles, testParams.backtestDelay ? ` with delay between tests ${testParams.backtestDelay} sec` : '')
       testParams.isDeepTest = isDeepTest
+      action._logRunStart(testParams, strategyData)
       let testResults = {}
       if (testParams.shouldTestTF) {
         if (!testParams.listOfTF || testParams.listOfTF.length === 0) {
-          await ui.showWarningPopup(`You set to test timeframes in options, but timeframes list after correction values is empty: ${testParams.listOfTFSource}\nPlease set correct one with separation by comma. \nFor example: 1m,4h`)
+          await ui.showWarningPopup(`Timeframe testing is enabled in the options, but the timeframe list has no valid values: "${testParams.listOfTFSource || ''}".\nSet timeframes separated by commas, for example: 1m,4h`)
         } else {
           let bestValue = null
           let bestTf = null
           testParams.shouldSkipInitBestResult = true
           for (const tf of testParams.listOfTF) {
-            console.log('\nTest timeframe:', tf)
+            log.info('Test timeframe:', tf)
             await tvChart.changeTimeFrame(tf)
             testParams.timeFrame = tf
             if (testParams.hasOwnProperty('bestPropVal'))
@@ -125,7 +124,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
               bestTf = tf
             }
             if (action.workerStatus === null) {
-              console.log('Stop command detected')
+              log.info('Stop command detected')
               break
             }
           }
@@ -141,15 +140,13 @@ action.testStrategy = async (request, isDeepTest = false) => {
       }
     }
   } catch (err) {
-    console.error(err)
-    await ui.showErrorPopup(`${err}`)
+    await ui.showErrorByKind(err, actionName)
   }
   ui.statusMessageRemove()
 }
 
 action._getRangeParams = async (strategyData) => {
   let paramRange = await model.getStrategyParameters(strategyData)
-  console.log('paramRange', paramRange)
   if (paramRange === null)
     // throw new Error('Error get changed strategy parameters')
     return [null, null, null]
@@ -162,21 +159,22 @@ action._getRangeParams = async (strategyData) => {
     return [null, null, null]
   }
   const cycles = changedStrategyParams.cycles ? changedStrategyParams.cycles : 100
-  console.log('changedStrategyParams', changedStrategyParams)
+  log.debug('changedStrategyParams', changedStrategyParams)
+  // null paramRange means the user kept the ranges unchanged
   if (changedStrategyParams.paramRange === null) {
-    console.log('Don not change paramRange')
   } else if (typeof changedStrategyParams.paramRange === 'object' && Object.keys(changedStrategyParams.paramRange).length) {
     paramRange = changedStrategyParams.paramRange
     await model.saveStrategyParameters(paramRange)
-    console.log('ParamRange changes to', paramRange)
+    log.info('Parameter ranges changed:', Object.keys(paramRange).length, 'parameters')
   } else {
-    throw new Error('The strategy parameters invalid. Change them or run default parameters set.')
+    throw new UserActionError('The strategy parameter ranges are invalid. Change them or run with the default parameters.')
   }
 
   const allRangeParams = model.createParamsFromRange(paramRange)
-  console.log('allRangeParams', allRangeParams)
-  if (!allRangeParams) {
-    throw new Error('Empty range parameters for strategy')
+  // createParamsFromRange skips single-value and invalid ranges, so an empty result means nothing to optimize
+  if (!Object.keys(allRangeParams).length) {
+    throw new UserActionError('No parameter has a range to test: every parameter has a single value or an invalid range.\n' +
+      'Set "from", "to" and "step" for at least one parameter (Upload/Download parameters) or run with defaults.')
   }
   return [allRangeParams, paramRange, cycles]
 }
@@ -185,7 +183,7 @@ action._getStrategyData = async (isDeepTest) => {
   ui.statusMessage('Get the initial parameters.')
   const strategyData = await tv.getStrategy('', false, isDeepTest)
   if (!strategyData || !strategyData.hasOwnProperty('name') || !strategyData.hasOwnProperty('properties') || !strategyData.properties) {
-    throw new Error('The current strategy do not contain inputs, than can be optimized. You can choose another strategy to optimize.')
+    throw new UserActionError(message.noStrategyInputs)
   }
   return strategyData
 }
@@ -210,7 +208,6 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
   } else {
     paramSpaceNumber = Object.keys(allRangeParams).reduce((accumulator, param) => accumulator * (allRangeParams[param].length || 1), 1)
   }
-  console.log('paramSpaceNumber', paramSpaceNumber)
 
   testParams.shouldTestTF = options.hasOwnProperty('shouldTestTF') ? options.shouldTestTF : false
   testParams.listOfTF = action._parseTF(options.listOfTF)
@@ -220,13 +217,12 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
   testParams.paramSpace = paramSpaceNumber
   let paramPriority = model.getParamPriorityList(paramRange) // Filter by allRangeParams
   paramPriority = paramPriority.filter(key => allRangeParams.hasOwnProperty(key))
-  console.log('paramPriority list', paramPriority)
   testParams.paramPriority = paramPriority
 
   testParams.startParams = await model.getStartParamValues(paramRange, strategyData)
-  console.log('testParams.startParams', testParams.startParams)
+  log.debug('Start parameters:', testParams.startParams)
   if (!testParams.hasOwnProperty('startParams') || !testParams.startParams.hasOwnProperty('current') || !testParams.startParams.current) {
-    throw new Error('Error.\n\n The current strategy parameters could not be determined.\n Testing aborted')
+    throw new Error('The current strategy parameters could not be determined. Testing aborted.')
   }
 
   testParams.cycles = cycles
@@ -243,6 +239,8 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
     testParams.randomDelay = request.options.hasOwnProperty('randomDelay') ? Boolean(request.options['randomDelay']) : true
     testParams.shouldSkipInitBestResult = request.options.hasOwnProperty('shouldSkipInitBestResult') ? Boolean(request.options['shouldSkipInitBestResult']) : false
     testParams.shouldSkipWaitingForDownload = request.options.hasOwnProperty('shouldSkipWaitingForDownload') ? Boolean(request.options['shouldSkipWaitingForDownload']) : false
+    testParams.parseExtraReportTabs = request.options.hasOwnProperty('parseExtraReportTabs') ? Boolean(request.options['parseExtraReportTabs']) : false
+    testParams.setParamsByApi = request.options.hasOwnProperty('setParamsByApi') ? Boolean(request.options['setParamsByApi']) : false
     testParams.dataLoadingTime = request.options.hasOwnProperty('dataLoadingTime') && !isNaN(parseInt(request.options['dataLoadingTime'])) ? request.options['dataLoadingTime'] : 30
     const maxMissingOptParamStreak = Number.parseInt(request.options['maxMissingOptParamStreak'])
     testParams.maxMissingOptParamStreak = request.options.hasOwnProperty('maxMissingOptParamStreak') && !Number.isNaN(maxMissingOptParamStreak)
@@ -254,6 +252,21 @@ action._getTestParams = async (request, strategyData, allRangeParams, paramRange
 }
 
 
+// One summary line per run, so a user's console log shows what was tested without the verbose detail
+action._logRunStart = (testParams, strategyData) => {
+  log.info('Test run started:', {
+    version: chrome.runtime.getManifest().version,
+    strategy: strategyData.name,
+    method: testParams.method,
+    optimization: `${testParams.isMaximizing ? 'max' : 'min'} ${testParams.optParamName}`,
+    combinations: testParams.paramSpace,
+    cycles: testParams.cycles,
+    ticker: testParams.ticker,
+    timeFrame: testParams.timeFrame,
+    isDeepTest: testParams.isDeepTest
+  })
+}
+
 action._showStartMsg = (paramSpaceNumber, cycles, addInfo) => {
   let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
   extraHeader += (paramSpaceNumber / cycles) > 10 ? `<br />This is too large for ${cycles} cycles. It is recommended to use up to 3-4 essential parameters, remove the rest from the strategy parameters file.` : ''
@@ -261,9 +274,8 @@ action._showStartMsg = (paramSpaceNumber, cycles, addInfo) => {
 }
 
 action._saveTestResults = async (testResults, testParams, isFinalTest = true) => {
-  console.log('testResults', testResults)
   if (!hasBacktestResults(testResults)) {
-    await ui.showWarningPopup('There is no testing data for saving. Try to do test again')
+    await ui.showWarningPopup(message.noBacktestResults)
     return
   }
 
@@ -281,7 +293,7 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
   text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ' : '(min) ') + testParams.optParamName + ': ' + backtest.convertValue(bestResult[testParams.optParamName]) : ''
   text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${backtest.convertValue(initBestValue)}` : ''
   ui.statusMessage(text)
-  console.log(`All done.\n\n${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ' : '(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
+  log.info(`All done. ${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ' : '(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
   if (testParams.shouldSkipWaitingForDownload || !isFinalTest)
     file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame}${testResults.isDeepTest ? ' deep backtesting' : ''} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max' : 'min'}_${testResults.optParamName}_${testResults.method}.csv`)
   if (isFinalTest) {
@@ -295,7 +307,7 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
 action.show3DChart = async () => {
   const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
   if (!hasBacktestResults(testResults)) {
-    await ui.showPopup('There is no results data for to show. Try to backtest again')
+    await ui.showWarningPopup(message.noBacktestResults)
     return
   }
   testResults.optParamName = testResults.optParamName || backtest.DEF_MAX_PARAM_NAME

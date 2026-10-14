@@ -443,10 +443,20 @@ const commands = {
       try {
         await ensureExtension(cdp, id, { reload: true });
         const tabs = await pages(cdp, v.tab);
+        // A chart with unsaved changes answers a reload with a "changes may be lost" beforeunload
+        // dialog that blocks the tab until answered; the reload is the intent, so accept it.
+        const reloading = new Set();
+        cdp.on('Page.javascriptDialogOpening', ({ type }, s) => {
+          if (type === 'beforeunload' && reloading.has(s))
+            cdp.send('Page.handleJavaScriptDialog', { accept: true }, s).catch(() => {});
+        });
         for (const t of tabs) {
           const s = await cdp.send('Target.attachToTarget', { targetId: t.targetId, flatten: true });
+          reloading.add(s.sessionId);
+          await cdp.send('Page.enable', {}, s.sessionId);
           await cdp.send('Page.reload', {}, s.sessionId);
         }
+        await new Promise((resolve) => setTimeout(resolve, 1500)); // let a beforeunload dialog arrive and be answered
         console.log(`extension ${id} reloaded; ${tabs.length} tab(s) matching "${v.tab}" reloaded`);
         return 0;
       } finally { cdp.close(); }

@@ -8,14 +8,16 @@ signal.parseTSSignalsAndGetMsg = async (fileData) => {
     const headers = Object.keys(csvData[0])
     const missColumns = ['timestamp', 'ticker', 'timeframe', 'signal'].filter(columnName => !headers.includes(columnName))
     if(missColumns && missColumns.length)
-      return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV. Please add all necessary columns to CSV like showed in the template. Uploading canceled.\n`
+      return {text: `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV. Please add all necessary columns to CSV like showed in the template. Uploading canceled.\n`, isError: true}
     const tickersAndTFSignals = {}
+    let invalidTimestampCount = 0
+    let invalidTimestampExample = null
     for(let row of csvData) { // Prepare timestamp arrays
       if(row['timestamp'] && row['signal'] && row['ticker'] && row['timeframe'] && row['timeframe'].length >= 2) {
         try {
           const [tfVal, tfType] = parseTF(row['timeframe'])
           if(!['h', 'm', 'd'].includes(tfType) || !(tfVal > 0))
-            return `  - ${fileData.name}: only minute(m) and hour(h) timeframes are supported. There is a timeframe "${row['timeframe']}" in the file. Uploading canceled.\n`
+            return {text: `  - ${fileData.name}: only minute(m) and hour(h) timeframes are supported. There is a timeframe "${row['timeframe']}" in the file. Uploading canceled.\n`, isError: true}
           const tktfName = `${row['ticker']}::${tfVal}${tfType}`.toLowerCase()
           if(!tickersAndTFSignals.hasOwnProperty(tktfName))
             tickersAndTFSignals[tktfName] = {tsBuy: [], tsSell: []}
@@ -26,14 +28,19 @@ signal.parseTSSignalsAndGetMsg = async (fileData) => {
             else if (row['signal'].toLowerCase().includes('sell'))
               tickersAndTFSignals[tktfName].tsSell.push(ts)
           } else {
-            console.error(`Timestamp ${row['timestamp']} ${typeof(row['timestamp'])} isn't valid`)
+            invalidTimestampCount += 1
+            if (invalidTimestampExample === null)
+              invalidTimestampExample = row['timestamp']
           }
         } catch (err) {
-          console.error(err)
+          log.error(`Signal file "${fileData.name}": row parse failed:`, row, err)
         }
       }
     }
+    if (invalidTimestampCount)
+      log.warn(`Signal file "${fileData.name}": ${invalidTimestampCount} row(s) with an invalid timestamp skipped, e.g.`, invalidTimestampExample)
     let msgArr = []
+    let failedArr = []
     for(let tktfName of Object.keys(tickersAndTFSignals)) {
       try {
         const tf = tktfName.split('::').pop()
@@ -46,17 +53,18 @@ signal.parseTSSignalsAndGetMsg = async (fileData) => {
         await storage.setKeys(`${storage.SIGNALS_KEY_PREFIX}_${tktfName}`,  {buy: buyConv.filter((item, idx) => buyConv.indexOf(item) === idx).join(','),
           sell: sellConv.filter((item, idx) => sellConv.indexOf(item) === idx).join(','),
           loadData: (new Date()).toISOString()})
-        console.log(`For ${tktfName} loaded ${buyConv.length + sellConv.length} timestamps`)
+        log.info(`For ${tktfName} loaded ${buyConv.length + sellConv.length} timestamps`)
         msgArr.push(`${tktfName} (${buyConv.length + sellConv.length})`)
       } catch (err) {
-        console.error(err)
+        log.error(`Signal file "${fileData.name}": saving signals for "${tktfName}" failed:`, err)
+        failedArr.push(tktfName)
       }
     }
-    return `- ${fileData.name}. Timestamps saved for tickers: ${msgArr.join(', ')}. Data saved in storage.\n`
+    const failedText = failedArr.length ? ` Saving failed for: ${failedArr.join(', ')}.` : ''
+    return {text: `- ${fileData.name}. Timestamps saved for tickers: ${msgArr.join(', ')}. Data saved in storage.${failedText}\n`, isError: failedArr.length > 0}
   } catch (err) {
-    console.error(fileData.name)
-    console.error(err)
-    return `- ${fileData.name}: ${err.message}\n`
+    log.error(`Signal file "${fileData.name}" parse failed:`, err)
+    return {text: `- ${fileData.name}: ${err && err.message ? err.message : err}\n`, isError: true}
   }
 }
 

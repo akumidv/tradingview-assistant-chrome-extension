@@ -32,13 +32,17 @@ const SEL = {
   tradesTabActive: '[id="List of Trades"][class*="selected"]',
   goproPopupCloseButton: '[data-dialog-name="gopro"][class^="dialog"] button[class*="close"]',
   // Key stats overview: 4 cards at the top (Total P&L, Max drawdown, Profitable trades, Profit factor)
-  reportContent: '[class^="backtestingReport"] [class^="container"] [class^="reportContainer"]',
+  // 2026-10 report root renamed backtestingReport -> reportShell; both are kept so either UI version works
+  reportRoot: '[class^="reportShell"], [class^="backtestingReport"]',
+  reportContent: '[class^="reportShell"] [class^="reportContainer"], [class^="backtestingReport"] [class^="container"] [class^="reportContainer"]',
   metricsValueCell: '[class^="reportContainer-"] [class^="containerCell"]',
+  // 2026-10 every report value is a card: [class^="title"] name + [class^="value"] / [class^="change"] (%) spans
+  metricCell: '[class^="containerCell"]',
 
   // Section groups (as of 2026-06): each tableWrapper contains tabs + table
   // Groups: "Return details", "Trades analysis", "Equity run-ups and drawdowns", "Capital Efficiency"
   // Tab buttons within each group (button[id][aria-selected]); skip id="strategy-report-summary" (shows cards, not table)
-  metricSectionGroup: '[class^="backtestingReport"] [class^="tableWrapper"]',
+  metricSectionGroup: '[class^="reportShell"] [class^="tableWrapper"], [class^="backtestingReport"] [class^="tableWrapper"]',
   metricOverviewTab: 'button#strategy-report-summary',
   // Tab button IDs for reference: returns-summary-table, benchmarking-table, risk-adjusted-performance-table,
   //   trades-analysis-table, run-ups-table, drawdowns-table, capital-usage-table, margin-usage-table

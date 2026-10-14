@@ -1,23 +1,31 @@
-<!DOCTYPE>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <head>
-        <title>TradingView Assistant</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta http-equiv="content-type" content="text/html; charset=utf-8">
-        <script src="metrics-options.js"></script>
-        <script src="assistant.js"></script>
-        <link rel="stylesheet" type="text/css" href="style.css">
-    </head>
+    <title>TradingView Assistant</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="metrics-options.js"></script>
+    <script src="assistant.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
 <body>
 <div class="wrapper">
+    <div id="whatsNewBar" class="whats-new-bar" hidden>
+        <button id="whatsNewOpen" class="whats-new-open">Updated to <span id="whatsNewVersion"></span> &mdash;
+            see what's new &#9656;</button>
+        <button id="whatsNewDismiss" class="close-button" title="Close and do not show again">&#10005;</button>
+    </div>
+    <div class="popup_header">
+        <h2>TradingView Assistant</h2>
+    </div>
+    <div class="tabs__links">
+        <a data-tab="1">Testing a strategy</a>
+        <a data-tab="2">Results</a>
+        <a data-tab="3">External signals</a>
+        <a data-tab="4">Options & Tools</a>
+        <a data-tab="5">Help</a>
+    </div>
     <div class="content">
-        <div class="popup_header">
-            <h2>TradingView Assistant</h2>
-        </div>
-
-
         <div class="tabs">
             <div id="content-1">
                 <div id="warningBacktest" class="subheader">
@@ -270,6 +278,33 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 </div>
                 <div class="row">
                     <div class="column left">
+                        <p>Also parse the report tabs for metrics missing from TradingView data (CAGR, expectancy,
+                            outliers, streaks, periodical, time patterns). Slower: every tab is opened on each backtest.
+                            Applies only when the report is read from TradingView data (the fast mode). When the
+                            extension falls back to parsing the report page, all tabs are parsed anyway and this option
+                            is ignored.</p>
+                        <p></p>
+                    </div>
+                    <div class="column right">
+                        <label></label>
+                        <input id="parseExtraReportTabs" type="checkbox"/>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>Experimental, faster: set strategy parameters through the TradingView chart API instead of the
+                            strategy dialog. Risk: TradingView may change this API without notice (the test then falls
+                            back to the dialog), and automated use of it may violate TradingView terms and could lead
+                            to account restrictions. Use at your own risk.</p>
+                        <p></p>
+                    </div>
+                    <div class="column right">
+                        <label></label>
+                        <input id="setParamsByApi" type="checkbox"/>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
                         <p>Download results without waiting for a click on the OK button.</p>
                         <p></p>
                     </div>
@@ -292,72 +327,76 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
             </div>
 
 
-            <div id="content-5">
-                <div class="row">
-                    <h3>Optimization Methods</h3>
-                    <p style="padding: 2px;">The <strong>sequential improvements</strong> optimization method is
-                        adjusts the best value already found. It does not perform a complete search of
-                        the entire parameter space.
-                        The logic works as follows. The current best state (parameters for max results) is
-                        taken. The first parameter is taken and all its values in the range are checked
-                        sequentially. If the best result is found, then further verification is carried out from
-                        this state. Then the next parameter is taken and all its values in the range are checked and
-                        etc.</p>
-                    <p style="padding: 2px;">The <strong>brute force</strong> optimization method tests all values
-                        in the strategy parameter space.</p>
-                    <p style="padding: 2px;">The <strong>annealing</strong> method is an optimization method in
-                        which the search for the maximum possible result is carried out in <a
-                                href="https://en.wikipedia.org/wiki/Simulated_annealing" target="_blank">fewer
-                            steps</a>
-                        The method works this way: first, the best state and its parameters are determined. One
-                        parameter is randomly determined, then its value from range of possible values is randomly
-                        selected. The status in this value is checked. If it is better, then it is remembered and
-                        further parameter changes are made from it.
-                        As the number of tests increases, the spread of parameter values decreases around those
-                        already found. That is, if at the beginning of testing the values are randomly selected from
-                        the entire range of possible parameter values, then as optimization is carried out, this
-                        spread decreases ("cools down") near current values. In the first phase of the test, this
-                        method searches across the parameter space; in the final stage, it tries to improve the best
-                        state already found.
-                        So that the system does not get stuck in one parameter area, as it happens with the
-                        sequential method, not one random parameter changes periodically, but all at once.
-                        .</p>
-                    <p style="padding: 2px;">The <strong>random improvements</strong> method is the simplest. One
-                        parameter is randomly determined and then a value is randomly selected for it from the
-                        entire range of possible values. If the condition is better, then it is remembered. And then
-                        the parameters from this state are randomly changed.</p>
-                    <p style="padding: 2px;">The <strong>random</strong> method - always selects random values for
-                        all parameters at once (default)</p>
-
-                </div>
-            </div>
-            <div class="tabs__links">
-                <a href="#content-1">Testing a strategy</a>
-                <a href="#content-2">Results</a>
-                <a href="#content-3">External signals</a>
-                <a href="#content-4">Options & Tools</a>
-                <a href="#content-5">Help</a>
-            </div>
-        </div>
-
-
-        <div id="shim"></div>
-        <div id="msgbx">
-            <div class="msg-header">
-                <h5>Warning.</h5>
-            </div>
-            <p id="msg-text"></p>
-            <div style="text-align: center">
-                <button id="closeMsg" class="button">Close</button>
+            <div id="content-5" class="help">
+                <details>
+                    <summary>What's new</summary>
+                    <div id="helpChangelog" class="changelog"></div>
+                </details>
+                <details open>
+                    <summary>About and contacts</summary>
+                    <ul class="help-links">
+                        <li><a href="https://github.com/akumidv/tradingview-assistant-chrome-extension"
+                               target="_blank">Description and source code</a> of the extension.</li>
+                        <li>Report a problem in <a
+                                href="https://github.com/akumidv/tradingview-assistant-chrome-extension/issues"
+                                target="_blank">GitHub issues</a>: attach a full screenshot of the TradingView page and,
+                            if possible, the browser console output (F12, Console tab).</li>
+                        <li><a href="https://github.com/akumidv/tradingview-assistant-chrome-extension#contacts"
+                               target="_blank">Contact the developer</a>.</li>
+                    </ul>
+                </details>
+                <details open>
+                    <summary>Optimization methods</summary>
+                    <dl class="help-methods">
+                        <dt>Random <span class="muted">(default)</span></dt>
+                        <dd>Selects random values for all parameters at once on every test.</dd>
+                        <dt>Random improvement</dt>
+                        <dd>Changes one random parameter to a random value from its whole range. A better result
+                            becomes the new state, and the next changes start from it.</dd>
+                        <dt>Sequential improvement</dt>
+                        <dd>Improves the best state already found, one parameter at a time: all values of the first
+                            parameter are checked, the best one is kept, then the next parameter is checked, and so on.
+                            It does not search the whole parameter space.</dd>
+                        <dt>Annealing</dt>
+                        <dd>Finds a good result in <a href="https://en.wikipedia.org/wiki/Simulated_annealing"
+                                                      target="_blank">fewer steps</a>. It starts from the best state
+                            and changes parameters to random values; a better result becomes the new state. As the tests
+                            go on, the spread of values narrows ("cools down") around the best values found: first it
+                            explores the whole space, at the end it refines the best state. From time to time it
+                            changes all parameters at once, so it does not get stuck in one area like the sequential
+                            method.</dd>
+                        <dt>Brute force</dt>
+                        <dd>Tests every combination of values in the parameter space.</dd>
+                    </dl>
+                    <p class="help-more">More details in the
+                        <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension#optimization-methods"
+                           target="_blank">repository description</a>.</p>
+                </details>
             </div>
         </div>
     </div>
     <div class="footer">
-        <p class="footer footer-text">Active automated use of TradingView may violate TradingView rules and can lead
-            to an account ban. This extension does not bypass TradingView protective mechanisms, but it still performs
-            repeated browser UI actions. Use it carefully and at your own risk.
-            Additional <a href="https://github.com/akumidv/tradingview-assistant-chrome-extension" target="_blank">info
-                and contact to developer</a></p>
+        <p class="footer-text">Automated use of TradingView may violate its rules and lead to an account ban. The
+            extension does not bypass its protections but repeats UI actions: use it carefully, at your own risk.</p>
+    </div>
+
+    <div id="whatsNewPanel" class="whats-new-panel" hidden>
+        <div class="whats-new-panel-header">
+            <h3>What's new</h3>
+            <button id="whatsNewClose" class="close-button" title="Close and do not show again">&#10005;</button>
+        </div>
+        <div id="whatsNewText" class="changelog whats-new-panel-body"></div>
+    </div>
+
+    <div id="shim"></div>
+    <div id="msgbx">
+        <div class="msg-header">
+            <h5>Warning.</h5>
+        </div>
+        <p id="msg-text"></p>
+        <div style="text-align: center">
+            <button id="closeMsg" class="button">Close</button>
+        </div>
     </div>
 </div>
 </body>

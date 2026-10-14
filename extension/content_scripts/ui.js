@@ -100,6 +100,7 @@ ui.stylePopup = `<style>
   .iondvpopup-body > p {
       line-height: 1.2;
       margin-top: 6px;
+      white-space: pre-wrap;
     }
   .iondvpopup-button {
     position: relative;
@@ -202,6 +203,33 @@ ui.showWarningPopup = async (msgText) => {
   return await ui.alertPopup(msgText, false)
 }
 
+ui.ISSUES_URL = 'https://github.com/akumidv/tradingview-assistant-chrome-extension/issues'
+
+// What to do when a failure is not the user's to fix: where to report it and what to attach
+ui.issueHelpText = () => {
+  const version = chrome.runtime.getManifest().version
+  return 'If it repeats after reloading the page, TradingView may have changed its UI.\n' +
+    `Please check <a href="${ui.ISSUES_URL}" target="_blank">GitHub issues</a> and open a new one if it is not reported yet. Include:\n` +
+    `- extension version ${version} and your browser;\n` +
+    '- TradingView UI language;\n' +
+    '- the console log: F12 → Console, filter "[tv-assistant]", levels including "Verbose".'
+}
+
+ui.showIssuePopup = async (msgText) => {
+  return await ui.alertPopup(`${msgText}\n\n${ui.issueHelpText()}`, true)
+}
+
+// Shows a caught error by kind: user-resolvable errors as is, everything else with the issue instructions
+ui.showErrorByKind = async (err, context) => {
+  const text = err && err.message ? err.message : `${err}`
+  if (err instanceof UserActionError)
+    return await ui.showErrorPopup(text)
+  log.error(`${context} failed:`, err)
+  if (err instanceof UiChangedError)
+    return await ui.showIssuePopup(text)
+  return await ui.showIssuePopup(`An unexpected error occurred while running "${context}":\n${text}`)
+}
+
 ui.statusMessageRemove = () => {
   const statusMessageEl = document.getElementById('iondvStatus')
   if (statusMessageEl)
@@ -219,6 +247,24 @@ ui.autoCloseAlert = (msg, duration = 3000) => {
   document.body.appendChild(altEl)
 }
 
+
+// A short notice that does not block the page or the test: one element, replaced by the next notice
+ui.showToast = (msgText, duration = 1500) => {
+  let toastEl = document.getElementById('iondvToast')
+  if (!toastEl) {
+    toastEl = document.createElement('div')
+    toastEl.id = 'iondvToast'
+    toastEl.setAttribute('style', 'position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 10000;' +
+      'max-width: 600px; padding: 8px 14px; background-color: #fffde0; color: black; border: 1px solid lightblue;' +
+      'box-shadow: 3px 3px 7px #777; font-family: arial; font-size: 13px; pointer-events: none;' +
+      'white-space: nowrap; overflow: hidden; text-overflow: ellipsis;')
+    document.body.appendChild(toastEl)
+  }
+  toastEl.textContent = msgText
+  toastEl.style.display = 'block'
+  clearTimeout(ui._toastTimer)
+  ui._toastTimer = setTimeout(() => { toastEl.style.display = 'none' }, duration)
+}
 
 ui.styleValStausMessage = `
 .button {
@@ -293,7 +339,7 @@ ui.statusMessage = (msgText, extraHeader = null) => {
   const btnClose = document.getElementById('iondvBoxClose')
   if (btnClose) {
     btnClose.onclick = () => {
-      console.log('Stop clicked')
+      log.info('Stop clicked')
       action.workerStatus = null
     }
   }
@@ -418,7 +464,9 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
               }
             }
             space = space == null ? paramSpace : space * paramSpace
-          } catch {}
+          } catch (err) {
+            log.debug(`Parameter space calculation for "${nameEl.innerText}" failed:`, err)
+          }
         }
       }
       document.getElementById('cyclesAll').innerHTML=String(space !== null ? space : 0)
@@ -447,7 +495,9 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       try {
         const cyclesEl = document.getElementById('stratParamCycles')
         return cyclesEl && cyclesEl.value ? parseInt(cyclesEl.value) : 100
-      } catch {}
+      } catch (err) {
+        log.debug('Reading cycles failed, default 100 is used:', err)
+      }
       return 100
     }
 
@@ -536,7 +586,6 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       const btnClose = document.getElementById('stratParamCancel')
       if (btnClose) {
         btnClose.onclick = () => {
-          console.log('Cancel')
           removeParamWindow()
           return resolve(null)
         }
@@ -545,7 +594,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       if (btnSaveRun) {
         btnSaveRun.onclick = () => {
           const paramRange = updateParamsAndSpace()
-          console.log('Save and run')
+          log.debug('Save and run')
           const cycles = getCycles()
           removeParamWindow()
           return resolve({cycles: cycles, paramRange: paramRange })
@@ -554,7 +603,7 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       const btnDefRun = document.getElementById('stratParamDefRun')
       if (btnDefRun) {
         btnDefRun.onclick = () => {
-          console.log('Run default')
+          log.debug('Run default')
           const cycles = getCycles()
           removeParamWindow()
           return resolve({cycles: cycles, paramRange: null })

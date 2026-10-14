@@ -21,12 +21,24 @@ page.waitForTimeout = async (timeout = 2500) => new Promise(resolve => setTimeou
 page.waitForSelector = async (selector, timeout = 5000, isHide = false, parentEl = null) => {
   const root = parentEl || document
   const tikTime = timeout === 0 ? 1000 : 50
-  let elem = null
-  try { elem = root.querySelector(selector) } catch {}
+  // An invalid selector still reads as "not found", but is reported once per call so a broken SEL entry is visible
+  let isInvalidReported = false
+  const query = () => {
+    try {
+      return root.querySelector(selector)
+    } catch (err) {
+      if (!isInvalidReported)
+        log.warn(`waitForSelector: invalid selector "${selector}":`, err)
+      isInvalidReported = true
+      return null
+    }
+  }
+  let elem = query()
   let elapsed = 0
-  while (timeout === 0 || (!isHide && !elem) || (isHide && !!elem)) {
+  // timeout 0 waits without a limit, but still only until the element appears (or disappears for isHide)
+  while ((!isHide && !elem) || (isHide && !!elem)) {
     await page.waitForTimeout(tikTime)
-    try { elem = root.querySelector(selector) } catch {}
+    elem = query()
     elapsed += tikTime
     if (timeout !== 0 && elapsed >= timeout)
       break

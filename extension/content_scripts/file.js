@@ -9,6 +9,7 @@ file.saveAs = (text, filename) => {
     aData.parentNode.removeChild(aData);
 }
 
+// handler(file) returns {text, isError}: any failed file turns the result popup into a warning
 file.upload = async (handler, endOfMsg, isMultiple = false) => {
   let fileUploadEl = document.createElement('input');
   fileUploadEl.type = 'file';
@@ -16,11 +17,23 @@ file.upload = async (handler, endOfMsg, isMultiple = false) => {
     fileUploadEl.multiple = 'multiple';
   fileUploadEl.addEventListener('change', async () => {
     let message = isMultiple ? 'File upload results:\n' : 'File upload result:\n'
+    let hasError = false
     for(let file of fileUploadEl.files) {
-      message += await handler(file)
+      try {
+        const result = await handler(file)
+        message += result.text
+        hasError = hasError || result.isError
+      } catch (err) {
+        log.error(`Upload of file "${file.name}" failed:`, err)
+        message += `  - ${file.name}: ${err && err.message ? err.message : err}\n`
+        hasError = true
+      }
     }
     message += endOfMsg ? '\n' + endOfMsg : ''
-    await ui.showPopup(message)
+    if (hasError)
+      await ui.showWarningPopup(message)
+    else
+      await ui.showPopup(message)
     ui.isMsgShown = false
   });
   fileUploadEl.click();
@@ -41,7 +54,7 @@ file.parseCSV = async (fileData) => {
         if (csvData && csvData.length)
           return resolve(csvData)
       } catch (err) {
-        console.error(err)
+        log.error(`CSV parsing of file "${CSV_FILENAME}" failed:`, err)
         return reject(`CSV parsing error: ${err.message}`)
       }
       return reject(`there is no data in the file`)
@@ -58,7 +71,7 @@ file.uploadHandler = async (fileData) => {
   const headers = Object.keys(csvData[0])
   const missColumns = ['Name','Value'].filter(columnName => !headers.includes(columnName.toLowerCase()))
   if(missColumns && missColumns.length)
-    return `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nSet parameters canceled.\n`
+    return {text: `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nSet parameters canceled.\n`, isError: true}
   csvData.forEach(row => {
     if(row['name'] === '__indicatorName')
       strategyName = row['value']
@@ -66,13 +79,13 @@ file.uploadHandler = async (fileData) => {
       propVal[row['name']] = row['value']
   })
   if(!strategyName)
-    return 'The name for indicator in row with name ""__indicatorName"" is missed in CSV file'
+    return {text: 'The indicator name (row "__indicatorName") is missing in the CSV file.', isError: true}
   const res = await tv.setStrategyParams(strategyName, propVal, false, true)
   const lastSetResult = tv.lastSetStrategyResult || {}
   if (res) {
-    return 'All settings applied successfully.'
+    return {text: 'All settings applied successfully.', isError: false}
   }
-  return `The name "${strategyName}" of the indicator from the file does not match the name in the open window`
+  return {text: `The name "${strategyName}" of the indicator from the file does not match the name in the open window`, isError: true}
 }
 
 function parseCSV2JSON(s, sep= ',') {

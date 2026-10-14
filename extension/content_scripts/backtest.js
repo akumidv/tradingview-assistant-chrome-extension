@@ -9,9 +9,11 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
   testResults.perfomanceSummary = []
   testResults.filteredSummary = []
   testResults.shortName = strategyData.name
-  console.log('testStrategy', testResults.shortName, testResults.isMaximizing ? 'max' : 'min', 'value of', testResults.optParamName,
+  tv.resetReportSources()
+  tv.resetParamSetter(testResults.setParamsByApi)
+  log.info('testStrategy', testResults.shortName, model.isMaximizing(testResults) ? 'max' : 'min', 'value of', testResults.optParamName,
     'by', testResults.method,
-    (testResults.filterAscending === null ? 'filter off' : 'filter ascending' + testResults.filterAscending + ' value ' +
+    (testResults.filterAscending === null ? 'filter off' : 'filter ascending ' + testResults.filterAscending + ' value ' +
       testResults.filterValue + ' by ' + testResults.filterParamName),
     testResults.cycles, 'times')
   testResults.paramsNames = Object.keys(allRangeParams)
@@ -28,7 +30,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     testResults.perfomanceSummary.push(initRes.data)
     try {
       ui.statusMessage(`<p>From default and previous tests. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`)
-      console.log('Init best value', testResults.bestValue)
+      log.info('Init best value', testResults.bestValue)
     } catch {
     }
   }
@@ -40,7 +42,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
 
   for (let i = 0; i < testResults.cycles; i++) {
     if (action.workerStatus === null) {
-      console.log('Stop command detected')
+      log.info('Stop command detected')
       break
     }
     let startTime = new Date()
@@ -71,7 +73,7 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
           isEnd = true
     }
     if (optRes !== null && optRes.hasOwnProperty('forceStop') && optRes.forceStop) {
-      throw new Error('Testing stopped due to missing optimization parameter in report data: ' + optRes.message)
+      throw new UserActionError('Testing stopped: the optimization parameter is missing in the report data. ' + optRes.message)
     }
     if (isEnd) {
       break
@@ -86,7 +88,8 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
         parseTime = optRes.data['_parseTime_']
         optRes['data']['_duration_'] = durationTime
       }
-    } catch {
+    } catch (err) {
+      log.debug(err)
     }
     if (optRes.hasOwnProperty('data') && optRes.hasOwnProperty('bestValue') && optRes.bestValue !== null && optRes.hasOwnProperty('bestPropVal')) {
       testResults.bestValue = optRes.bestValue
@@ -188,14 +191,14 @@ async function getInitBestValues(testResults) {
       resVal = newVal
       resPropVal = newPropVal
       resData = newResData
-    } else if (testResults.isMaximizing && newVal > resVal) {
+    } else if (model.isMaximizing(testResults) && newVal > resVal) {
       resVal = newVal
       resPropVal = newPropVal
       resData = newResData
-    } else if (!testResults.isMaximizing && newVal < resVal) {
-      resVal = newVal < resVal ? newVal : resVal
-      resPropVal = newVal < resVal ? newPropVal : resPropVal
-      resData = newVal < resVal ? newResData : resData
+    } else if (!model.isMaximizing(testResults) && newVal < resVal) {
+      resVal = newVal
+      resPropVal = newPropVal
+      resData = newResData
     }
   }
 
@@ -209,11 +212,15 @@ async function getInitBestValues(testResults) {
   if (res['error'] === null)
     resData = calculateAdditionValuesToReport(resData)
 
-  if (resData && !Object.hasOwn(resData, testResults.optParamName)) {
+  if (res.isNoTrades && typeof resData[testResults.optParamName] !== 'number') {
+    log.warn(`No trades for the current parameters - no initial "${testResults.optParamName}" value.`, resData['comment'])
+    ui.statusMessage(`No trades for the current parameters - the test starts without an initial "${testResults.optParamName}" value.`)
+    resData = {}
+  } else if (resData && typeof resData[testResults.optParamName] !== 'number') {
     const numericKeys = Object.keys(resData).filter(k => !k.startsWith('_') && typeof resData[k] === 'number')
     if (numericKeys.length) {
       const visibleMetricKeys = numericKeys.slice(0, 5)
-      console.warn(
+      log.warn(
         `Optimization parameter "${testResults.optParamName}" was not found in the report.`,
         { availableMetrics: numericKeys }
       )
@@ -223,19 +230,21 @@ async function getInitBestValues(testResults) {
         `${numericKeys.length > visibleMetricKeys.length ? `\n...and ${numericKeys.length - visibleMetricKeys.length} more. See console for the full list.` : ''}`
       )
     } else {
-      console.warn(
+      log.warn(
         `No report data for "${testResults.optParamName}".`,
         { reportComment: resData['comment'] || null, reportData: resData }
       )
-      await ui.showWarningPopup(
-        `No report data for "${testResults.optParamName}".\n\n${resData['comment'] || 'TradingView did not provide a parseable report table.'}`
-      )
+      // Without a comment from the report, the report table itself could not be parsed: most likely a UI change
+      if (resData['comment'])
+        await ui.showWarningPopup(`No report data for "${testResults.optParamName}".\n\n${resData['comment']}`)
+      else
+        await ui.showIssuePopup(`No report data for "${testResults.optParamName}".\n\nTradingView did not provide a parseable report table.`)
     }
     return null
   }
 
-  if (resData && Object.hasOwn(resData, testResults.optParamName)) {
-    console.log(`Init from current "${testResults.optParamName}":`, resData[testResults.optParamName])
+  if (resData && typeof resData[testResults.optParamName] === 'number') {
+    log.debug(`Init from current "${testResults.optParamName}":`, resData[testResults.optParamName])
     // resVal = resData[testResults.optParamName]
     resData['comment'] = resData['comment'] ? `Current parameters. ${resData['comment']}` : 'Current parameters.'
     Object.keys(resPropVal).forEach(key => resData[`__${key}`] = resPropVal[key])
@@ -248,14 +257,14 @@ async function getInitBestValues(testResults) {
     if (resPropVal === null || Object.keys(resPropVal).some(key => resPropVal[key] !== defPropVal[key])) {
       await page.waitForTimeout(testResults.backtestDelay * 1000)
       const res = await backtest.getTestIterationResult(testResults, defPropVal, true) // Ignore error because propValues can be the same
-      if (res && res.data && Object.hasOwn(res.data, testResults.optParamName)) {
-        console.log(`Init from default "${testResults.optParamName}":`, res.data[testResults.optParamName])
+      if (res && res.data && typeof res.data[testResults.optParamName] === 'number') {
+        log.debug(`Init from default "${testResults.optParamName}":`, res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
         Object.keys(defPropVal).forEach(key => res.data[`__${key}`] = defPropVal[key])
         setBestVal(res.data[testResults.optParamName], defPropVal, res.data)
       }
     } else {
-      console.log(`Default "${testResults.optParamName}" equal current:`, resData[testResults.optParamName])
+      log.debug(`Default "${testResults.optParamName}" equal current:`, resData[testResults.optParamName])
     }
   }
 
@@ -266,17 +275,17 @@ async function getInitBestValues(testResults) {
       const bestPropVal = expandPropVal(testResults.startParams.best, resPropVal)
       await page.waitForTimeout(testResults.backtestDelay * 1000)
       const res = await backtest.getTestIterationResult(testResults, bestPropVal, true)  // Ignore error because propValues can be the same
-      if (res && res.data && Object.hasOwn(res.data, testResults.optParamName)) {
-        console.log(`Init from best "${testResults.optParamName}":`, res.data[testResults.optParamName])
+      if (res && res.data && typeof res.data[testResults.optParamName] === 'number') {
+        log.debug(`Init from best "${testResults.optParamName}":`, res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
         Object.keys(bestPropVal).forEach(key => res.data[`__${key}`] = bestPropVal[key])
         setBestVal(res.data[testResults.optParamName], bestPropVal, res.data)
       }
     } else {
-      console.log(`Best "${testResults.optParamName}" equal previous (current or default):`, resData[testResults.optParamName])
+      log.debug(`Best "${testResults.optParamName}" equal previous (current or default):`, resData[testResults.optParamName])
     }
   }
-  console.log(`For init "${testResults.optParamName}":`, resVal)
+  log.info(`For init "${testResults.optParamName}":`, resVal)
 
   if (resVal !== null && resPropVal !== null && resData !== null)
     return { bestValue: resVal, bestPropVal: resPropVal, data: resData }
@@ -296,7 +305,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
     const setTime = Math.round((new Date() - startTime) / 1000 * 10) / 10
     startTime = new Date()
     const res = await tv.getPerformance(testResults)
-    const waitTime = Object.hasOwn(res, 'waitTime') ? res._waitTime : 0
+    const waitTime = Object.hasOwn(res, '_waitTime') ? res._waitTime : 0
     const parseTime = Math.round((new Date() - startTime - waitTime) / 1000 * 10) / 10
 
     Object.keys(propVal).forEach(key => res['data'][`__${key}`] = propVal[key])
@@ -317,7 +326,7 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
     res['data']['_parseTime_'] = parseTime
     return res
   } catch (err) {
-    console.log('Error to getTestIterationResult ', err)
+    log.error('getTestIterationResult failed:', err)
     return { 'data': {} }
   }
   // return {error: isProcessError ? 2 : !isProcessEnd ? 3 : null, message: reportData['comment'], data: reportData}
@@ -325,7 +334,8 @@ backtest.getTestIterationResult = async (testResults, propVal, isIgnoreError = f
 
 async function getResWithBestValue(res, testResults, bestValue, bestPropVal, propVale) {
   res = !res ? {} : res
-  const hasOptMetric = res.data && Object.hasOwn(res.data, testResults.optParamName)
+  // A "—" card value (no trades) is not a metric value
+  const hasOptMetric = res.data && typeof res.data[testResults.optParamName] === 'number'
   const hasNoError = !Object.hasOwn(res, 'error') || res.error === null
   const availableMetricKeys = res.data
     ? Object.keys(res.data).filter(k => !k.startsWith('_') && typeof res.data[k] === 'number')
@@ -333,6 +343,21 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
   const isStaleUnchanged = Boolean(res.isStaleUnchanged)
   const isEmptyReport = hasNoError && (!Object.hasOwn(res, 'data') || availableMetricKeys.length === 0)
   const isDegenerate = hasNoError && !isEmptyReport && !hasOptMetric
+
+  // No closed trades for these parameters: a valid outcome of the strategy, not missing data - record it
+  // as filtered with an explicit comment, keep the run going and do not count it as a missing-data miss.
+  if (res.isNoTrades && hasNoError) {
+    testResults.missingOptParamStreak = 0
+    res.bestValue = bestValue
+    res.bestPropVal = bestPropVal
+    res.isFiltered = true
+    res.forceStop = false
+    res.currentValue = 'no trades'
+    res.message = res.data['comment'] || 'No trades for these parameters'
+    testResults.filteredSummary.push(res.data)
+    await storage.setKeys(storage.STRATEGY_KEY_RESULTS, testResults)
+    return res
+  }
 
   // Stale (TV did not recompute, value unchanged): record the result but flag it, keep the run
   // going, and do NOT count it as a missing-data miss (the data exists, it is just not fresh).
@@ -398,13 +423,13 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
   if (bestValue === null || typeof bestValue === 'undefined') {
     res.bestValue = res.data[testResults.optParamName]
     res.bestPropVal = propVale
-    console.log(`Best value (first): ${bestValue} => ${res.bestValue}`)
-  } else if (!isFiltered && testResults.isMaximizing) {
+    log.debug(`Best "${testResults.optParamName}" improved: ${bestValue} → ${res.bestValue}`, res.bestPropVal)
+  } else if (!isFiltered && model.isMaximizing(testResults)) {
     res.bestValue = bestValue < res.data[testResults.optParamName] ? res.data[testResults.optParamName] : bestValue
     res.bestPropVal = bestValue < res.data[testResults.optParamName] ? propVale : bestPropVal
     if (bestValue < res.data[testResults.optParamName]) {
       res.isBestChanged = true
-      console.log(`Best value max: ${bestValue} => ${res.bestValue}`, res.bestPropVal)
+      log.debug(`Best "${testResults.optParamName}" improved: ${bestValue} → ${res.bestValue}`, res.bestPropVal)
     } else {
       res.isBestChanged = false
     }
@@ -414,7 +439,7 @@ async function getResWithBestValue(res, testResults, bestValue, bestPropVal, pro
     res.bestPropVal = bestValue > res.data[testResults.optParamName] ? propVale : bestPropVal
     if (bestValue > res.data[testResults.optParamName]) {
       res.isBestChanged = true
-      console.log(`Best value min: ${bestValue} => ${res.bestValue}`)
+      log.debug(`Best "${testResults.optParamName}" improved: ${bestValue} → ${res.bestValue}`, res.bestPropVal)
     } else {
       res.isBestChanged = false
     }
@@ -436,7 +461,7 @@ function randomNormalDistribution(min, max) {
   let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
   num = num / 10.0 + 0.5; // Translate to 0 -> 1
   if (num > 1 || num < 0)
-    return randomNormalDistribution() // resample between 0 and 1
+    return randomNormalDistribution(min, max) // resample within the requested range
   else {
     num *= max - min // Stretch to fill range
     num += min // offset to min
@@ -455,11 +480,10 @@ function randomInteger(min = 0, max = 10) {
 async function optAllRandomIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
   const propData = optRandomGetPropertiesValues(allRangeParams, null, testResults.paramConditions)
   let propVal = propData.data
-  const changedParam = propData.hasOwnProperty('changedParam') ? propData.changedParam : null
   if (bestPropVal)
     propVal = expandPropVal(propVal, bestPropVal)
 
-  let res = await backtest.getTestIterationResult(testResults, propVal, false, false, changedParam)
+  let res = await backtest.getTestIterationResult(testResults, propVal)
   res = backtest._updateMessage(res, propData.message)
   return await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
 }
@@ -515,22 +539,27 @@ function expandPropVal(propVal, basePropVal) {
 // Annealing optimization
 async function optAnnealingIteration(allRangeParams, testResults, bestValue, bestPropVal, optimizationState) {
   const initTemp = 1// TODO to param? Find the best match?
-  const isMaximizing = testResults.hasOwnProperty('isMaximizing') ? testResults.isMaximizing : true
+  const isMaximizing = model.isMaximizing(testResults) // Same direction source as getResWithBestValue
   if (!optimizationState.isInit) {
     optimizationState.currentTemp = initTemp
 
-    if (!bestPropVal || bestValue === 'undefined') {
+    if (!bestPropVal || typeof bestValue !== 'number') {
       let propVal = optAnnealingNewState(allRangeParams) // Random value
       if (bestPropVal)
         propVal = expandPropVal(propVal, bestPropVal)
-      optimizationState.lastState = propVal
-      const res = await backtest.getTestIterationResult(testResults, optimizationState.lastState)
-      if (!res || !res.data)
+      // The random start is a regular cycle: record it like any other iteration. A rejected start
+      // (error, filtered, no trades, missing metric) leaves the state uninitialised, so the next
+      // cycle draws another random start.
+      let res = await backtest.getTestIterationResult(testResults, propVal)
+      res = await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
+      if (res.forceStop || res.error !== null || res.isFiltered || !res.data || typeof res.data[testResults.optParamName] !== 'number')
         return res
-
+      optimizationState.lastState = propVal
       optimizationState.lastEnergy = res.data[testResults.optParamName]
       optimizationState.bestState = optimizationState.lastState;
       optimizationState.bestEnergy = optimizationState.lastEnergy;
+      optimizationState.isInit = true
+      return res
     } else {
       optimizationState.lastState = bestPropVal
       optimizationState.bestState = bestPropVal;
@@ -540,7 +569,6 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
 
     optimizationState.isInit = true
   }
-  const iteration = testResults.perfomanceSummary.length
 
 
   let propData = optAnnealingNewState(allRangeParams, optimizationState.currentTemp, optimizationState.lastState)
@@ -551,7 +579,8 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
   let res = await backtest.getTestIterationResult(testResults, currentState)
   res = backtest._updateMessage(res, propData.message)
   res = await getResWithBestValue(res, testResults, bestValue, bestPropVal, propVal)
-  if (res.forceStop || res.error !== null || !res.data || !res.data.hasOwnProperty(testResults.optParamName))
+  // A filtered result (filter parameter, stale report, no trades) is never accepted as the current state
+  if (res.forceStop || res.error !== null || res.isFiltered || !res.data || typeof res.data[testResults.optParamName] !== 'number')
     return res
   const currentEnergy = res.data[testResults.optParamName]
 
@@ -561,8 +590,12 @@ async function optAnnealingIteration(allRangeParams, testResults, bestValue, bes
     res.message += ` The best value ${res.bestValue}.`
   } else {
     const randVal = crypto.getRandomValues(new Uint16Array(1))[0] / 65536 //Math.random()
-    const expVal = Math.exp(-(currentEnergy - optimizationState.lastEnergy) / optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
-    // console.log('#', optimizationState.currentTemp, randVal, expVal, currentEnergy, optimizationState.lastEnergy, currentEnergy - optimizationState.lastEnergy)
+    // Signed improvement: positive is better in the optimisation direction. A missing last energy
+    // (e.g. a no-trades start) is treated as worse than any numeric current value.
+    const lastEnergy = optimizationState.lastEnergy
+    const delta = typeof lastEnergy !== 'number' ? Infinity
+      : isMaximizing ? currentEnergy - lastEnergy : lastEnergy - currentEnergy
+    const expVal = delta > 0 ? 1 : Math.exp(delta / optimizationState.currentTemp) // Math.exp(-10) ~0,000045,  Math.exp(-1) 0.3678 Math.exp(0); => 1
     if (randVal <= expVal) { // TODO need to optimize
       optimizationState.lastState = currentState;
       optimizationState.lastEnergy = currentEnergy;

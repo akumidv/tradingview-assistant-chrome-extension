@@ -1,9 +1,6 @@
-/** {*/
-/*    box-sizing: border-box;*/
-/*}*/
-
 :root {
     --warningVisible: none;
+    --popupHeight: 600px; /* Chrome limits an extension popup to 800x600 */
 }
 
 * {
@@ -11,84 +8,60 @@
     margin: 0;
     padding: 0;
 }
-html{
-    height: 100%;
+
+html, body {
+    height: var(--popupHeight);
     overflow: hidden;
 }
 
-/*body {*/
-/*    font-family: Arial, Helvetica, sans-serif;*/
-/*    font-size: 90%;*/
-/*    color: #2A2E43;*/
-/*    margin: 0;*/
-/*    padding: 0;*/
-/*    min-width: 600px;*/
-/*}*/
-
 body {
-    height: 100%;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 90%;
-    margin: 0;
-    padding: 0;
-    color: #2A2E43; /*#2B2F45;*/
-    min-width: 600px;
-    min-height: 550px;
-    overflow-y: hidden;
-    /*display: flex;*/
-    /*flex-direction: column;*/
+    color: #2A2E43;
+    width: 600px;
 }
 
+/* Fixed-height column: header, tab links and footer stay in place, only the tab content scrolls */
 .wrapper {
-    /*position: relative;*/
+    position: relative;
     display: flex;
     flex-direction: column;
-    min-height: 100%;
+    height: 100%;
 }
+
 .content {
-    flex: 1 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
 }
+
 .popup_header {
-    min-width: 450px;
-    min-height: 85px;
-    padding-top: 5px;
-    padding-bottom: 10px;
-    padding-left: 15px;
-    padding-right: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom-width: 1px;
-    border-bottom-style: solid;
-    border-bottom-color: #AAA;
+    flex: 0 0 auto;
+    padding: 8px 15px;
+    border-bottom: 1px solid #AAA;
 }
 
 .footer {
     flex: 0 0 auto;
-    height: 40px;
     width: 100%;
-    border-top-width: 1px;
-    border-top-style: solid;
-    border-top-color: #AAA;
-    left: 0;
+    border-top: 1px solid #AAA;
 }
 
 .footer-text {
-    font-size: 95%;
+    font-size: 85%;
+    line-height: 1.3;
     color: #555;
     text-align: right;
-    padding: 5px 5px;
+    padding: 3px 6px;
 }
 
 .header {
     padding: 5px 0px;
     text-align: center;
     font-size: 125%;
-
 }
 
 .subheader {
-    /*display: none;*/
     display: var(--warningVisible);
     text-align: center;
     padding-top: 5px;
@@ -101,11 +74,6 @@ body {
     font-size: 110%;
 }
 
-
-.details {
-
-}
-
 .param-container {
     overflow:hidden
 }
@@ -116,6 +84,11 @@ body {
     display:inline-block;
     border: 0px;
     margin: 5px
+}
+
+/* A select is as wide as its longest option: limited, so the whole line fits the popup width */
+.param-box select {
+    max-width: 200px;
 }
 
 .checkbox-minmax {
@@ -139,7 +112,6 @@ body {
 
 
 .row {
-    /*margin:0;*/
     padding: 5px 10px;
     margin-top: 5px;
     clear: both;
@@ -181,7 +153,6 @@ body {
     padding: 10px 10px;
     text-align: center;
     text-decoration: none;
-    /*display: inline-block;*/
     font-size: 14px;
     margin: 4px 2px;
     -webkit-transition-duration: 0.4s; /* Safari */
@@ -233,20 +204,14 @@ body {
     color: white;
 }
 
-.tabs {
-    display: flex;
-    flex-direction: column;
-}
-
+/* Tabs are switched by assistant.js (class "active"), not by URL anchors: an anchor scrolls the popup to the
+   target and shifts the header out of view */
 .tabs__links {
+    flex: 0 0 auto;
     display: flex;
     width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 5px;
-    order: 0;
     white-space: nowrap;
     background-color: #fff;
     border: 1px solid #e3f2fd;
@@ -259,35 +224,157 @@ body {
     padding: 6px 10px;
     text-align: center;
     color: #1976d2;
+    cursor: pointer;
 }
 
 .tabs__links>a:hover {
     background-color: rgba(227, 242, 253, 0.3);
 }
 
-.tabs>#content-1:target~.tabs__links>a[href="#content-1"],
-.tabs>#content-2:target~.tabs__links>a[href="#content-2"],
-.tabs>#content-3:target~.tabs__links>a[href="#content-3"],
-.tabs>#content-4:target~.tabs__links>a[href="#content-4"] {
+.tabs__links>a.active {
     background-color: #bbdefb;
     cursor: default;
 }
 
-.tabs>div:not(.tabs__links) {
+.tabs>div {
     display: none;
-    order: 1;
 }
 
-.tabs>div:target {
+.tabs>div.active {
     display: block;
+}
+
+/* Help tab */
+.help details {
+    padding: 4px 10px;
+}
+
+.help summary {
+    font-size: 115%;
+    font-weight: bold;
+    padding: 4px 0;
+    cursor: pointer;
+}
+
+.help-methods dt {
+    font-weight: bold;
+    margin-top: 6px;
+}
+
+.help-methods dd {
+    margin-left: 12px;
+    line-height: 1.35;
+}
+
+.help-more {
+    margin-top: 8px;
+}
+
+.help-links {
+    margin-left: 18px;
+}
+
+.help-links li {
+    line-height: 1.35;
+    margin: 2px 0;
+}
+
+.muted {
+    color: #777;
+    font-weight: normal;
+}
+
+/* Changelog text rendered from CHANGELOG.md: in the Help tab and in the "What's new" panel */
+.changelog h4 {
+    margin: 8px 0 2px 0;
+    font-size: 105%;
+}
+
+.changelog h5 {
+    margin: 6px 0 2px 0;
+    font-size: 100%;
+}
+
+.changelog ul {
+    margin-left: 18px;
+}
+
+.changelog li, .changelog p {
+    line-height: 1.35;
+    margin: 2px 0;
+}
+
+/* "What's new" notice: a strip above the header, it opens a panel over the whole popup */
+.whats-new-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    background-color: #fff3cd;
+    border-bottom: 1px solid #f0d27a;
+}
+
+.whats-new-bar[hidden], .whats-new-panel[hidden] {
+    display: none;
+}
+
+.whats-new-open {
+    flex: 1 1 auto;
+    text-align: left;
+    padding: 5px 10px;
+    border: none;
+    background: none;
+    color: #664d03;
+    font-size: 100%;
+    cursor: pointer;
+}
+
+.whats-new-open:hover {
+    text-decoration: underline;
+}
+
+.close-button {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    color: #555;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.close-button:hover {
+    color: #ba004a;
+}
+
+.whats-new-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 980;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+}
+
+.whats-new-panel-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 6px 6px 12px;
+    background-color: #fff3cd;
+    border-bottom: 1px solid #f0d27a;
+}
+
+.whats-new-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 6px 12px 12px 12px;
 }
 
 #shim {
     opacity: .75;
-    filter: alpha(opacity=75);
-    -ms-filter: "alpha(opacity=75)";
-    -khtml-opacity: .75;
-    -moz-opacity: .75;
     background: #B8B8B8;
     position: absolute;
     left: 0px;
@@ -315,21 +402,12 @@ body {
     background: #fff;
     border: 1px solid #ccc;
     box-shadow: 3px 3px 7px #777;
-    -webkit-box-shadow: 3px 3px 7px #777;
-    -moz-border-radius: 22px;
-    -webkit-border-radius: 22px;
+    border-radius: 22px;
     z-index: 999;
     display: none
-
 }
 
-.switch-toggle {
-    /*box-shadow: 3px 3px 7px #777;*/
-    /*background: #a9c7d0;*/
-    /*width: 125px;*/
-}
 .switch-toggle > input {
-    /*position: fixed;*/
     opacity: 0;
 }
 .switch-toggle > input + label {
