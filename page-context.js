@@ -202,29 +202,59 @@ function buildFilterSummary(testResults) {
 
 function createPreviewTestResultsPopup(testResults) {
   function paramRowContent(row, paramsNames) {
-    return paramsNames.map((param) => `<td style="text-align: right; padding: 4px;">${row['__' + param]}</td>`)
+    return paramsNames.map((param) => `<td style="text-align: right; padding: 4px;">${formatCell(row['__' + param])}</td>`)
   }
   function getId(col) {
     return col.replaceAll(' ', '_')
+  }
+  function formatCell(value) {
+    return typeof value === 'undefined' ? 'N/A' : value
+  }
+  // 2026-08 TradingView keeps renaming the report metrics - resolve each column against the
+  // row's actual keys (exact match first, then a fuzzy case-insensitive contains match) instead
+  // of trusting one hardcoded label, so a future rename shows a wrong-but-visible column rather
+  // than silently rendering "undefined" everywhere.
+  function resolveColumnKey(row, exactName, fuzzyIncludes) {
+    if (row && row.hasOwnProperty(exactName))
+      return exactName
+    if (!row)
+      return exactName
+    const found = Object.keys(row).find(key => !key.startsWith('__') &&
+      fuzzyIncludes.every(part => key.toLowerCase().includes(part)))
+    return found || exactName
   }
   const preview = document.createElement('div')
   preview.id = 'iondvPreviewResults'
   preview.setAttribute("style", `background-color:rgba(0, 0, 0, 0.4); position:absolute; width:100%; height:100%; top:0px; left:0px; z-index:10000;`);
   preview.style.height = document.documentElement.scrollHeight + "px";
-  const col1 = 'Net Profit %: All', col2 = 'Max Drawdown %', col3 = 'Avg # Bars in Trades: All',
-  col4 = 'Total Closed Trades: All', col5 = 'Sharpe Ratio', col6 = 'Sortino Ratio', col7 = 'Profit Factor: All'
+  // Show every result, same as the CSV export (file.js) does: the passing ones (perfomanceSummary)
+  // plus the filtered-out ones (filteredSummary) - picking only one of the two used to silently
+  // drop the other set from the preview whenever any filtered result existed.
+  const arraySummary = testResults.perfomanceSummary.concat(testResults.filteredSummary || [])
+  const sampleRow = arraySummary[0]
+  const col1 = resolveColumnKey(sampleRow, 'Total PnL %', ['pnl', '%']),
+    col2 = resolveColumnKey(sampleRow, 'Max drawdown %', ['drawdown', '%']),
+    col3 = resolveColumnKey(sampleRow, 'Average bars in trades: All', ['bars in trades', 'all']),
+    col4 = resolveColumnKey(sampleRow, 'Total trades: All', ['total trades', 'all']),
+    // 2026-08 TradingView dropped Sharpe/Sortino Ratio from the scraped report data (the tab
+    // that used to hold them, "risk-adjusted-performance-table", is gone) - show these two
+    // available metrics instead of two permanently-N/A columns.
+    col5 = resolveColumnKey(sampleRow, 'Percent profitable: All', ['percent profitable', 'all']),
+    col6 = resolveColumnKey(sampleRow, 'Average profit / average loss: All', ['average profit / average loss', 'all']),
+    col7 = resolveColumnKey(sampleRow, 'Profit factor', ['profit factor'])
   const col1Id = getId(col1), col2Id = getId(col2), col3Id = getId(col3),
   col4Id = getId(col4), col5Id = getId(col5), col6Id = getId(col6), col7Id = getId(col7)
-  const arraySummary = testResults.filteredSummary.length ? testResults.filteredSummary : testResults.perfomanceSummary
   const style = 'style="text-align: right; padding: 4px;"'
   const styleHeader = 'style="text-align: right; padding: 4px; cursor: pointer;"'
   const styleParam = 'style="text-align: right; padding: 4px; color: gray;"'
-  const title = `Preview ${arraySummary.length} results`
+  const title = testResults.filteredSummary && testResults.filteredSummary.length
+    ? `Preview ${arraySummary.length} results (${testResults.filteredSummary.length} filtered out)`
+    : `Preview ${arraySummary.length} results`
   const subtitle = `${testResults.name} ${testResults.ticker} ${testResults.timeFrame}`
   const headerParams = testResults.paramsNames.map((param) => `<th ${styleParam}>${param}</th>`)
-  const tableContent = arraySummary.map((row) => `<tr><td ${style}>${row[col1]}</td>
-    <td ${style}>${row[col2]}</td><td ${style}>${row[col3]}</td><td ${style}>${row[col4]}</td>
-    <td ${style}>${row[col5]}</td><td ${style}>${row[col6]}</td><td ${style}>${row[col7]}</td>
+  const tableContent = arraySummary.map((row) => `<tr><td ${style}>${formatCell(row[col1])}</td>
+    <td ${style}>${formatCell(row[col2])}</td><td ${style}>${formatCell(row[col3])}</td><td ${style}>${formatCell(row[col4])}</td>
+    <td ${style}>${formatCell(row[col5])}</td><td ${style}>${formatCell(row[col6])}</td><td ${style}>${formatCell(row[col7])}</td>
     ${paramRowContent(row, testResults.paramsNames)}</tr>`)
     preview.innerHTML = `<button id="iondvBoxClose" style="position: absolute;left: 50%;top: 50%;
     margin-top: -325px;margin-left: 465px;">Close</button>

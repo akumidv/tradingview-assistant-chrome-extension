@@ -858,8 +858,14 @@ tv._parseMetricSectionGroup = async (group, report, parsedTabs) => {
       await page.waitForTimeout(250)
       table = group.querySelector('table')
     }
-    if (!table)
+    if (!table) {
+      // No table after a fair attempt - either a genuine "no data" empty state (e.g. "Margin
+      // usage" with nothing to show) or a non-table tab (e.g. "Growth and decline" is a chart,
+      // not a table). Either way retrying it on every later pass/scrollRoot just re-clicks it
+      // forever and stalls the whole parse, so give up on it for good.
+      parsedTabs.add(tabKey)
       continue
+    }
 
     const headerEls = table.querySelectorAll('thead > tr > th')
     const strategyHeaders = [...headerEls].map(h => (h?.innerText || '').trim())
@@ -959,6 +965,19 @@ tv._getReportDataHash = (reportData) => {
   return keys.map(k => `${k}=${reportData[k]}`).join('|')
 }
 
+// 2026-08 Cheap "did the report re-render" signal for the polling loop below.
+// Unlike tv.parseReportTable() this never clicks through report sub-tabs (Periodical,
+// Benchmarking, Margin usage, Growth and decline, Streaks, ...) - TradingView keeps adding
+// more of them, and re-clicking through all of them on every poll tick made the wait loop
+// visibly hammer the tab strip (looked like the UI "hanging" while switching report tabs).
+// It only reads whatever is already rendered, just to notice a change happened.
+tv._getQuickReportSignature = () => {
+  const reportRoot = page.$('[class^="backtestingReport"]') || page.$('#bottom-area')
+  if (!reportRoot)
+    return ''
+  return (reportRoot.innerText || '').replace(/\s+/g, ' ').trim()
+}
+
 tv.backtestDelay = async (backtestDelay = 0, isRandom = true) => {
   let delayTime = backtestDelay * 1000
   const minimalDelay = 0.2 * 1000//, backtestDelay/2) // 20%
@@ -987,6 +1006,9 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
   // stage-selector-independent signal that the computation finished.
   const prevReport = tv._getLastStoredReport(testResults)
   const prevDataHash = tv._getReportDataHash(prevReport)
+  // Snapshot of whatever tab happens to be visible right now, used only to notice a re-render -
+  // cheap and click-free, see tv._getQuickReportSignature.
+  const initialQuickSignature = prevDataHash ? tv._getQuickReportSignature() : ''
   let lastDataCheckTime = new Date()
   const dataCheckIntervalMs = 500
   let tikTime = 50
@@ -1025,8 +1047,11 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
       if (!isProcessEnd && !isProcessError && prevDataHash &&
           (new Date() - lastDataCheckTime) >= dataCheckIntervalMs) {
         lastDataCheckTime = new Date()
-        const tickHash = tv._getReportDataHash(await tv.parseReportTable())
-        if (tickHash && tickHash !== prevDataHash) {
+        // Cheap, click-free check (see tv._getQuickReportSignature) - the authoritative
+        // full parse (which does click through every report sub-tab) still runs exactly
+        // once below, after the wait loop, via tv.parseReportTable().
+        const tickSignature = tv._getQuickReportSignature()
+        if (tickSignature && tickSignature !== initialQuickSignature) {
           isDataChanged = true
           isProcessEnd = true
         }
