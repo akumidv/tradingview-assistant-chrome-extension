@@ -1379,7 +1379,9 @@ tv.getPerformance = async (testResults, ignoreWaiting = false) => {
   const isStaleUnchanged = !isNoTrades && !isProcessError && !isDataChanged && !isPageSignal && !!prevDataHash && finalDataHash === prevDataHash
   try {
     if (testResults.perfomanceSummary.length && !isProcessError)
-      log.debug('#', testResults.perfomanceSummary.length, testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1][testResults.optParamName], '->', reportData[testResults.optParamName])
+      log.debug(`Test ${testResults.perfomanceSummary.length + (testResults.filteredSummary || []).length + 1}: ` +
+        `${testResults.optParamName} ${reportData[testResults.optParamName]} ` +
+        `(previous accepted ${testResults.perfomanceSummary[testResults.perfomanceSummary.length - 1][testResults.optParamName]})`)
   } catch (err) {
     log.debug(err)
   }

@@ -290,9 +290,16 @@ body {
     font-size: 105%;
 }
 
-.changelog h5 {
-    margin: 6px 0 2px 0;
+/* A "### " part of a release (Details): collapsed under the summary */
+.changelog details {
+    margin: 4px 0 2px 0;
+    padding: 0;
+}
+
+.help .changelog summary {
     font-size: 100%;
+    font-weight: bold;
+    padding: 2px 0;
 }
 
 .changelog ul {

@@ -7,12 +7,12 @@ const METRICS = {
     {
       header: 'Overview',
       options: [
+        'Total PnL',
+        'Total PnL %',
         'Max drawdown',
         'Max drawdown %',
         'Profit factor',
         'Profitable trades',
-        'Total PnL',
-        'Total PnL %',
       ]
     },
     {
@@ -140,7 +140,7 @@ METRICS.ALL_VALUES = new Set(
 
 METRICS.isValid = (value) => METRICS.ALL_VALUES.has(value)
 
-METRICS.populate = (selectEl) => {
+METRICS.populate = (selectEl, defaultValue) => {
   if (!selectEl) return
   selectEl.innerHTML = ''
   for (const group of METRICS.GROUPS) {
@@ -157,4 +157,6 @@ METRICS.populate = (selectEl) => {
       selectEl.appendChild(el)
     }
   }
+  // Without it the first enabled option would be selected until saved options are applied
+  if (defaultValue) selectEl.value = defaultValue
 }

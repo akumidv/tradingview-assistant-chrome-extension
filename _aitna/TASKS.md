@@ -12,4 +12,6 @@ and the owning role follows from that letter, so it is not a separate field. Sta
 
 - A2 · import the js language profile · blocked · import akmon `js` profile in AGENTS.md once akmon ships it
 - C2 · verify chrome-devtools MCP live · active · new session: approve server, snapshot/click on a signed-in chart · [detail](skills/tv-browser-test/SKILL.md)
+- C3 · log the TradingView build · active · log TV version at session start, from page context · [detail](skills/github-issues/SKILL.md#bug-flow)
 - C1 · pin the test runner · active · record `[test].runner` in `_aitna/.akmon.toml`, reusing this project's manager
+- C4 · github tool: stale clock and bug+enhancement skip · active · quiet days from owner's last comment; keep bug+enhancement issues in delta · [detail](tools/github/lib.mjs)

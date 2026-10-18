@@ -50,6 +50,11 @@ Model & notation: [`MODEL.md`](https://github.com/akumidv/ai_akmon/blob/main/MOD
   [learning](https://github.com/akumidv/ai_akmon/blob/main/pipelines/learning.md)).
 - **Memory:** read `_aitna/memory/` at session start — distilled project facts, indexed by
   [`_aitna/memory/README.md`](_aitna/memory/README.md).
+- **Changelog:** [`extension/CHANGELOG.md`](extension/CHANGELOG.md) (not the repository root) —
+  written only through the [changelog skill](_aitna/skills/changelog/SKILL.md), which also decides
+  what is substantive enough for an entry.
 - **Backlog:** [`_aitna/TASKS.md`](_aitna/TASKS.md) — one line per task, detail by reference;
   finished entries move to `TASKS_ARCHIVE.md`.
+- **Decisions:** [`_aitna/decisions/`](_aitna/decisions/README.md) — accepted thematic ADRs,
+  numbered; an assistant drafts a block, the owner accepts it.
 - **Secrets:** from `.env` (gitignored). Never in code, docs, tests, or commits.

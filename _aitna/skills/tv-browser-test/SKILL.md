@@ -44,7 +44,9 @@ tool, not by the user.
     world (`TradingViewApi`, …). Promises are awaited; the result prints as JSON. `--tab` picks
     the tab by a URL part (default `tradingview.com/chart`).
   - `logs [--seconds N]` — console calls and uncaught exceptions of the chart tab, each marked
-    `[extension]`, `[page]` or `[other]`; default 30 s, `0` runs until Ctrl-C.
+    `[extension]`, `[page]` or `[other]`; default 30 s, `0` runs until Ctrl-C. `--until REGEX` stops at
+    the first matching line (`--until "All done"` for a backtest run; exit 1 if it never matches within
+    `--seconds`); redirect to a file to keep the log for `npm run release:verify`.
   - `stop` / `restart` — close, or relaunch (the profile keeps the sign-in).
   - `install` — Chrome for Testing via puppeteer ([`.puppeteerrc.cjs`](../../../.puppeteerrc.cjs)).
 - **`chrome-devtools` MCP server** ([`.mcp.json`](../../../.mcp.json) →

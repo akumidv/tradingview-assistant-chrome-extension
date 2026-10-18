@@ -1,10 +1,3 @@
 #!/bin/bash
-# Packs the extension (everything under extension/) into assistant-ext.zip at the repository root.
-
-EXT_NAME="assistant-ext"
-cd "$(dirname "$0")"
-
-if [ -f ./${EXT_NAME}.zip ]; then
-  rm ./${EXT_NAME}.zip
-fi
-(cd extension && zip -r ../${EXT_NAME}.zip .)
+# Packs extension/ into assistant-ext.zip for the Chrome Web Store after the release checks (see _aitna/tools/release).
+cd "$(dirname "$0")" && exec node _aitna/tools/release/cli.mjs pack "$@"

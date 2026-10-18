@@ -19,3 +19,7 @@ node_modules/
 
 # test browser for the tv-browser-test skill — profile (TradingView sign-in), Chrome for Testing, launch state
 _aitna/.browser/
+
+# github-issues skill — the owner's local triage backlog and sync watermarks (never committed)
+_aitna/TASKS.local.md
+_aitna/.akmon.local.toml

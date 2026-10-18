@@ -594,7 +594,6 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       if (btnSaveRun) {
         btnSaveRun.onclick = () => {
           const paramRange = updateParamsAndSpace()
-          log.debug('Save and run')
           const cycles = getCycles()
           removeParamWindow()
           return resolve({cycles: cycles, paramRange: paramRange })

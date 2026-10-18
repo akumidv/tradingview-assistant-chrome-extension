@@ -9,8 +9,8 @@ const LOG_PREFIX = '[tv-assistant]'
 
 
 document.addEventListener('DOMContentLoaded', () => {
-  METRICS.populate(document.getElementById('optParamName'))
-  METRICS.populate(document.getElementById('optFilterParamName'))
+  METRICS.populate(document.getElementById('optParamName'), METRICS.DEFAULT_OPT_PARAM)
+  METRICS.populate(document.getElementById('optFilterParamName'), METRICS.DEFAULT_FILTER_PARAM)
   checkIsTVChart()
   setTabEvents()
   setPopupInputsByOptions()
@@ -114,7 +114,8 @@ function escapeHtml(text) {
 }
 
 // The Markdown subset CHANGELOG.md uses: "### " subheadings, "- " list items (indented lines continue them),
-// paragraphs, **bold** and [text](https://link)
+// paragraphs, **bold** and [text](https://link). A "### " part (Details) renders collapsed, so the Help tab shows the
+// summaries and opens the details on a click.
 function renderInlineMarkdown(text) {
   return escapeHtml(text)
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
@@ -140,15 +141,22 @@ function renderChangelogSection(section) {
   }
   let html = `<h4>${escapeHtml(section.title)}</h4>`
   let isListOpen = false
+  let isPartOpen = false
   for (const block of blocks) {
-    if (block.type === 'li' && !isListOpen)
-      html += '<ul>'
     if (block.type !== 'li' && isListOpen)
       html += '</ul>'
+    if (block.type === 'h5') {
+      html += (isPartOpen ? '</details>' : '') + `<details><summary>${renderInlineMarkdown(block.text)}</summary>`
+      isPartOpen = true
+      isListOpen = false
+      continue
+    }
+    if (block.type === 'li' && !isListOpen)
+      html += '<ul>'
     isListOpen = block.type === 'li'
     html += `<${block.type}>${renderInlineMarkdown(block.text)}</${block.type}>`
   }
-  return html + (isListOpen ? '</ul>' : '')
+  return html + (isListOpen ? '</ul>' : '') + (isPartOpen ? '</details>' : '')
 }
 
 

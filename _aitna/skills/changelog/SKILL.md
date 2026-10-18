@@ -33,7 +33,7 @@ The popup renders the file itself ([assistant.js](../../../extension/popup/assis
 `getChangelogSummary`, `renderChangelogSection`):
 
 - the "What's new" notice is the section cut at its **first `### ` line**, so every `###` subsection is
-  hidden from the notice and shown only in the Help tab;
+  hidden from the notice and shown only in the Help tab, collapsed under its `###` heading;
 - only this Markdown subset renders: `### ` subheadings, `- ` items (an indented line continues an item),
   paragraphs, `**bold**`, `[text](https://link)`; anything else shows as raw text;
 - the text before the first `## ` heading is a note for editors and is not shown.

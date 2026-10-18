@@ -98,6 +98,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
       action._showStartMsg(testParams.paramSpace, testParams.cycles, testParams.backtestDelay ? ` with delay between tests ${testParams.backtestDelay} sec` : '')
       testParams.isDeepTest = isDeepTest
       action._logRunStart(testParams, strategyData)
+      const runStartTime = new Date()
       let testResults = {}
       if (testParams.shouldTestTF) {
         if (!testParams.listOfTF || testParams.listOfTF.length === 0) {
@@ -115,7 +116,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
             if (testParams.hasOwnProperty('bestValue'))
               delete testParams.bestValue
             testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams) // TODO think about not save, but store them from  testResults.perfomanceSummary, testResults.filteredSummary = [], testResults.timeFrame to list
-            await action._saveTestResults(testResults, testParams, false)
+            await action._saveTestResults(testResults, testParams, false, runStartTime)
             if (bestTf === null) {
               bestValue = testResults.bestValue
               bestTf = tf
@@ -136,7 +137,7 @@ action.testStrategy = async (request, isDeepTest = false) => {
         }
       } else {
         testResults = await backtest.testStrategy(testParams, strategyData, allRangeParams)
-        await action._saveTestResults(testResults, testParams, true)
+        await action._saveTestResults(testResults, testParams, true, runStartTime)
       }
     }
   } catch (err) {
@@ -159,7 +160,7 @@ action._getRangeParams = async (strategyData) => {
     return [null, null, null]
   }
   const cycles = changedStrategyParams.cycles ? changedStrategyParams.cycles : 100
-  log.debug('changedStrategyParams', changedStrategyParams)
+  log.debug('Test settings from the dialog:', changedStrategyParams)
   // null paramRange means the user kept the ranges unchanged
   if (changedStrategyParams.paramRange === null) {
   } else if (typeof changedStrategyParams.paramRange === 'object' && Object.keys(changedStrategyParams.paramRange).length) {
@@ -267,13 +268,30 @@ action._logRunStart = (testParams, strategyData) => {
   })
 }
 
+// Run summary for the final log line, from the results already stored: tests count, duration and
+// the no-trades / stale outcomes, recognised by the comment markers written by tv.getPerformance
+action._getRunStats = (testResults, runStartTime) => {
+  const formatDuration = (ms) => {
+    const totalSec = Math.round(ms / 1000)
+    const min = Math.floor(totalSec / 60)
+    return min ? `${min}m ${totalSec % 60}s` : `${totalSec}s`
+  }
+  const performed = Array.isArray(testResults.perfomanceSummary) ? testResults.perfomanceSummary : []
+  const filtered = Array.isArray(testResults.filteredSummary) ? testResults.filteredSummary : []
+  const hasComment = (data, marker) => data && typeof data['comment'] === 'string' && data['comment'].includes(marker)
+  const noTrades = filtered.filter(data => hasComment(data, 'No trades for these parameters') || hasComment(data, 'No report data: ')).length
+  const stale = filtered.filter(data => hasComment(data, 'WARNING: report not updated')).length
+  const duration = runStartTime ? ` in ${formatDuration(new Date() - runStartTime)}` : ''
+  return `${performed.length + filtered.length} tests${duration} (${noTrades} no trades, ${stale} stale)`
+}
+
 action._showStartMsg = (paramSpaceNumber, cycles, addInfo) => {
   let extraHeader = `The search is performed among ${paramSpaceNumber} possible combinations of parameters (space).`
   extraHeader += (paramSpaceNumber / cycles) > 10 ? `<br />This is too large for ${cycles} cycles. It is recommended to use up to 3-4 essential parameters, remove the rest from the strategy parameters file.` : ''
   ui.statusMessage(`Started${addInfo}.`, extraHeader)
 }
 
-action._saveTestResults = async (testResults, testParams, isFinalTest = true) => {
+action._saveTestResults = async (testResults, testParams, isFinalTest = true, runStartTime = null) => {
   if (!hasBacktestResults(testResults)) {
     await ui.showWarningPopup(message.noBacktestResults)
     return
@@ -293,7 +311,7 @@ action._saveTestResults = async (testResults, testParams, isFinalTest = true) =>
   text += bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ' : '(min) ') + testParams.optParamName + ': ' + backtest.convertValue(bestResult[testParams.optParamName]) : ''
   text += (initBestValue !== null && bestResult && bestResult.hasOwnProperty(testParams.optParamName) && initBestValue === bestResult[testParams.optParamName]) ? `\nIt isn't improved from the initial value: ${backtest.convertValue(initBestValue)}` : ''
   ui.statusMessage(text)
-  log.info(`All done. ${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ' : '(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
+  log.info(`All done: ${action._getRunStats(testResults, runStartTime)}. ${bestResult && bestResult.hasOwnProperty(testParams.optParamName) ? 'The best ' + (testResults.isMaximizing ? '(max) ' : '(min) ') + testParams.optParamName + ': ' + bestResult[testParams.optParamName] : ''}`)
   if (testParams.shouldSkipWaitingForDownload || !isFinalTest)
     file.saveAs(CSVResults, `${testResults.ticker}:${testResults.timeFrame}${testResults.isDeepTest ? ' deep backtesting' : ''} ${testResults.shortName} - ${testResults.cycles}_${testResults.isMaximizing ? 'max' : 'min'}_${testResults.optParamName}_${testResults.method}.csv`)
   if (isFinalTest) {

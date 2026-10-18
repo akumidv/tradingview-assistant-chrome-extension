@@ -242,7 +242,8 @@ function toStudyInputValue(inputInfo, value) {
     case 'source': {
       const source = STUDY_SOURCE_VALUES[String(value).trim().toLowerCase()]
       if (!source || (Array.isArray(inputInfo.options) && !inputInfo.options.includes(source)))
-        throw new Error(`source "${value}" has no chart API value (only price and volume sources are supported)`)
+        throw new Error(`source "${value}" is not a built-in price or volume source of the chart (e.g. it is another indicator's output), ` +
+          'the chart API can not set it')
       return source
     }
     case 'resolution':

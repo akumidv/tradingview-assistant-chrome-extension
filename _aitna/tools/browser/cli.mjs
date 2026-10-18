@@ -412,24 +412,38 @@ const commands = {
   },
 
   logs: {
-    help: 'stream console messages and uncaught exceptions of a TradingView tab, marked by world (--tab, --seconds, default 30; 0 = until Ctrl-C)',
-    options: { port: { type: 'string' }, tab: TAB_OPTION, seconds: { type: 'string', default: '30' } },
+    help: 'stream console messages and uncaught exceptions of a TradingView tab, marked by world (--tab, --seconds, default 30; 0 = until Ctrl-C; '
+      + '--until REGEX stops at the first line matching it, --seconds then being its timeout, and exits 1 when none matched)',
+    options: { port: { type: 'string' }, tab: TAB_OPTION, seconds: { type: 'string', default: '30' }, until: { type: 'string' } },
     async run(v) {
+      let until = null;
+      if (v.until !== undefined) {
+        try { until = new RegExp(v.until); } catch (error) { throw new UsageError(`--until "${v.until}" is not a valid RegExp: ${error.message}`); }
+      }
       const cdp = await connect(port(v));
       const { target, sessionId, contexts } = await attach(cdp, v.tab);
       const world = (id) => (contexts.has(id) ? worldOf(contexts.get(id)) : 'other');
       const show = (o) => (o.value !== undefined ? (typeof o.value === 'string' ? o.value : JSON.stringify(o.value)) : (o.description ?? o.type));
+      let matched = false;
+      let stop = () => {};
+      const emit = (line) => {
+        if (matched) return;
+        console.log(line);
+        if (until?.test(line)) { matched = true; stop(); }
+      };
       cdp.on('Runtime.consoleAPICalled', (e, s) => {
-        if (s === sessionId) console.log(`[${world(e.executionContextId)}] ${e.type}: ${e.args.map(show).join(' ')}`);
+        if (s === sessionId) emit(`[${world(e.executionContextId)}] ${e.type}: ${e.args.map(show).join(' ')}`);
       });
       cdp.on('Runtime.exceptionThrown', ({ exceptionDetails: d }, s) => {
-        if (s === sessionId) console.log(`[${world(d.executionContextId)}] uncaught: ${d.exception?.description || d.text}`);
+        if (s === sessionId) emit(`[${world(d.executionContextId)}] uncaught: ${d.exception?.description || d.text}`);
       });
       console.log(`listening to ${target.url}`);
       const seconds = Number(v.seconds);
-      await new Promise((done) => { if (seconds > 0) setTimeout(done, seconds * 1000); process.on('SIGINT', done); });
+      await new Promise((done) => { stop = done; if (seconds > 0) setTimeout(done, seconds * 1000); process.on('SIGINT', done); });
       cdp.close();
-      return 0;
+      if (!until) return 0;
+      console.log(matched ? 'until matched' : `until not matched within ${seconds} s`);
+      return matched ? 0 : 1;
     },
   },
 

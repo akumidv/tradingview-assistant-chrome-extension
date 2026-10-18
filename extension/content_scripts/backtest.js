@@ -11,11 +11,6 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
   testResults.shortName = strategyData.name
   tv.resetReportSources()
   tv.resetParamSetter(testResults.setParamsByApi)
-  log.info('testStrategy', testResults.shortName, model.isMaximizing(testResults) ? 'max' : 'min', 'value of', testResults.optParamName,
-    'by', testResults.method,
-    (testResults.filterAscending === null ? 'filter off' : 'filter ascending ' + testResults.filterAscending + ' value ' +
-      testResults.filterValue + ' by ' + testResults.filterParamName),
-    testResults.cycles, 'times')
   testResults.paramsNames = Object.keys(allRangeParams)
 
   // Get best init value and properties values
@@ -30,7 +25,6 @@ backtest.testStrategy = async (testResults, strategyData, allRangeParams) => {
     testResults.perfomanceSummary.push(initRes.data)
     try {
       ui.statusMessage(`<p>From default and previous tests. Best "${testResults.optParamName}": ${backtest.convertValue(testResults.bestValue)}</p>`)
-      log.info('Init best value', testResults.bestValue)
     } catch {
     }
   }
@@ -185,20 +179,24 @@ async function getInitBestValues(testResults) {
   let resVal = null
   let resPropVal = testResults.startParams.current
   let resData = {}
+  let resSource = null // which parameters the initial best value came from, for the log
 
-  function setBestVal(newVal, newPropVal, newResData) {
+  function setBestVal(newVal, newPropVal, newResData, source) {
     if (resVal === null || resPropVal === null) {
       resVal = newVal
       resPropVal = newPropVal
       resData = newResData
+      resSource = source
     } else if (model.isMaximizing(testResults) && newVal > resVal) {
       resVal = newVal
       resPropVal = newPropVal
       resData = newResData
+      resSource = source
     } else if (!model.isMaximizing(testResults) && newVal < resVal) {
       resVal = newVal
       resPropVal = newPropVal
       resData = newResData
+      resSource = source
     }
   }
 
@@ -249,7 +247,7 @@ async function getInitBestValues(testResults) {
     resData['comment'] = resData['comment'] ? `Current parameters. ${resData['comment']}` : 'Current parameters.'
     Object.keys(resPropVal).forEach(key => resData[`__${key}`] = resPropVal[key])
     const curPropVal = expandPropVal(testResults.startParams.current, resPropVal)
-    setBestVal(resData[testResults.optParamName], curPropVal, res.data)
+    setBestVal(resData[testResults.optParamName], curPropVal, res.data, 'current parameters')
   }
 
   if (testResults.startParams.hasOwnProperty('default') && testResults.startParams.default) {
@@ -261,7 +259,7 @@ async function getInitBestValues(testResults) {
         log.debug(`Init from default "${testResults.optParamName}":`, res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Default parameters. ${res.data['comment']}` : 'Default parameters.'
         Object.keys(defPropVal).forEach(key => res.data[`__${key}`] = defPropVal[key])
-        setBestVal(res.data[testResults.optParamName], defPropVal, res.data)
+        setBestVal(res.data[testResults.optParamName], defPropVal, res.data, 'default parameters')
       }
     } else {
       log.debug(`Default "${testResults.optParamName}" equal current:`, resData[testResults.optParamName])
@@ -279,13 +277,13 @@ async function getInitBestValues(testResults) {
         log.debug(`Init from best "${testResults.optParamName}":`, res.data[testResults.optParamName])
         res.data['comment'] = res.data['comment'] ? `Best value parameters. ${res.data['comment']}` : 'Best value parameters.'
         Object.keys(bestPropVal).forEach(key => res.data[`__${key}`] = bestPropVal[key])
-        setBestVal(res.data[testResults.optParamName], bestPropVal, res.data)
+        setBestVal(res.data[testResults.optParamName], bestPropVal, res.data, 'previous best')
       }
     } else {
       log.debug(`Best "${testResults.optParamName}" equal previous (current or default):`, resData[testResults.optParamName])
     }
   }
-  log.info(`For init "${testResults.optParamName}":`, resVal)
+  log.info(`Initial best ${testResults.optParamName}: ${resVal}${resSource ? ` (${resSource})` : ''}`)
 
   if (resVal !== null && resPropVal !== null && resData !== null)
     return { bestValue: resVal, bestPropVal: resPropVal, data: resData }
