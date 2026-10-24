@@ -246,6 +246,14 @@ tv._isSameParamValue = (currentRaw, desiredRaw) => {
   return cur === want
 }
 
+// Numbers are compared by value (0.30000000000000004 is shown by TradingView as 0.3), the rest as text
+tv._isSameParamNumberOrText = (currentRaw, desiredRaw) => {
+  const cur = Number(String(currentRaw).trim()), want = Number(String(desiredRaw).trim())
+  if (String(currentRaw).trim() !== '' && String(desiredRaw).trim() !== '' && Number.isFinite(cur) && Number.isFinite(want))
+    return Math.abs(cur - want) <= 1e-9 * Math.max(1, Math.abs(want))
+  return tv._isSameParamValue(currentRaw, desiredRaw)
+}
+
 tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStrategyParamOpen = false) => {
   const indicatorTitleEl = await tv.checkAndOpenStrategy(name, isDeepTest) // In test.name - ordinary strategy name but in strategyData.name short one as in indicator title
   if (!indicatorTitleEl)
@@ -277,8 +285,13 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
         i++
         let inputEl = indicProperties[i].querySelector('input')
         if (inputEl) {
-          if (!tv._isSameParamValue(inputEl.value, propVal[propText]))
-            page.setInputElementValue(inputEl, propVal[propText])
+          if (!tv._isSameParamValue(inputEl.value, propVal[propText])) {
+            // TradingView checks the input limits (minval/maxval) when the field loses focus and silently
+            // restores the previous value for an out-of-range one: the value is read back below
+            inputEl.focus()
+            page.setInputElementValue(inputEl, propVal[propText], true)
+            inputEl.blur()
+          }
           inputEl = null
         } else {
           let buttonEl = indicProperties[i].querySelector('button[role="combobox"]')
@@ -300,6 +313,7 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
           if (Boolean(propVal[propText]) !== isChecked) {
             page.mouseClick(checkboxEl)
             checkboxEl.checked = Boolean(propVal[propText])
+            await page.waitForTimeout(30) // the inputs depending on this checkbox get enabled after a re-render
           }
           checkboxEl = null
         }
@@ -309,6 +323,21 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
     }
   }
   indicProperties = null
+  // Values TradingView did not take (out of the input limits, or a disabled input): the test runs with the
+  // value shown in the dialog, so that one is reported instead of the requested one
+  const rejected = {}
+  try {
+    await page.waitForTimeout(50)
+    const actualValues = await tv.getStrategyParams(true)
+    Object.keys(setPropertiesNames).forEach(key => {
+      if (Object.hasOwn(actualValues, key) && !tv._isSameParamNumberOrText(actualValues[key], propVal[key]))
+        rejected[key] = { wanted: propVal[key], actual: actualValues[key] }
+    })
+    if (Object.keys(rejected).length)
+      log.warn('TradingView did not accept the values (out of the input limits?):', rejected)
+  } catch (err) {
+    log.debug('Reading back the strategy parameters failed:', err)
+  }
   const elOkBtn = page.$(SEL.okBtn)
   if (!keepStrategyParamOpen && elOkBtn)
     elOkBtn.click()
@@ -316,11 +345,11 @@ tv._setStrategyParamsLegacy = async (name, propVal, isDeepTest = false, keepStra
   const appliedKeys = Object.keys(setPropertiesNames)
   const missingKeys = propKeys.filter(key => !setPropertiesNames[key])
 
-
-return {
+  return {
     success: missingKeys.length === 0,
     applied: appliedKeys,
-    missing: missingKeys
+    missing: missingKeys,
+    rejected
   }
 }
 
@@ -510,9 +539,13 @@ tv.openStrategyTab = async (isDeepTest = false) => {
   // await tv.checkIsNewVersion()
   let metricsTabActive = await page.waitForSelector(SEL.metricsTab, 1000)
   if (!metricsTabActive) {
-    if (!metricsTabActive)
-      throw new UiChangedError('Cannot find the "Metrics" tab on the "Strategy Tester" panel.')
-
+    // A strategy without trades shows only an empty-state block ("Trades are required to see strategy report"),
+    // without the Metrics/Trades tabs. That is a valid state: the parameters must still be settable.
+    if (tv._isNoTradesReportView()) {
+      log.debug('Strategy Tester shows the no-trades view, the "Metrics" tab is absent - continue.')
+      return true
+    }
+    throw new UiChangedError('Cannot find the "Metrics" tab on the "Strategy Tester" panel.')
   }
   if (!page.$(SEL.metricsTabActive))
     metricsTabActive.click()
@@ -957,7 +990,17 @@ tv.parseReportTable = async () => {
   return report
 }
 
-tv.REPORT_NO_DATA_MESSAGES = ['This report requires trade data', 'Not enough data to show', 'Not enough data']
+tv.REPORT_NO_DATA_MESSAGES = ['This report requires trade data', 'Not enough data to show', 'Not enough data',
+  'Trades are required to see strategy report', 'This strategy hasn\'t made any trades', 'This strategy hasn’t made any trades']
+
+// 2026-10 UI: with no trades the Strategy Tester replaces the whole report (and its Metrics/Trades tabs)
+// by an empty-state block. Matched by selector or by text, as its class names are hashed.
+tv._isNoTradesReportView = () => {
+  if (page.$(SEL.strategyReportEmptyState))
+    return true
+  const bottomText = (document.querySelector('#bottom-area')?.innerText || '').replace(/\s+/g, ' ')
+  return tv.REPORT_NO_DATA_MESSAGES.slice(3).some(message => bottomText.includes(message))
+}
 
 // Blocks of the report showing a "no data" placeholder instead of a chart/table, by block title.
 // The placeholder is matched by text (English UI) because its class names are hashed.
@@ -997,7 +1040,7 @@ tv._getReportEmptyState = () => {
       message: keyStatsNoData[0].message
     }
   if (!keyStatsEl && !page.$(SEL.metricsValueCell)) { // Neither layout found - match the text of the whole report
-    const reportText = (tv._getReportRoot()?.innerText || '').replace(/\s+/g, ' ').trim()
+    const reportText = (tv._getReportRoot()?.innerText || document.querySelector('#bottom-area')?.innerText || '').replace(/\s+/g, ' ').trim()
     const matchedMessage = tv.REPORT_NO_DATA_MESSAGES.find(message => reportText.includes(message))
     if (matchedMessage)
       return { type: 'no_trade_data', message: matchedMessage }
@@ -1126,6 +1169,14 @@ tv._addPopupMetricAliases = (report) => {
   for (const label of Object.values(tv.PAGE_REPORT_SIDE_METRICS).flat())
     if (Object.hasOwn(report, label) && !Object.hasOwn(report, `${label}: All`))
       report[`${label}: All`] = report[label]
+  // The Key stats cards alone (when the report tabs are not parsed) still give the trades count and the win rate:
+  // "Profitable trades 52.38% 11/21"
+  if (!Object.hasOwn(report, 'Total trades: All') && typeof report['Profitable trades total'] === 'number')
+    report['Total trades: All'] = report['Profitable trades total']
+  if (!Object.hasOwn(report, 'Total winners: All') && typeof report['Profitable trades count'] === 'number')
+    report['Total winners: All'] = report['Profitable trades count']
+  if (!Object.hasOwn(report, 'Percent profitable: All') && typeof report['Profitable trades'] === 'number')
+    report['Percent profitable: All'] = report['Profitable trades']
   return report
 }
 
@@ -1210,6 +1261,14 @@ tv.readReport = async (testResults) => {
     try {
       pageReport = await tv.getPageReport(testResults)
     } catch (err) {
+      // A strategy without trades has no performance data in the page objects: that is a result (no trades), not a
+      // broken source. Switching to the report page here made the rest of the run read only the 4 Key stats cards,
+      // without "Total trades: All" and the other metrics.
+      if (tv._isNoTradesReportView()) {
+        log.debug('No performance data in the page objects, the report shows no trades:', err.message)
+        tv.lastReportSource = tv.REPORT_SOURCE_OBJECTS
+        return {'Total trades: All': 0}
+      }
       tv._switchReportSourceToDom('read', err.message)
     }
   }

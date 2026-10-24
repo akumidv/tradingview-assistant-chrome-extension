@@ -310,23 +310,65 @@ function setStrategyInputs(request) {
   return result
 }
 
-async function previewStrategyTestResults(testResults) {
-  if (typeof testResults === 'undefined' || !testResults.hasOwnProperty('perfomanceSummary') || testResults.perfomanceSummary.length === 0)
+// One run, or {runs: [...]} - all runs of a strategy: the last one is shown first, the list switches between them
+async function previewStrategyTestResults(data) {
+  const runs = data && Array.isArray(data.runs) ? data.runs : (data ? [data] : [])
+  const hasRows = (run) => run && Array.isArray(run.perfomanceSummary) && run.perfomanceSummary.length > 0
+  if (!runs.some(hasRows))
     throw (message.errorsNoBacktest)
 
   return new Promise(resolve => {
-    createPreviewTestResultsPopup(testResults)
-    const btnClose = document.getElementById('iondvBoxClose')
-    if (btnClose) {
-      btnClose.onclick = () => {
-        const iondvPreviewResultsEl = document.getElementById('iondvPreviewResults')
-        if (iondvPreviewResultsEl)
+    let selected = String(runs.length - 1)
+    function closePreview() {
+      const iondvPreviewResultsEl = document.getElementById('iondvPreviewResults')
+      if (iondvPreviewResultsEl)
         iondvPreviewResultsEl.parentNode.removeChild(iondvPreviewResultsEl)
-        return resolve()
+    }
+    function render() {
+      closePreview()
+      const view = selected === 'all' ? mergeRuns(runs) : runs[Number(selected)]
+      createPreviewTestResultsPopup(view, runs.length > 1 ? {runs, selected} : null)
+      const btnClose = document.getElementById('iondvBoxClose')
+      if (btnClose) {
+        btnClose.onclick = () => {
+          closePreview()
+          return resolve()
+        }
+      }
+      const runSelectEl = document.getElementById('iondvPreviewRun')
+      if (runSelectEl) {
+        runSelectEl.onchange = () => {
+          selected = runSelectEl.value
+          render()
+        }
       }
     }
-
+    render()
   })
+}
+
+function getRunLabel(run, idx) {
+  const date = run.finished ? String(run.finished).slice(0, 16).replace('T', ' ') : (run.source || 'uploaded')
+  const count = (run.perfomanceSummary || []).length + (run.filteredSummary || []).length
+  return `${idx + 1}. ${date} | ${run.ticker || ''} ${run.timeFrame || ''} | ${run.isMaximizing === false ? 'min' : 'max'} ` +
+    `${run.optParamName || ''} | ${run.method || ''} | ${count} results`
+}
+
+function getRunOptions(runSelector) {
+  const escape = (text) => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;')
+  const options = runSelector.runs.map((run, idx) =>
+    `<option value="${idx}" ${String(idx) === runSelector.selected ? 'selected' : ''}>${escape(getRunLabel(run, idx))}</option>`)
+  options.push(`<option value="all" ${runSelector.selected === 'all' ? 'selected' : ''}>All ${runSelector.runs.length} runs together</option>`)
+  return options.reverse().join('')
+}
+
+// All runs in one table: the passed results of every run, then the filtered ones
+function mergeRuns(runs) {
+  const last = runs[runs.length - 1]
+  return {...last,
+    perfomanceSummary: runs.flatMap(run => run.perfomanceSummary || []),
+    filteredSummary: runs.flatMap(run => run.filteredSummary || []),
+    paramsNames: [...new Set(runs.flatMap(run => run.paramsNames || []))]}
 }
 
 async function show3DChart(testResults) {
@@ -423,7 +465,8 @@ function buildFilterSummary(testResults) {
   return `Filters: ${parts.join(' & ')}`
 }
 
-function createPreviewTestResultsPopup(testResults) {
+// runSelector: {runs, selected} to show a list of the runs of the strategy ("all" or the run index), or null
+function createPreviewTestResultsPopup(testResults, runSelector = null) {
   function paramRowContent(row, paramsNames) {
     return paramsNames.map((param) => `<td style="text-align: right; padding: 4px;">${formatCell(row['__' + param])}</td>`)
   }
@@ -454,6 +497,7 @@ function createPreviewTestResultsPopup(testResults) {
   // plus the filtered-out ones (filteredSummary) - picking only one of the two used to silently
   // drop the other set from the preview whenever any filtered result existed.
   const arraySummary = testResults.perfomanceSummary.concat(testResults.filteredSummary || [])
+    .filter(row => row !== null && typeof row === 'object')
   const sampleRow = arraySummary[0]
   const col1 = resolveColumnKey(sampleRow, 'Total PnL %', ['pnl', '%']),
     col2 = resolveColumnKey(sampleRow, 'Max drawdown %', ['drawdown', '%']),
@@ -475,7 +519,8 @@ function createPreviewTestResultsPopup(testResults) {
     : `Preview ${arraySummary.length} results`
   const subtitle = `${testResults.name} ${testResults.ticker} ${testResults.timeFrame}`
   const headerParams = testResults.paramsNames.map((param) => `<th ${styleParam}>${param}</th>`)
-  const tableContent = arraySummary.map((row) => `<tr><td ${style}>${formatCell(row[col1])}</td>
+  const passedCount = testResults.perfomanceSummary.filter(row => row !== null && typeof row === 'object').length
+  const tableContent = arraySummary.map((row, rowIdx) => `<tr${rowIdx >= passedCount ? ' class="iondvFilteredRow" style="display: none; color: #999;" title="' + String(row.comment || 'Filtered out').replaceAll('"', '&quot;') + '"' : ''}><td style="text-align: center; padding: 4px;"><button class="iondvSaveRow" data-row="${rowIdx}" title="Save the parameters of this row to a CSV file for the import button of the strategy settings dialog">Save</button></td><td ${style}>${formatCell(row[col1])}</td>
     <td ${style}>${formatCell(row[col2])}</td><td ${style}>${formatCell(row[col3])}</td><td ${style}>${formatCell(row[col4])}</td>
     <td ${style}>${formatCell(row[col5])}</td><td ${style}>${formatCell(row[col6])}</td><td ${style}>${formatCell(row[col7])}</td>
     ${paramRowContent(row, testResults.paramsNames)}</tr>`)
@@ -489,9 +534,12 @@ function createPreviewTestResultsPopup(testResults) {
       <div style="margin:0;padding: 0px;clear: both;width: 100%;">
         <div style="display:inline-block;vertical-align: middle;padding: 0px;width: 100%;">
           <h3 style="padding-bottom: 10px">${title}</h3>
+          ${runSelector ? `<label style="display: block; padding-bottom: 10px;">Test run: <select id="iondvPreviewRun">${getRunOptions(runSelector)}</select></label>` : ''}
+          ${arraySummary.length > passedCount ? `<label style="display: block; padding-bottom: 10px; cursor: pointer;"><input type="checkbox" id="iondvShowFiltered"> Show the ${arraySummary.length - passedCount} filtered out results (gray, the reason is in the tooltip)</label>` : ''}
           <h2 style="padding-bottom: 10px">${subtitle}</h2>
           <table id="tablePreviewResults" style="width: 100%;">
             <tr>
+              <th style="text-align: center; padding: 4px;">Save</th>
               <th id="${col1Id}" ${styleHeader}>${col1}</th>
               <th id="${col2Id}" ${styleHeader}>${col2}</th>
               <th id="${col3Id}" ${styleHeader}>${col3}</th>
@@ -507,13 +555,58 @@ function createPreviewTestResultsPopup(testResults) {
       </div>
     </div>`
   document.getElementsByTagName('body')[0].appendChild(preview)
-  document.getElementById(col1Id).onclick = () => sortTable(0)
-  document.getElementById(col2Id).onclick = () => sortTable(1)
-  document.getElementById(col3Id).onclick = () => sortTable(2)
-  document.getElementById(col4Id).onclick = () => sortTable(3)
-  document.getElementById(col5Id).onclick = () => sortTable(4)
-  document.getElementById(col6Id).onclick = () => sortTable(5)
-  document.getElementById(col7Id).onclick = () => sortTable(6)
+  const showFilteredEl = document.getElementById('iondvShowFiltered')
+  if (showFilteredEl)
+    showFilteredEl.onchange = () => document.querySelectorAll('#tablePreviewResults .iondvFilteredRow')
+      .forEach(rowEl => rowEl.style.display = showFilteredEl.checked ? '' : 'none')
+  // Save buttons: the rows can be re-sorted, so each button keeps the index of its result
+  document.getElementById('tablePreviewResults').addEventListener('click', (event) => {
+    const btn = event.target.closest('.iondvSaveRow')
+    if (!btn)
+      return
+    const row = arraySummary[parseInt(btn.dataset.row)]
+    if (!row)
+      return
+    saveResultRowParams(testResults, row)
+    btn.textContent = 'Saved \u2713'
+    setTimeout(() => { btn.textContent = 'Save' }, 1500)
+  })
+  document.getElementById(col1Id).onclick = () => sortTable(1)
+  document.getElementById(col2Id).onclick = () => sortTable(2)
+  document.getElementById(col3Id).onclick = () => sortTable(3)
+  document.getElementById(col4Id).onclick = () => sortTable(4)
+  document.getElementById(col5Id).onclick = () => sortTable(5)
+  document.getElementById(col6Id).onclick = () => sortTable(6)
+  document.getElementById(col7Id).onclick = () => sortTable(7)
+}
+
+// Saves the strategy parameters of one test result in the format of the strategy parameters file
+// ("Name,Value" with the "__indicatorName" row) that the import button in the strategy settings dialog loads
+function saveResultRowParams(testResults, row) {
+  const toCSVValue = (value) => typeof value === 'string' ? JSON.stringify(value) : String(value)
+  const paramNames = (testResults.paramsNames || []).filter(name => Object.hasOwn(row, `__${name}`))
+  Object.keys(row).forEach(key => {
+    const name = key.slice(2)
+    if (key.startsWith('__') && !key.startsWith('___') && name && !paramNames.includes(name))
+      paramNames.push(name)
+  })
+  const strategyName = testResults.shortName || testResults.name || ''
+  let csv = `Name,Value\n"__indicatorName",${JSON.stringify(strategyName)}\n`
+  paramNames.forEach(name => {
+    const value = row[`__${name}`]
+    if (value !== null && typeof value !== 'undefined')
+      csv += `${JSON.stringify(name)},${toCSVValue(value)}\n`
+  })
+  // The file name is the strategy name (strategy_id): "Upload strategy parameters" of the extension takes the strategy
+  // from it, and the browser adds " (N)" to the copies
+  const fileName = `${strategyName.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim() || 'strategy'}.csv`
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}))
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000)
 }
 
 function create3DPopup(testResults) {

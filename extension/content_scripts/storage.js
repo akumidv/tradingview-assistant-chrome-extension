@@ -1,6 +1,6 @@
 const storage = {
   KEY_PREFIX: 'iondv',
-  STRATEGY_KEY_PARAM: 'strategy_param',
+  // The strategy parameters, optimization settings and results are in the assistant database (shared/db.js)
   STRATEGY_KEY_RESULTS: 'strategy_result',
   SIGNALS_KEY_PREFIX: 'signals'
 }
@@ -45,4 +45,4 @@ storage.clearAll = async () => {
   const allStorageKey = await storage.getKey(null)
   await storage.removeKey(Object.keys(allStorageKey))
   return Object.keys(allStorageKey)
-}
+}
