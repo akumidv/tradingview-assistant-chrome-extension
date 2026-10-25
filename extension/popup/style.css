@@ -442,3 +442,70 @@ body {
 .switch-toggle > input[id="optFilterOff"]:not(checked) ~ div[id="filterParam"] {
     display: inline;
 }
+
+/* Optimization settings table of the "Testing a strategy" tab */
+.opt-table-hint {
+    margin: 4px 0;
+    font-size: 85%;
+    color: #555;
+}
+
+.opt-table-wrap {
+    max-height: 190px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+}
+
+.opt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 85%;
+}
+
+.opt-table th {
+    position: sticky;
+    top: 0;
+    background-color: #f1f1f1;
+    text-align: left;
+    padding: 3px 4px;
+    font-weight: normal;
+    color: #555;
+}
+
+.opt-table td {
+    padding: 3px 4px;
+    border-top: 1px solid #eee;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.opt-table td.opt-strategy {
+    white-space: normal;
+    max-width: 170px;
+}
+
+.opt-table tbody tr:hover {
+    background-color: #eef6ff;
+}
+
+.opt-table tbody tr.selected {
+    background-color: #cfe6ff;
+}
+
+.opt-table .opt-delete {
+    border: none;
+    background: none;
+    color: #999;
+    cursor: pointer;
+    padding: 0 2px;
+}
+
+.opt-table .opt-delete:hover {
+    color: #d00;
+}
+
+.opt-table-empty {
+    margin: 6px;
+    color: #777;
+}

@@ -1,32 +1,6 @@
 const model = {}
 
 
-model.getStrategyParameters = async (strategyData) => {
-  let paramRange = await storage.getKey(storage.STRATEGY_KEY_PARAM)
-  if(paramRange) {
-    const mismatched = Object.keys(paramRange).filter(key => !Object.keys(strategyData.properties).includes(key))
-    if(mismatched && mismatched.length) {
-      const isDef = await ui.alertPopup(`The parameters loaded from the storage are not present in the current strategy: ${mismatched.join(', ')}.\n\n` +
-        'Load the matching strategy on the TradingView chart, or upload new parameters for the current one.\n' +
-        'Alternatively, use the default optimization parameters of the strategy.\n\n' +
-        'Use the default parameters?', false, true)
-      if (!isDef)
-        return null
-      paramRange = model.getStrategyRange(strategyData)
-    }
-  } else {
-    paramRange = model.getStrategyRange(strategyData)
-  }
-  await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
-  return paramRange
-}
-
-
-model.saveStrategyParameters = async (paramRange) => {
-  await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
-}
-
-
 model.getStrategyRange = (strategyData) => {
   const paramRange = {}
   Object.keys(strategyData.properties).forEach((key, idx) => {
@@ -40,7 +14,9 @@ model.getStrategyRange = (strategyData) => {
         paramRange[key] = [isInteger ? Math.floor(strategyData.properties[key] / 2) : strategyData.properties[key] / 2,
           strategyData.properties[key] * 2]
         let step = isInteger ? Math.round((paramRange[key][1] - paramRange[key][0]) / 10) : (paramRange[key][1] - paramRange[key][0]) / 10
-        step = isInteger && step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1 // TODO or set paramRange[key][1]?
+        if (!isInteger)
+          step = Math.round(step * 1e8) / 1e8
+        step = step !== 0 ? step : paramRange[key][1] < 0 ? -1 : 1
         paramRange[key].push(step)
         paramRange[key].push(strategyData.properties[key])
         paramRange[key].push(idx + 1)
@@ -50,27 +26,6 @@ model.getStrategyRange = (strategyData) => {
     }
   })
   return paramRange
-}
-
-model.parseStrategyParamsAndGetMsg = async (fileData) => {
-  const paramRange = {}
-  const csvData = await file.parseCSV(fileData)
-  const headers = Object.keys(csvData[0])
-  const missColumns = ['parameter','from','to','step','default','priority'].filter(columnName => !headers.includes(columnName.toLowerCase()))
-  if(missColumns && missColumns.length)
-    return {text: `  - ${fileData.name}: There is no column(s) "${missColumns.join(', ')}" in CSV.\nPlease add all necessary columns to CSV like showed in the template.\n\nUploading canceled.\n`, isError: true}
-  csvData.forEach(row => paramRange[row['parameter']] = [row['from'], row['to'], row['step'], row['default'], row['priority']])
-  await storage.setKeys(storage.STRATEGY_KEY_PARAM, paramRange)
-  return {text: 'The data was saved in the storage.\nTo use them for repeated testing, click on the "Test strategy" button in the extension pop-up window.', isError: false}
-}
-
-model.convertStrategyRangeToTemplate = (paramRange) => {
-  let csv = 'Parameter,From,To,Step,Default,Priority\n'
-  Object.keys(paramRange).forEach(key => {
-    csv += `${JSON.stringify(key)},${typeof paramRange[key][0] === 'string' ? JSON.stringify(paramRange[key][0]) : paramRange[key][0]},`+
-      `${paramRange[key][1]},${paramRange[key][2]},${typeof paramRange[key][3] === 'string' ? JSON.stringify(paramRange[key][3]) : paramRange[key][3]},${paramRange[key][4]}\n`
-  })
-  return csv
 }
 
 // Optimisation direction; a missing flag means maximise, the same default action.js applies to testParams
@@ -85,6 +40,8 @@ model.getBestResult = (testResults) => {
   if(!perfomanceSummary || !perfomanceSummary.length)
     return ''
   const bestResult = perfomanceSummary.reduce((curBestRes, curResult) => {
+    if(!curBestRes || typeof curBestRes !== 'object')
+      curBestRes = null
     // A metric value of 0 is a valid value, so presence is checked by type, not by truthiness
     if(curResult && typeof curResult[checkField] === 'number') {
       const isBestMissing = !curBestRes || typeof curBestRes[checkField] !== 'number'
@@ -94,8 +51,8 @@ model.getBestResult = (testResults) => {
         return curResult
     }
     return curBestRes
-  })
-  return bestResult
+  }, null)
+  return bestResult || {}
 }
 
 model.createParamsFromRange = (paramRange) => {
@@ -160,7 +117,8 @@ model.getParamPriorityList = (paramRange) => {
   return paramPriorityList
 }
 
-model.getStartParamValues = async (paramRange, strategyData) => {
+// previousResults: the previous run of the strategy (its best parameters are a start value), or null
+model.getStartParamValues = async (paramRange, strategyData, previousResults = null) => {
   const currenPropVal = getCurrentPropValues(strategyData, paramRange)
   const startValues = {'default': {}, 'current': currenPropVal}
 
@@ -171,8 +129,8 @@ model.getStartParamValues = async (paramRange, strategyData) => {
       startValues.default[key] = paramRange[key][3]
   })
 
-  const testResults = await storage.getKey(storage.STRATEGY_KEY_RESULTS)
-  if(testResults && testResults.perfomanceSummary && testResults.perfomanceSummary.length) {
+  const testResults = previousResults
+  if(testResults && testResults.perfomanceSummary && testResults.perfomanceSummary.length && Array.isArray(testResults.paramsNames)) {
     const bestResult = testResults.perfomanceSummary ? model.getBestResult(testResults) : {}
     const allParamsName = Object.keys(startValues.default)
     if(bestResult) {
@@ -181,7 +139,7 @@ model.getStartParamValues = async (paramRange, strategyData) => {
         if(bestResult.hasOwnProperty(`__${paramName}`))
           propVal[paramName] = bestResult[`__${paramName}`]
       })
-      if(propVal && Object.keys(propVal).every(key => allParamsName.includes(key)))
+      if(Object.keys(propVal).length && Object.keys(propVal).every(key => allParamsName.includes(key)))
         startValues.best = propVal
     }
   }

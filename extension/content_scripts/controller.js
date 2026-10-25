@@ -35,11 +35,20 @@
           case 'uploadSignals':
             await action.uploadSignals()
             break
-          case 'uploadStrategyTestParameters':
-            await action.uploadStrategyTestParameters()
+          case 'uploadStrategyParameters':
+            await action.uploadStrategyParameters()
             break
-          case 'getStrategyTemplate':
-            await action.getStrategyTemplate()
+          case 'getStrategyParameters':
+            await action.getStrategyParameters()
+            break
+          case 'editOptimizationSettings':
+            await action.editOptimizationSettings(request)
+            break
+          case 'exportDatabase':
+            await action.exportDatabase()
+            break
+          case 'importDatabase':
+            await action.importDatabase()
             break
           case 'testStrategy':
             await action.testStrategy(request, false)
@@ -48,16 +57,19 @@
             await action.testStrategy(request, true)
             break
           case 'previewStrategyTestResults':
-            await action.previewStrategyTestResults()
+            await action.previewStrategyTestResults(request)
             break
           case 'downloadStrategyTestResults':
-            await action.downloadStrategyTestResults()
+            await action.downloadStrategyTestResults(request)
+            break
+          case 'uploadStrategyTestResults':
+            await action.uploadStrategyTestResults(request)
             break
           case 'clearAll':
             await action.clearAll()
             break
           case 'show3DChart':
-            await action.show3DChart()
+            await action.show3DChart(request)
             break
           default:
             log.warn(`Unknown action "${request.action}"`)

@@ -409,80 +409,93 @@ width: 800px; height: 800px; position: fixed; top: 50px; right: 0; left: 0;
 margin: auto; border: 1px solid lightblue; box-shadow: 3px 3px 7px #777;
 align-items: center;  justify-content: left; text-align: left;`
 
-ui.showAndUpdateStrategyParameters = async (testParams) => {
+// The "Strategy parameters" window: ranges and Active marks of the optimization settings of one strategy.
+// params: [{name, active, range: [from, to, step, default, priority]}] in the order to show; cycles: the cycles value.
+// timeLimit: minutes, 0 - no limit. The test stops at the limit reached first: cycles or time; both 0 - no limit.
+// onSave(state) is called by the Save and Save&Run buttons, state = {params (same form, row order), cycles, timeLimit}.
+// Resolves {action: 'run', state} for Save&Run, {action: 'skip', state} for Skip&Run (the stored parameters, only
+// cycles taken from the window) and null for Cancel.
+ui.showOptimizationSettingsDialog = async (strategyTitle, params, cycles, timeLimit, onSave) => {
   return new Promise(resolve => {
-    function updateParamsAndSpace() {
-      const paramRange = {}
-      let allFiltersRows = document.getElementById('stratParamData').getElementsByTagName('tr')
-      let space = null
-      if (allFiltersRows) {
-        for(let row of allFiltersRows) {
-          const cells = row.getElementsByTagName('td')
-          if (!cells || cells.length !== 7)
-            continue
-          const activeEl = cells[0].getElementsByTagName('input')
-          if (!activeEl || !activeEl[0] || !activeEl[0].checked)
-            continue
-          const nameEl = cells[1] // const nameEl = cells[1].getElementsByTagName('input')
-          const fromEl = cells[2].getElementsByTagName('input')
-          const toEl = cells[3].getElementsByTagName('input')
-          const stepEl = cells[4].getElementsByTagName('input')
-          const defEl = cells[5].getElementsByTagName('input')
-          const priorityEl = cells[6].getElementsByTagName('input')
-          if(!nameEl || !nameEl.innerText || !fromEl || !fromEl.length || !toEl || !toEl.length || !stepEl || !stepEl.length)
-            continue
-          try {
-            const key = nameEl.innerText
-            let paramSpace = 1
-            const priority = parseInt(priorityEl[0].value)
-            if(typeof testParams.paramRangeSrc[key][0] === 'boolean') {
-              paramRange[key] = [true, false, 0, defEl[0].value.toLowerCase() === 'true', priority]
-              paramSpace = 2
-            } else if (typeof testParams.paramRangeSrc[key][0] === 'string' && testParams.paramRangeSrc[key][0].includes(';')) {
-              paramRange[key] = [fromEl[0].value, '', 0, fromEl[0].value.split(';')[0], priority]
-              paramSpace = fromEl[0].value.split(';').length
-            } else {
-              let isInteger = testParams.paramRangeSrc[key][0] === Math.round(testParams.paramRangeSrc[key][0]) &&
-                testParams.paramRangeSrc[key][1] === Math.round(testParams.paramRangeSrc[key][1]) &&
-                testParams.paramRangeSrc[key][2] === Math.round(testParams.paramRangeSrc[key][2])
-              if (!Number.isNaN(Number(fromEl[0].value))) { // Not 0 or Nan
-                if (parseInt(fromEl[0].value) !== Number(fromEl[0].value) ||
-                   (Number(toEl[0].value) && parseInt(toEl[0].value) !== Number(toEl[0].value)) ||
-                   (Number(stepEl[0].value) && parseInt(stepEl[0].value) !== Number(stepEl[0].value)))
-                  isInteger = false
-                paramRange[key] = [isInteger ? parseInt(fromEl[0].value) : Number(fromEl[0].value),
-                  Number(toEl[0].value)]
-                let step = isInteger ? parseInt(stepEl[0].value) : Number(stepEl[0].value)
-                step = step !== 0 ? step : paramRange[key][1] < paramRange[key][0] ? -1 : 1
-                paramRange[key].push(step)
-                paramRange[key].push(isInteger ? parseInt(defEl[0].value) : Number(defEl[0].value))
-                paramRange[key].push(priority)
-                paramSpace = Math.floor(Math.abs(paramRange[key][0] - paramRange[key][1]) / paramRange[key][2]) + 1
-              } else {
-                paramRange[key] = [fromEl[0].value, '', 0, fromEl[0].value, priority]
-                paramSpace = 1
-              }
-            }
-            space = space == null ? paramSpace : space * paramSpace
-          } catch (err) {
-            log.debug(`Parameter space calculation for "${nameEl.innerText}" failed:`, err)
-          }
-        }
-      }
-      document.getElementById('cyclesAll').innerHTML=String(space !== null ? space : 0)
-      // TODO update cells?
-      return paramRange
-    }
+    const escapeHtml = (value) => String(value === null || typeof value === 'undefined' ? '' : value)
+      .replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    // Decimal comma is accepted as a decimal point
+    const toNumberText = (text) => String(text || '').trim().replace(',', '.')
+    const sourceRanges = Object.fromEntries(params.map(param => [param.name, param.range]))
 
+    // Reads every row of the window, in the row order
+    function readRows() {
+      const rowParams = []
+      let space = null
+      const allRows = document.getElementById('stratParamData').getElementsByTagName('tr')
+      let rowIdx = 0
+      for (let row of allRows) {
+        rowIdx++
+        const cells = row.getElementsByTagName('td')
+        if (!cells || cells.length !== 7)
+          continue
+        const key = row.dataset.param ? decodeURIComponent(row.dataset.param) : cells[1].innerText
+        const isActive = !!cells[0].querySelector('input')?.checked
+        const fromEl = cells[2].querySelector('input')
+        const toEl = cells[3].querySelector('input')
+        const stepEl = cells[4].querySelector('input')
+        const defEl = cells[5].querySelector('input')
+        const priorityEl = cells[6].querySelector('input')
+        if (!key || !fromEl || !toEl || !stepEl || !defEl)
+          continue
+        const src = sourceRanges[key] || []
+        let priority = parseInt(priorityEl?.value)
+        if (Number.isNaN(priority))
+          priority = rowIdx
+        let range
+        let paramSpace = 1
+        try {
+          if (typeof src[0] === 'boolean') {
+            range = [true, false, 0, defEl.value.trim().toLowerCase() === 'true', priority]
+            paramSpace = 2
+          } else if (typeof src[0] === 'string' && (src[0].includes(';') || fromEl.value.includes(';'))) {
+            const options = fromEl.value.split(';').map(item => item.trim()).filter(item => item.length)
+            const def = options.includes(defEl.value.trim()) ? defEl.value.trim() : options[0]
+            range = [options.join(';'), '', 0, def, priority]
+            paramSpace = options.length || 1
+          } else {
+            const fromText = toNumberText(fromEl.value), toText = toNumberText(toEl.value)
+            const stepText = toNumberText(stepEl.value), defText = toNumberText(defEl.value)
+            if (fromText !== '' && !Number.isNaN(Number(fromText))) {
+              const nums = [fromText, toText, stepText, defText].filter(item => item !== '' && !Number.isNaN(Number(item)))
+              const isInteger = nums.every(item => Number.isInteger(Number(item)))
+              const from = Number(fromText)
+              const to = toText === '' || Number.isNaN(Number(toText)) ? from : Number(toText)
+              let step = stepText === '' || Number.isNaN(Number(stepText)) ? 0 : Number(stepText)
+              step = step !== 0 ? step : to < from ? -1 : 1
+              const def = defText === '' || Number.isNaN(Number(defText)) ? from : Number(defText)
+              range = isInteger ? [parseInt(from), parseInt(to), parseInt(step) || 1, parseInt(def), priority] : [from, to, step, def, priority]
+              paramSpace = Math.floor(Math.abs(range[0] - range[1]) / Math.abs(range[2])) + 1
+            } else {
+              range = [fromEl.value, '', 0, defEl.value === '' ? fromEl.value : defEl.value, priority]
+            }
+          }
+        } catch (err) {
+          log.debug(`Reading the range of "${key}" failed:`, err)
+          continue
+        }
+        rowParams.push({name: key, active: isActive, range})
+        if (isActive)
+          space = space == null ? paramSpace : space * paramSpace
+      }
+      document.getElementById('cyclesAll').innerHTML = String(space !== null ? space : 0)
+      return rowParams
+    }
 
     function prepareRow(name, param, status) {
       const isBoolean = typeof param[0] === 'boolean'
-      return `<td><input type="checkbox" ${status? 'checked' : ''} style="width:1em; background-color : #f1f1f1;" name="iondv-active-check-box"></td><td>${name}</td>
-              <td><input type="text" value="${isBoolean ? 'true' : param[0]}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
-              <td><input type="text" value="${isBoolean ? 'false' : param[1]}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
-              <td><input type="number"  step="any" value="${param[2]}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
-              <td><input type="text" value="${param[3]}" style="width:4em; background-color : #f1f1f1;" ></td>
-              <td><input type="number" value="${param[4]}" style="width:4em; background-color : #f1f1f1;"></td>`
+      const v = escapeHtml
+      return `<td><input type="checkbox" ${status? 'checked' : ''} style="width:1em; background-color : #f1f1f1;" name="iondv-active-check-box"></td><td>${v(name)}</td>
+              <td><input type="text" value="${isBoolean ? 'true' : v(param[0])}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
+              <td><input type="text" value="${isBoolean ? 'false' : v(param[1])}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
+              <td><input type="text" value="${v(param[2])}" style="width:4em; ${!isBoolean? 'background-color :#f1f1f1;':''}" ${isBoolean ? 'disabled' :''}></td>
+              <td><input type="text" value="${v(param[3])}" style="width:4em; background-color : #f1f1f1;" ></td>
+              <td><input type="number" value="${v(param[4])}" style="width:4em; background-color : #f1f1f1;"></td>`
     }
 
     function removeParamWindow() {
@@ -492,36 +505,46 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
     }
 
     function getCycles() {
-      try {
-        const cyclesEl = document.getElementById('stratParamCycles')
-        return cyclesEl && cyclesEl.value ? parseInt(cyclesEl.value) : 100
-      } catch (err) {
-        log.debug('Reading cycles failed, default 100 is used:', err)
-      }
-      return 100
+      const cyclesEl = document.getElementById('stratParamCycles')
+      const value = cyclesEl ? parseInt(cyclesEl.value) : NaN
+      return Number.isInteger(value) && value >= 0 ? value : 100 // 0 - no limit
     }
 
-    try{
-      const isStratParamElPresent = document.getElementById('iondvStratParam')
-      let stratParamEl = isStratParamElPresent ? document.getElementById('iondvStratParam') : document.createElement('div')
-      let popupEl
-      if (!isStratParamElPresent) {
-        stratParamEl.id = 'iondvStratParam'
-        stratParamEl.setAttribute('style', ui.styleValWindowShadow)
-        stratParamEl.style.height = document.documentElement.scrollHeight + 'px'
-        const stratParamStyleEl = stratParamEl.appendChild(document.createElement('style'))
-        stratParamStyleEl.innerHTML = ui.styleParamWindow
-        popupEl = stratParamEl.appendChild(document.createElement('div'))
-        popupEl.setAttribute('style', ui.styleValParamWindow )
-      } else {
-        popupEl = stratParamEl.querySelector('div')
+    function getTimeLimit() {
+      const timeLimitEl = document.getElementById('stratParamTimeLimit')
+      const value = timeLimitEl ? Number(String(timeLimitEl.value).replace(',', '.')) : 0
+      return Number.isFinite(value) && value > 0 ? value : 0
+    }
+
+    async function save(btn) {
+      const state = {params: readRows(), cycles: getCycles(), timeLimit: getTimeLimit()}
+      await onSave(state)
+      if (btn) {
+        btn.textContent = 'Saved ✓'
+        setTimeout(() => { btn.textContent = 'Save' }, 1500)
       }
+      return state
+    }
+
+    try {
+      removeParamWindow()
+      const stratParamEl = document.createElement('div')
+      stratParamEl.id = 'iondvStratParam'
+      stratParamEl.setAttribute('style', ui.styleValWindowShadow)
+      stratParamEl.style.height = document.documentElement.scrollHeight + 'px'
+      const stratParamStyleEl = stratParamEl.appendChild(document.createElement('style'))
+      stratParamStyleEl.innerHTML = ui.styleParamWindow
+      const popupEl = stratParamEl.appendChild(document.createElement('div'))
+      popupEl.setAttribute('style', ui.styleValParamWindow)
       popupEl.innerHTML = `<div style="height: 150px; overflow-y: hidden; vertical-align:top;">
-  <h1 style="padding: 25px">Strategy parameters</h1>
+  <h1 style="padding: 20px 25px 4px 25px">Strategy parameters</h1>
+  <div style="padding: 0 25px 10px 25px; color: #555;">${escapeHtml(strategyTitle)}</div>
   <div style="align-content: center"><span style="padding:5px 15px">
-  Cycles <input id="stratParamCycles" type="number" value="10" style="width:8em; background-color :#f1f1f1;"> 
+  Cycles <input id="stratParamCycles" type="number" min="0" title="0 - no limit: the test runs until the whole space is tested or the Stop button is pressed" value="${Number.isInteger(cycles) && cycles >= 0 ? cycles : 10}" style="width:8em; background-color :#f1f1f1;">
   <a id="iondvCycleCopy" style="cursor: pointer;padding-right: 5px"><i class="iondv_icon iondv_copy"></i></a>
   from ~<span id="cyclesAll">100</span></span>
+  <span style="padding:5px 15px 5px 0">Time limit <input id="stratParamTimeLimit" type="number" min="0" step="any" title="Minutes; 0 - no limit. The test stops at the limit reached first: cycles or time" value="${Number(timeLimit) > 0 ? Number(timeLimit) : 0}" style="width:5em; background-color :#f1f1f1;"> min</span>
+  <button id="stratParamSave" class="iondv-button iondv-button-def">Save</button>
   <button id="stratParamSaveRun" class="iondv-button iondv-button-run">Save&Run</button>
   <button id="stratParamDefRun" class="iondv-button iondv-button-def">Skip&Run</button>
   <button id="stratParamCancel" class="iondv-button iondv-button-close">Cancel</button>
@@ -532,35 +555,17 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
    <thead><td style="width: 10%"><input type="checkbox" id="iondvCheckAll" style="width:1em;background-color :#f1f1f1;">Active</td><td style="width: 40%">Parameter</td><td>From</td><td>To</td><td>Step</td><td>Default</td><td>Priority</td></thead>
    <tbody id="stratParamData"></tbody>
   </table></div>`
-      if (!isStratParamElPresent) {
-        const tvDialog = document.getElementById('overlap-manager-root')
-        if (tvDialog)
-          document.body.insertBefore(stratParamEl, tvDialog) // For avoid problem if msg overlap tv dialog window
-        else
-          document.body.appendChild(stratParamEl)
-      }
+      const tvDialog = document.getElementById('overlap-manager-root')
+      if (tvDialog)
+        document.body.insertBefore(stratParamEl, tvDialog) // For avoid problem if msg overlap tv dialog window
+      else
+        document.body.appendChild(stratParamEl)
       const tbody = document.getElementById('stratParamData')
+      tbody.innerHTML = params.map(param =>
+        `\n<tr data-param="${encodeURIComponent(param.name)}">${prepareRow(param.name, param.range, param.active)}</tr>`).join('')
 
-      let paramRows = ''
-      const processedParams = []
-      for(let name in testParams.paramRange) {
-        if (testParams.paramRange[name][0] === null || (isNaN(testParams.paramRange[name][0]) &&
-          (typeof testParams.paramRange[name][0] !== 'string' || !testParams.paramRange[name][0].includes(';'))))
-          continue
-        paramRows += `\n<tr>${prepareRow(name, testParams.paramRange[name], true)}</tr>`
-        processedParams.push(name)
-      }
-      for(let name in testParams.paramRangeSrc) {
-        if(!processedParams.includes(name) && testParams.paramRangeSrc[name][0] !== null && (
-          !isNaN(testParams.paramRangeSrc[name][0]) ||
-          (typeof testParams.paramRangeSrc[name][0] === 'string') && testParams.paramRangeSrc[name][0].includes(';')))
-          paramRows += `\n<tr>${prepareRow(name, testParams.paramRangeSrc[name], false)}</tr>`
-      }
-      if (paramRows)
-        tbody.innerHTML = paramRows // tbody.appendChild(paramRows)
-
-      updateParamsAndSpace()
-      tbody.addEventListener('change', updateParamsAndSpace)
+      readRows()
+      tbody.addEventListener('change', readRows)
       const copyCycleBtn = document.getElementById('iondvCycleCopy')
       if (copyCycleBtn) {
         copyCycleBtn.onclick = async () => {
@@ -573,40 +578,39 @@ ui.showAndUpdateStrategyParameters = async (testParams) => {
       const checkAllEl = document.getElementById('iondvCheckAll')
       if (checkAllEl) {
         checkAllEl.onchange = () => {
-          const allCheckbox = document.getElementById('iondvCheckAll')
-          const checkAllEl = document.querySelectorAll('[name="iondv-active-check-box"]')
-          if(checkAllEl && allCheckbox) {
-            for(const el of checkAllEl) {
-              el.checked = allCheckbox.checked
-            }
-            updateParamsAndSpace()
-          }
+          document.querySelectorAll('[name="iondv-active-check-box"]').forEach(el => el.checked = checkAllEl.checked)
+          readRows()
         }
       }
-      const btnClose = document.getElementById('stratParamCancel')
-      if (btnClose) {
-        btnClose.onclick = () => {
-          removeParamWindow()
-          return resolve(null)
+      document.getElementById('stratParamCancel').onclick = () => {
+        removeParamWindow()
+        return resolve(null)
+      }
+      // Save: stores the window state in the optimization settings; the window stays open
+      const btnSave = document.getElementById('stratParamSave')
+      btnSave.onclick = async () => {
+        try {
+          await save(btnSave)
+        } catch (err) {
+          log.error('Saving the optimization settings failed:', err)
+          btnSave.textContent = 'Save failed'
+          setTimeout(() => { btnSave.textContent = 'Save' }, 2500)
         }
       }
-      const btnSaveRun = document.getElementById('stratParamSaveRun')
-      if (btnSaveRun) {
-        btnSaveRun.onclick = () => {
-          const paramRange = updateParamsAndSpace()
-          const cycles = getCycles()
+      document.getElementById('stratParamSaveRun').onclick = async () => {
+        try {
+          const state = await save(null)
           removeParamWindow()
-          return resolve({cycles: cycles, paramRange: paramRange })
+          return resolve({action: 'run', state})
+        } catch (err) {
+          log.error('Saving the optimization settings failed:', err)
+          await ui.showErrorPopup(`The optimization settings were not saved: ${err.message}`)
         }
       }
-      const btnDefRun = document.getElementById('stratParamDefRun')
-      if (btnDefRun) {
-        btnDefRun.onclick = () => {
-          log.debug('Run default')
-          const cycles = getCycles()
-          removeParamWindow()
-          return resolve({cycles: cycles, paramRange: null })
-        }
+      document.getElementById('stratParamDefRun').onclick = () => {
+        const state = {params, cycles: getCycles(), timeLimit: getTimeLimit()}
+        removeParamWindow()
+        return resolve({action: 'skip', state})
       }
     } catch (err) {
       removeParamWindow()

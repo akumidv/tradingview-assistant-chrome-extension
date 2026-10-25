@@ -5,6 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="metrics-options.js"></script>
+    <script src="../shared/db.js"></script>
+    <script src="../shared/optimizationSettings.js"></script>
     <script src="assistant.js"></script>
     <link rel="stylesheet" type="text/css" href="style.css">
 </head>
@@ -31,6 +33,26 @@
                 <div id="warningBacktest" class="subheader">
                     <p>The extension works with the <a href="https://www.tradingview.com/chart" target="_blank">English
                         version</a> of TradingView</p>
+                </div>
+                <div class="row">
+                    <div class="details">
+                        <details open>
+                            <summary>Optimization settings</summary>
+                            <p class="opt-table-hint">Click a strategy to select it: the parameters below are its
+                                settings, their changes are saved for it. Double-click to edit the parameter ranges.</p>
+                            <div class="opt-table-wrap">
+                                <table id="optSettingsTable" class="opt-table">
+                                    <thead>
+                                    <tr><th>Strategy</th><th title="Active / all parameters">Params</th><th>Value of</th>
+                                        <th>By</th><th>Filter</th><th title="Cycles / time limit in minutes">Cycles</th><th>Updated</th><th></th></tr>
+                                    </thead>
+                                    <tbody id="optSettingsBody"></tbody>
+                                </table>
+                                <p id="optSettingsEmpty" class="opt-table-empty" hidden>No strategies yet: add one
+                                    with "Upload strategy parameters" or "Get strategy parameters" below.</p>
+                            </div>
+                        </details>
+                    </div>
                 </div>
                 <div class="row">
                     <div class="details">
@@ -112,7 +134,8 @@
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>Run a user-controlled strategy test using the loaded or generated parameter range.</p>
+                        <p>Test the strategy selected in the table with its optimization settings. The results are
+                            saved in the database (Results tab).</p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
@@ -138,27 +161,28 @@
 
                 <div class="row">
                     <div class="column left">
-                        <p>Getting a template for setting the testing parameters of the current strategy.</p>
+                        <p>Get the parameters of the strategy on the chart and save them as the strategy settings;
+                            its optimization settings are created or checked against them.</p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
-                            <button id="getStrategyTemplate" class="button button-blue">Get template</button>
+                            <button id="getStrategyParameters" class="button button-blue">Get strategy parameters</button>
                         </div>
                     </div>
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>To test the profit of strategies, upload a CSV file in which the lines correspond to the
-                            strategy parameters and contain the testing range.
-                            <a href="data:text/csv;charset=utf-8,Parameter,From,To,Step,Default,Priority
-SMALong,40,70,5,20,1
-EMAShort,5,15,1,21,2
-%22Check MACD%22,false,true,,false,3
-%22Stop Loss%22,1,5,0.51,4%0A" download="strategy_template.csv">Sample template </a></p>
+                        <p>Upload a strategy parameters file ("Name,Value", as the export button of the strategy
+                            settings dialog saves it). The strategy is the file name without " (N)".
+                            <a href="data:text/csv;charset=utf-8,Name,Value
+%22__indicatorName%22,%22My strategy%22
+%22SMA Long%22,40
+%22Use MACD%22,true
+%22Timeframe%22,%2260%22%0A" download="My strategy.csv">Sample file</a></p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
-                            <button id="uploadStrategyTestParameters" class="button button-blue">Upload parameters
+                            <button id="uploadStrategyParameters" class="button button-blue">Upload strategy parameters
                             </button>
                         </div>
                     </div>
@@ -172,7 +196,8 @@ EMAShort,5,15,1,21,2
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>Quick overview of the results of the last testing for this ticker and timeframe.</p>
+                        <p>Results of the strategy selected on the "Testing a strategy" tab: its last test run, the
+                            other runs are in the list of the preview.</p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
@@ -183,7 +208,8 @@ EMAShort,5,15,1,21,2
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>To download the results of the last testing for this ticker and timeframe.</p>
+                        <p>Download the results of the last test run of the selected strategy and set its best
+                            parameters for the strategy.</p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
@@ -194,7 +220,18 @@ EMAShort,5,15,1,21,2
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>View a 3D chart with the results</p>
+                        <p>Add results CSV files downloaded earlier to the runs of the selected strategy.</p>
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="uploadStrategyTestResults" class="button button-blue">Upload results
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>View a 3D chart with the results of the last test run of the selected strategy.</p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">
@@ -305,17 +342,30 @@ plotchar(tickerName==syminfo.ticker and array.includes(arrTSSell,tostring(time))
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>Download results without waiting for a click on the OK button.</p>
-                        <p></p>
+                        <p>Save the whole database of the extension (strategies, optimization settings, results) to a
+                            file, as a backup.</p>
                     </div>
                     <div class="column right">
-                        <label></label>
-                        <input id="shouldSkipWaitingForDownload" type="checkbox" checked/>
+                        <div style="align-content: center">
+                            <button id="exportDatabase" class="button button-blue">Export database</button>
+                        </div>
                     </div>
                 </div>
                 <div class="row">
                     <div class="column left">
-                        <p>Clear all stored data</p>
+                        <p>Load a database file saved by "Export database": its strategies replace the stored ones with
+                            the same names.</p>
+                    </div>
+                    <div class="column right">
+                        <div style="align-content: center">
+                            <button id="importDatabase" class="button button-blue">Import database</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column left">
+                        <p>Clear the stored options and the working data of the last test. The database (strategies,
+                            settings, results) is kept: delete a strategy with the &#10005; button in its table.</p>
                     </div>
                     <div class="column right">
                         <div style="align-content: center">

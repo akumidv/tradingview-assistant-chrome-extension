@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setClickEvents()
   setOptionsEvents()
   setWhatsNew()
+  setOptimizationTable()
 });
 
 const TAB_COUNT = 5
@@ -179,7 +180,8 @@ function setOptionsEvents() {
 }
 
 function setClickEvents() {
-  for(let elId of ['uploadSignals', 'testStrategy', 'previewStrategyTestResults', 'downloadStrategyTestResults', 'getStrategyTemplate', 'uploadStrategyTestParameters', 'clearAll', 'show3DChart']) {
+  for(let elId of ['uploadSignals', 'testStrategy', 'previewStrategyTestResults', 'downloadStrategyTestResults', 'uploadStrategyTestResults',
+    'getStrategyParameters', 'uploadStrategyParameters', 'clearAll', 'show3DChart', 'exportDatabase', 'importDatabase']) {
     function signalListener() {
       sendSignalToActiveTab(elId)
     }
@@ -212,6 +214,9 @@ function checkIsTVChart() {
   });
 }
 
+
+let resolvePopupOptionsLoaded
+const popupOptionsLoaded = new Promise(resolve => resolvePopupOptionsLoaded = resolve)
 
 function setPopupInputsByOptions(getResults) {
   chrome.storage.local.get('iondvOptions', (getResults) => {
@@ -285,6 +290,7 @@ function setPopupInputsByOptions(getResults) {
       }
     }
     activateTab(tabId) // Saved or first tab
+    resolvePopupOptionsLoaded()
   })
 }
 
@@ -322,7 +328,6 @@ function getOptions(signal) {
   iondvOptions.randomDelay = document.getElementById('randomDelay').checked
   iondvOptions.shouldTestTF = document.getElementById('shouldTestTF').checked
   iondvOptions.shouldSkipInitBestResult = document.getElementById('shouldSkipInitBestResult').checked
-  iondvOptions.shouldSkipWaitingForDownload = document.getElementById('shouldSkipWaitingForDownload').checked
   iondvOptions.parseExtraReportTabs = document.getElementById('parseExtraReportTabs').checked
   iondvOptions.setParamsByApi = document.getElementById('setParamsByApi').checked
 
@@ -331,7 +336,8 @@ function getOptions(signal) {
     iondvOptions.listOfTF = listOfTF === '' ? null : listOfTF
   }
 
-  iondvOptions.tabId = (signal === 'uploadSignals') ? 3 : 1
+  iondvOptions.tabId = (signal === 'uploadSignals') ? 3 : RESULTS_ACTIONS.includes(signal) ? 2 :
+    ['exportDatabase', 'importDatabase'].includes(signal) ? 4 : 1
   return iondvOptions
 }
 
@@ -341,7 +347,18 @@ function saveOptions(signal) {
   console.debug(LOG_PREFIX, 'Saved options', iondvOptions)
 }
 
+function showPopupMessage(html) {
+  document.getElementById('msg-text').innerHTML = html
+  document.getElementById('shim').style.display = 'block'
+  document.getElementById('msgbx').style.display = 'block'
+}
+
 function sendSignalToActiveTab(signal) {
+  if (STRATEGY_ACTIONS.includes(signal) && !selectedStrategyId) {
+    showPopupMessage('Select a strategy in the optimization settings table of the "Testing a strategy" tab first.<br><br>' +
+      'If the table is empty, add a strategy with "Upload strategy parameters" or "Get strategy parameters".')
+    return
+  }
   let iondvOptions = null
   if(signal !== 'clearAll') {
     iondvOptions = getOptions(signal)
@@ -358,6 +375,182 @@ function sendSignalToActiveTab(signal) {
     const message = {action: signal}
     if(iondvOptions)
       message.options = iondvOptions
-    chrome.tabs.sendMessage(tabs[0].id, message, function() {window.close()});
+    if (selectedStrategyId)
+      message.strategyId = selectedStrategyId
+    chrome.tabs.sendMessage(tabs[0].id, message, function() {
+      // No receiver: the extension was reloaded or updated after the tab was opened, so the tab still runs
+      // the old, disconnected content scripts. Without this check the click silently did nothing.
+      if (chrome.runtime.lastError) {
+        console.warn(LOG_PREFIX, 'The message was not delivered to the tab:', chrome.runtime.lastError.message)
+        document.getElementById('msg-text').innerHTML = 'The extension is not connected to this TradingView tab ' +
+          '(it was reloaded or updated after the tab was opened).<br><br>Reload the TradingView page (F5) and try again.'
+        document.getElementById('shim').style.display = 'block'
+        document.getElementById('msgbx').style.display = 'block'
+        return
+      }
+      window.close()
+    });
   });
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Optimization settings table: the strategies of the database (shared/db.js). The selected one is the strategy of the
+// actions; its optimization options are shown in the form of the tab, and changes of the form are saved for it.
+// ---------------------------------------------------------------------------------------------------------------------
+
+const SELECTED_STRATEGY_KEY = 'iondvSelectedStrategy'
+const RESULTS_ACTIONS = ['previewStrategyTestResults', 'downloadStrategyTestResults', 'uploadStrategyTestResults', 'show3DChart']
+const STRATEGY_ACTIONS = ['testStrategy', 'editOptimizationSettings', ...RESULTS_ACTIONS]
+const OPTION_ELEMENT_IDS = ['optMinmax', 'optParamName', 'optMethod', 'optFilterOff', 'optFilterMore', 'optFilterLess',
+  'optFilterValue', 'optFilterParamName']
+let selectedStrategyId = null
+let optimizationRecords = []
+
+async function setOptimizationTable() {
+  try {
+    const stored = await new Promise(resolve => chrome.storage.local.get(SELECTED_STRATEGY_KEY, resolve))
+    selectedStrategyId = stored && stored[SELECTED_STRATEGY_KEY] ? stored[SELECTED_STRATEGY_KEY] : null
+    await renderOptimizationTable()
+    if (selectedStrategyId && !optimizationRecords.some(record => record.strategy_id === selectedStrategyId))
+      selectedStrategyId = null
+    await popupOptionsLoaded // the stored form is set first, the options of the selected strategy replace it
+    if (selectedStrategyId)
+      setFormByRecord(optimizationRecords.find(record => record.strategy_id === selectedStrategyId))
+  } catch (err) {
+    console.error(LOG_PREFIX, 'Can not read the optimization settings from the database', err)
+    document.getElementById('optSettingsEmpty').hidden = false
+    document.getElementById('optSettingsEmpty').textContent = `The database is not available: ${err && err.message ? err.message : err}`
+  }
+  // A change of the form is saved for the selected strategy
+  for (const elId of OPTION_ELEMENT_IDS) {
+    const el = document.getElementById(elId)
+    if (!el)
+      continue
+    el.addEventListener('change', saveFormToSelectedStrategy)
+    if (el.type === 'radio' || el.type === 'checkbox')
+      el.addEventListener('click', saveFormToSelectedStrategy)
+  }
+}
+
+function describeRecord(record) {
+  let paramsText = '?'
+  let cycles = ''
+  try {
+    const parsed = optSettings.fromXml(record.content_xml)
+    paramsText = `${parsed.params.filter(param => param.active).length}/${parsed.params.length}`
+    cycles = (parsed.cycles > 0 ? String(parsed.cycles) : '\u221e') + (parsed.timeLimit > 0 ? ` / ${parsed.timeLimit}m` : '')
+  } catch (err) {
+    paramsText = 'damaged'
+  }
+  const filter = record.filterCondition === 'more' ? `${record.filterParamName} ≥ ${record.filterValue}` :
+    record.filterCondition === 'less' ? `${record.filterParamName} ≤ ${record.filterValue}` : 'off'
+  return {
+    paramsText, cycles, filter,
+    valueOf: `${record.isMaximizing === false ? 'min' : 'max'} ${record.optParamName || ''}`,
+    method: record.optMethod || '',
+    updated: record.updated ? String(record.updated).slice(5, 16).replace('T', ' ') : ''
+  }
+}
+
+async function renderOptimizationTable() {
+  optimizationRecords = (await tvaDb.getAll(tvaDb.OPTIMIZATION_SETTINGS))
+    .sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')))
+  const tbody = document.getElementById('optSettingsBody')
+  tbody.innerHTML = ''
+  document.getElementById('optSettingsEmpty').hidden = optimizationRecords.length > 0
+  for (const record of optimizationRecords) {
+    const info = describeRecord(record)
+    const row = document.createElement('tr')
+    row.dataset.strategyId = record.strategy_id
+    row.classList.toggle('selected', record.strategy_id === selectedStrategyId)
+    row.title = `${record.indicator_name || record.strategy_id}\nCreated: ${record.created || ''}\nUpdated: ${record.updated || ''}`
+    const cells = [record.strategy_id, info.paramsText, info.valueOf, info.method, info.filter, info.cycles, info.updated]
+    cells.forEach((text, idx) => {
+      const cell = document.createElement('td')
+      cell.textContent = text
+      if (idx === 0)
+        cell.className = 'opt-strategy'
+      row.appendChild(cell)
+    })
+    const deleteCell = document.createElement('td')
+    const deleteBtn = document.createElement('button')
+    deleteBtn.className = 'opt-delete'
+    deleteBtn.title = 'Delete the strategy with its settings and results'
+    deleteBtn.textContent = '✕'
+    deleteBtn.addEventListener('click', async (event) => {
+      event.stopPropagation()
+      if (!confirm(`Delete "${record.strategy_id}" with its strategy parameters, optimization settings and all test results?`))
+        return
+      await tvaDb.deleteStrategy(record.strategy_id)
+      if (selectedStrategyId === record.strategy_id)
+        await selectStrategy(null)
+      await renderOptimizationTable()
+    })
+    deleteCell.appendChild(deleteBtn)
+    row.appendChild(deleteCell)
+    row.addEventListener('click', () => selectStrategy(record.strategy_id))
+    row.addEventListener('dblclick', async () => {
+      await selectStrategy(record.strategy_id)
+      sendSignalToActiveTab('editOptimizationSettings')
+    })
+    tbody.appendChild(row)
+  }
+}
+
+async function selectStrategy(strategyId) {
+  selectedStrategyId = strategyId
+  await new Promise(resolve => chrome.storage.local.set({[SELECTED_STRATEGY_KEY]: strategyId}, resolve))
+  document.querySelectorAll('#optSettingsBody tr').forEach(row =>
+    row.classList.toggle('selected', row.dataset.strategyId === strategyId))
+  const record = optimizationRecords.find(item => item.strategy_id === strategyId)
+  if (record) {
+    setFormByRecord(record)
+    saveOptions('selectStrategy') // the form of the selected strategy is the current form
+  }
+}
+
+function setFormByRecord(record) {
+  if (!record)
+    return
+  if (record.hasOwnProperty('isMaximizing'))
+    document.getElementById('optMinmax').checked = record.isMaximizing !== false
+  if (record.optParamName)
+    document.getElementById('optParamName').value = METRICS.isValid(record.optParamName) ? record.optParamName : METRICS.DEFAULT_OPT_PARAM
+  if (record.optMethod)
+    document.getElementById('optMethod').value = record.optMethod
+  const condition = record.filterCondition || 'off'
+  document.getElementById('optFilterOff').checked = condition === 'off'
+  document.getElementById('optFilterMore').checked = condition === 'more'
+  document.getElementById('optFilterLess').checked = condition === 'less'
+  if (record.hasOwnProperty('filterValue'))
+    document.getElementById('optFilterValue').value = record.filterValue
+  if (record.filterParamName)
+    document.getElementById('optFilterParamName').value = METRICS.isValid(record.filterParamName) ? record.filterParamName : METRICS.DEFAULT_FILTER_PARAM
+}
+
+let saveFormTimer = null
+function saveFormToSelectedStrategy() {
+  if (!selectedStrategyId)
+    return
+  clearTimeout(saveFormTimer)
+  // The click on a radio button comes before its "checked" state is shown: the form is read a moment later
+  saveFormTimer = setTimeout(async () => {
+    const strategyId = selectedStrategyId
+    try {
+      const saved = await tvaDb.update(tvaDb.OPTIMIZATION_SETTINGS, strategyId, optSettings.getOptionFields(getOptions('saveForm')))
+      if (saved) {
+        const idx = optimizationRecords.findIndex(record => record.strategy_id === strategyId)
+        if (idx >= 0)
+          optimizationRecords[idx] = saved
+        const row = document.querySelector(`#optSettingsBody tr[data-strategy-id="${CSS.escape(strategyId)}"]`)
+        if (row) {
+          const info = describeRecord(saved)
+          const cells = row.querySelectorAll('td')
+          ;[info.valueOf, info.method, info.filter, info.cycles, info.updated].forEach((text, i) => cells[i + 2].textContent = text)
+        }
+      }
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Saving the optimization options of the strategy failed', err)
+    }
+  }, 50)
 }
